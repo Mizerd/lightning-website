@@ -154,7 +154,6 @@ values = {
     "version": releases.get("version", ""),
     "released": releases.get("released", ""),
     "releasesUrl": releases.get("releases_url", ""),
-    "mirrorUrl": releases.get("mirror_url", ""),
     "donateUrl": donate_url,
 }
 
@@ -163,9 +162,10 @@ def asset_url(pkg):
     """Direct download URL for one package, from the releases.json template.
 
     The template carries ${version} and ${file} rather than a bare base URL
-    because GitHub's asset layout (/releases/download/<tag>/<name>) is not
-    GitLab's. Returns "" when either the template or the package's filename is
-    missing, which hides that card's button instead of emitting a dead link.
+    because GitHub puts assets under /releases/download/<tag>/<name>, with the
+    tag in the path. Returns "" when either the template or the package's
+    filename is missing, which hides that card's button rather than emitting a
+    dead link.
     """
     tpl = releases.get("asset_url", "")
     if not tpl or not pkg.get("file"):
@@ -249,38 +249,250 @@ else:
         '<a href="{{ donateUrl }}"',
         '<a data-lg-href="donateUrl" href="%s"' % html.escape(donate_url, quote=True), 1)
 
-# The two release links live in href="..." where a <span> wrapper is invalid,
-# so the anchor carries the binding name and the value goes in directly.
-for _key in ("releasesUrl", "mirrorUrl"):
-    doc = doc.replace(
-        '<a href="{{ %s }}"' % _key,
-        '<a data-lg-href="%s" href="%s"' % (_key, html.escape(values[_key], quote=True)), 1)
+# The release link lives in href="..." where a <span> wrapper is invalid, so
+# the anchor carries the binding name and the value goes in directly.
+doc = doc.replace(
+    '<a href="{{ releasesUrl }}"',
+    '<a data-lg-href="releasesUrl" href="%s"'
+    % html.escape(values["releasesUrl"], quote=True), 1)
+
+# The artifact had a second release button beside that one, pointing at the
+# GitLab release list. It goes -- see correction 1 below for why -- and it has
+# to go here, while its href is still the literal {{ mirrorUrl }}: expand()
+# would turn that into a <span>, which no href pattern would match.
+doc, _n = re.subn(r'\s*<a href="\{\{ mirrorUrl \}\}"[^>]*>.*?</a>', "",
+                  doc, count=1, flags=re.S)
+if _n != 1:
+    raise SystemExit("secondary (mirror) release button not found")
 
 doc = expand(doc, values)
 
 # ------------------------------------------------------- content corrections
 # Fixes applied to the artifact's markup, re-applied on every rebuild.
 
-# 1. Downloads come from GitHub, not GitLab. releases.json already points the
-#    prominent (blue) button at the GitHub release assets and the secondary one
-#    at GitLab; these are the labels that go with that swap. GitLab remains the
-#    canonical source repository -- only the download path moved.
-_labels = [(">Releases (GitLab)<", ">Releases (GitHub)<"),
-           (">GitHub mirror<", ">Releases (GitLab)<")]
-for _before, _after in _labels:
+# 1. GitHub only. The artifact was written when the canonical repository and
+#    the release list both lived on a self-hosted GitLab. The project points
+#    people at GitHub for everything now, so nothing on the page may link to
+#    GitLab or name it. Each rewrite below asserts its own needle and the
+#    sweep at the end of the block asserts the result, so a reworded artifact
+#    fails the build instead of quietly reintroducing a link.
+
+# The secondary release button is already gone (above). Nothing takes its
+# place: the repository is linked from the nav, the hero and the Contribute
+# card, so another button would only repeat them. The Contribute card offered
+# the two repositories side by side; the GitLab one goes the same way.
+doc, _n = re.subn(
+    r'\s*<a href="https://gitlab\.smetonis\.net/Mizerd/lightning"[^>]*>'
+    r'GitLab \(canonical\)</a>', "", doc, count=1, flags=re.S)
+if _n != 1:
+    raise SystemExit("GitLab repository button not found")
+
+# Labels and prose. The wording keeps every claim the artifact made that is
+# still true -- the manifest, not the host, is what defines a release -- and
+# drops only the sentences whose subject was the old host.
+_edits = [
+    (">Releases (GitLab)<", ">Releases (GitHub)<"),
+    (">GitHub (mirror)<", ">Open on GitHub<"),
+    (">GitLab decides what a release is<",
+     ">The signed manifest decides what a release is<"),
+    ("Downloads come from the GitHub mirror first, to keep the traffic off "
+     "the project's own server, and fall back to GitLab. Lightning never "
+     "calls the GitHub API",
+     "Downloads come from GitHub, but Lightning never calls the GitHub API"),
+    ("The mirror's URL is part of the signed manifest",
+     "The download URL is part of the signed manifest"),
+    ("Someone who took over the mirror could break your download.",
+     "Someone who took over the download host could break your download."),
+    ("in the room or in the tracker on the mirror.",
+     "in the room or in the issue tracker on GitHub."),
+    ("It's all public, under GPL-3.0-or-later. GitLab is the real repository. "
+     "GitHub is an automatic read-only mirror, so pull requests opened there "
+     "don't reach anyone.",
+     "It's all public, under GPL-3.0-or-later. The code, the full release "
+     "history and the build scripts are all on GitHub."),
+]
+for _before, _after in _edits:
     if _before not in doc:
-        raise SystemExit("expected download label %r not found" % _before)
+        raise SystemExit("expected text %r not found" % _before)
     doc = doc.replace(_before, _after, 1)
 
-# 2. The "docs/build-and-test.md" link pointed at the repository root, so it
-#    dropped you on the project home page instead of the document it names.
-#    Point it at the file, on the mirror the other five doc links already use.
+# What is left is plain repository links: the nav's "Source" and the hero's
+# "Read the source". Correction 2 below relies on this having already run.
+doc = doc.replace("https://gitlab.smetonis.net/Mizerd/lightning",
+                  "https://github.com/Mizerd/lightning")
+
+if "gitlab" in doc.lower():
+    raise SystemExit("a GitLab reference survived the rewrite")
+
+# 2. Code signing. The artifact said the SignPath Foundation application had
+#    not been made; it has, and it is queued. This is the one claim on the page
+#    that can quietly become a lie, so it asserts its own needle.
+_before = ("Signing through the SignPath Foundation is something we'd like to "
+           "do, but we <strong style=\"color: #f0d6a0; font-weight: 600;\">"
+           "haven't even applied yet</strong>, so no release is signed today.")
+_after = ("We've applied to the SignPath Foundation and the "
+          "<strong style=\"color: #f0d6a0; font-weight: 600;\">application is "
+          "in progress</strong>, so no release is signed today.")
+if _before not in doc:
+    raise SystemExit("SignPath sentence not found")
+doc = doc.replace(_before, _after, 1)
+
+# 3. The alpha banner named a release series ("0.7.x"), which nothing keeps
+#    current. Bind it to the version instead, so it follows a GitHub release
+#    like every other version on the page.
+#
+#    It also ran to four lines on a phone -- roughly a sixth of the screen,
+#    above the fold, on every scroll, because the bar is sticky. A second,
+#    shorter wording carries the same three warnings in one clause; exactly
+#    one of the two is visible at any width (see .lg-alpha-* in the CSS).
+#    Both are in the markup rather than one being rewritten by script, so the
+#    warning is right with JavaScript off.
+#
+#    expand() has already run, so these emit the expanded <span data-lg-bind>
+#    form directly -- a {{ version }} left here would never be substituted.
+_ver = '<span data-lg-bind="version">%s</span>' % html.escape(
+    str(releases.get("version", "")))
+_pill = ("<span style=\"display: inline-flex; align-items: center; gap: 8px; "
+         "font-family: 'JetBrains Mono', monospace; font-size: 11px; "
+         "font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; "
+         "color: #e8a33d;\">")
+if _pill not in doc:
+    raise SystemExit("alpha pill not found")
+doc = doc.replace(_pill, _pill[:-1] + ' class="lg-alpha-pill">', 1)
+
+_before = ("<span style=\"max-width: 780px;\">Lightning is in alpha (0.7.x). "
+           "It works")
+if _before not in doc:
+    raise SystemExit("alpha banner sentence not found")
 doc = doc.replace(
-    '<a href="https://gitlab.smetonis.net/Mizerd/lightning">docs/build-and-test.md</a>',
+    _before,
+    "<span style=\"max-width: 780px;\" class=\"lg-alpha-full\">Lightning is in "
+    "alpha (" + _ver + "). It works", 1)
+
+_bold = "color: #fbeccd; font-weight: 700;"
+doc = doc.replace(
+    "and calls don't work yet.</span>",
+    "and calls don't work yet.</span>"
+    "<span class=\"lg-alpha-brief\">Alpha " + _ver + " \u2014 "
+    "<strong style=\"%s\">no security audit</strong>, "
+    "<strong style=\"%s\">no code signing</strong>, no calls yet.</span>"
+    % (_bold, _bold), 1)
+
+# 6. macOS. The artifact had a one-line card saying a macOS build existed but
+#    would not be published until it could be signed. That is no longer the
+#    plan -- it ships unsigned when it ships -- so the small card goes and a
+#    real block takes its place, below the Linux and Windows columns.
+#
+#    Nothing here is wired to a release: there is no download button, no
+#    package card and no entry in releases.json, so releases.js and
+#    /api/latest never touch it. It is static copy until there is a build to
+#    point at, at which point it becomes ordinary packages with os "macos".
+_mac_card = (
+    '        <div style="padding: 22px; border: 1px solid #1e2631; '
+    'border-radius: 11px; background: #10151c;">\n'
+    '          <div style="font-size: 15px; font-weight: 600;">macOS</div>\n'
+    '          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; '
+    "color: #8d99a8;\">Not supported yet. There's a macOS build in the "
+    "pipeline, but it won't be published until it can be signed.</p>\n"
+    '        </div>\n')
+if _mac_card not in doc:
+    raise SystemExit("macOS placeholder card not found")
+doc = doc.replace(_mac_card, "", 1)
+
+_CARD = ("padding: 22px; border: 1px solid #1e2631; border-radius: 11px; "
+         "background: #10151c;")
+_CMD = ("margin-top: 10px; padding: 11px 13px; border-radius: 7px; "
+        "background: #070a0e; border: 1px solid #1a212b; font-family: "
+        "'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; "
+        "color: #a8d5bd; overflow-x: auto; white-space: pre;")
+_BODY = "margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;"
+_STEP = ("font-family: 'JetBrains Mono', monospace; font-size: 11.5px; "
+         "font-weight: 700; color: #5f88cc;")
+
+_macos = (
+    '      <div style="margin-top: 24px; padding: 26px; border: 1px solid '
+    '#1e2631; border-radius: 13px; background: linear-gradient(180deg, '
+    '#141a23, #10151c);">\n'
+    '        <div style="display: flex; flex-wrap: wrap; align-items: '
+    'baseline; gap: 12px;">\n'
+    '          <h3 style="font-size: 20px; font-weight: 600;">macOS</h3>\n'
+    '          <span style="padding: 3px 9px; border-radius: 5px; background: '
+    "#1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; "
+    'font-weight: 700; letter-spacing: 0.04em; color: #9dbdf5;">Coming soon'
+    '</span>\n'
+    '        </div>\n'
+    '        <p style="max-width: 780px; %s">A macOS build is in progress. '
+    'There is nothing to download yet, and no date -- when there is a release '
+    'it appears on the GitHub releases page with everything else.</p>\n'
+    '\n'
+    '        <div style="margin-top: 18px; padding: 18px 20px; border: 1px '
+    'solid #4a3814; border-radius: 11px; background: #1c1609;">\n'
+    '          <div style="font-size: 14.5px; font-weight: 600; color: '
+    '#f0d6a0;">It will not be signed or notarised</div>\n'
+    '          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; '
+    'color: #c4a874;">Notarising needs a paid Apple Developer account, and '
+    'there is no company behind Lightning to hold one. Gatekeeper will refuse '
+    'to open the app on the first try. That is expected, and the steps below '
+    'are how you get past it -- so <strong style="color: #f0d6a0; '
+    'font-weight: 600;">check the checksum first</strong>, because you are '
+    'the one vouching for the download.</p>\n'
+    '        </div>\n'
+    '\n'
+    '        <div style="display: grid; grid-template-columns: repeat('
+    'auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">\n'
+    '          <div style="%s">\n'
+    '            <div style="%s">STEP 1</div>\n'
+    '            <div style="margin-top: 8px; font-size: 15px; font-weight: '
+    '600;">Check it before you open it</div>\n'
+    '            <p style="%s">Compare the download against the SHA256SUMS '
+    'file from the same release.</p>\n'
+    '            <div style="%s">shasum -a 256 -c SHA256SUMS '
+    '--ignore-missing</div>\n'
+    '          </div>\n'
+    '          <div style="%s">\n'
+    '            <div style="%s">STEP 2</div>\n'
+    '            <div style="margin-top: 8px; font-size: 15px; font-weight: '
+    '600;">Open it the first time</div>\n'
+    '            <p style="%s">Drag Lightning to Applications, then '
+    '<em style="font-style: normal; color: #c9d5e4;">Control-click</em> it '
+    'and choose <em style="font-style: normal; color: #c9d5e4;">Open</em>, '
+    'and <em style="font-style: normal; color: #c9d5e4;">Open</em> again in '
+    'the dialog. Double-clicking will not offer that choice -- only this '
+    'route does, and only the first time.</p>\n'
+    '          </div>\n'
+    '          <div style="%s">\n'
+    '            <div style="%s">IF IT STILL REFUSES</div>\n'
+    '            <div style="margin-top: 8px; font-size: 15px; font-weight: '
+    '600;">"Damaged and can\'t be opened"</div>\n'
+    '            <p style="%s">Nothing is damaged. That is the quarantine flag '
+    'macOS attaches to anything downloaded. Clear it, then open the app '
+    'normally.</p>\n'
+    '            <div style="%s">xattr -d com.apple.quarantine '
+    '/Applications/Lightning.app</div>\n'
+    '          </div>\n'
+    '        </div>\n'
+    '      </div>\n'
+    '\n') % (_BODY, _CARD, _STEP, _BODY, _CMD, _CARD, _STEP, _BODY,
+             _CARD, _STEP, _BODY, _CMD)
+
+_after_cols = ('      <div style="display: grid; grid-template-columns: '
+               'repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; '
+               'margin-top: 32px;">\n')
+if _after_cols not in doc:
+    raise SystemExit("trailing download-notes grid not found")
+doc = doc.replace(_after_cols, _macos + _after_cols, 1)
+
+# 4. The "docs/build-and-test.md" link pointed at the repository root, so it
+#    dropped you on the project home page instead of the document it names.
+#    Point it at the file, in the same repository the other five doc links
+#    already use. The bare repository URL here is what correction 1 left
+#    behind; this must run after that sweep, not before it.
+doc = doc.replace(
+    '<a href="https://github.com/Mizerd/lightning">docs/build-and-test.md</a>',
     '<a href="https://github.com/Mizerd/lightning/blob/main/docs/build-and-test.md">'
     'docs/build-and-test.md</a>', 1)
 
-# 3. The verify box tells you to run sha256sum against SHA256SUMS but gave you
+# 5. The verify box tells you to run sha256sum against SHA256SUMS but gave you
 #    no way to get the file. Link it, from the same release as the packages.
 _sha = releases.get("asset_url", "")
 if _sha:
@@ -366,7 +578,7 @@ def _mark(cls, want):
 _mark("lg-nav", lambda a: "<nav" == "<nav" and "display: flex" in a and "gap: 28px" in a
       and "max-width: 1180px" in a and "padding: 14px 32px" in a)
 _NAVLINKS = ("#different", "#screenshots", "#features", "#privacy",
-             "gitlab.smetonis.net/Mizerd/lightning\"")
+             "github.com/Mizerd/lightning\"")
 _mark("lg-navlink", lambda a: 'font-size: 14px; font-weight: 500; color: #93a0b1;' in a
       and any(h in a for h in _NAVLINKS))
 
@@ -384,6 +596,13 @@ _mark("lg-rows", lambda a: "88px minmax(0, 1fr) minmax(0, 1.15fr)" in a)
 # demand propagates up through every ancestor and inflates the whole download
 # section. Tagged here so the media query can let them wrap instead.
 _mark("lg-cmd", lambda a: "overflow-x: auto" in a and "white-space: pre" in a)
+
+# The sticky alpha bar. The "ALPHA" pill inside it is a <span>, which _mark()
+# cannot reach (TAG_RE covers nav/section/div/figure/a/h1-h3 only) -- a
+# predicate for it here matched an unrelated amber label in the status section
+# instead, so the pill is tagged by hand in correction 3.
+_mark("lg-alpha-bar", lambda a: "background: #241c0d" in a
+      and "padding: 11px 24px" in a)
 
 # The hero's version pill. At 11.5px the line runs ~319px, so on a 390px screen
 # it breaks after "matrix-rust-sdk" and leaves "0.18" alone on a second line.
@@ -445,6 +664,11 @@ extra_head = """
    Overrides for the desktop-only inline styles. !important is unavoidable:
    an inline style beats any stylesheet rule without it. See the responsive
    pass in tools/unbundle.py for what each class is attached to. */
+/* Two wordings of the alpha warning, one visible at a time. The brief one is
+   for phones, where the full sentence wrapped to four lines in a bar that is
+   sticky -- so it cost a sixth of the screen on every scroll. */
+.lg-alpha-brief {{ display: none; }}
+
 @media (max-width: 760px) {{
   /* The nav's seven links in a nowrap row were the widest element on the
      page (719px at a 390px viewport) and what forced the horizontal scroll.
@@ -482,6 +706,25 @@ extra_head = """
   .lg-grid > *, .lg-rows > * {{ min-width: 0 !important; }}
 
   pre, code {{ overflow-wrap: anywhere; }}
+
+  /* Swap the two wordings, and drop the "ALPHA" pill -- the brief sentence
+     opens with the same word, so the pill is only a wasted row. */
+  .lg-alpha-full, .lg-alpha-pill {{ display: none !important; }}
+
+  /* Drop the flex row for a plain block of running text. As flex items the
+     warning and the "what's missing" link were forced onto separate rows --
+     flex blockifies its children, so `display: inline` on the span computes
+     to `block` -- which cost a whole row to a 126px link. Flowing them as one
+     paragraph lets the link finish the last line instead. */
+  .lg-alpha-bar {{
+    display: block !important;
+    text-align: center !important;
+    padding: 8px 14px !important;
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }}
+  .lg-alpha-brief {{ display: inline !important; }}
+  .lg-alpha-bar a {{ margin-left: 6px !important; }}
 
   /* Give the pill room for one line instead of orphaning the SDK version. */
   .lg-pill {{ font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }}

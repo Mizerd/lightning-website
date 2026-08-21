@@ -101,7 +101,6 @@
     text("version", d.version);
     if (d.released) text("released", d.released);
     if (d.releases_url) link("releasesUrl", d.releases_url);
-    if (d.mirror_url) link("mirrorUrl", d.mirror_url);
     link("donateUrl", d.donate_url);
 
     if (Array.isArray(d.packages) && d.packages.length) {

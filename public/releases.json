@@ -2,7 +2,6 @@
   "version": "0.7.4",
   "released": "2026-08-19",
   "releases_url": "https://github.com/Mizerd/lightning/releases",
-  "mirror_url": "https://gitlab.smetonis.net/Mizerd/lightning/-/releases",
   "donate_url": "",
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
   "packages": [

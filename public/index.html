@@ -556,6 +556,11 @@
    Overrides for the desktop-only inline styles. !important is unavoidable:
    an inline style beats any stylesheet rule without it. See the responsive
    pass in tools/unbundle.py for what each class is attached to. */
+/* Two wordings of the alpha warning, one visible at a time. The brief one is
+   for phones, where the full sentence wrapped to four lines in a bar that is
+   sticky -- so it cost a sixth of the screen on every scroll. */
+.lg-alpha-brief { display: none; }
+
 @media (max-width: 760px) {
   /* The nav's seven links in a nowrap row were the widest element on the
      page (719px at a 390px viewport) and what forced the horizontal scroll.
@@ -593,6 +598,25 @@
   .lg-grid > *, .lg-rows > * { min-width: 0 !important; }
 
   pre, code { overflow-wrap: anywhere; }
+
+  /* Swap the two wordings, and drop the "ALPHA" pill -- the brief sentence
+     opens with the same word, so the pill is only a wasted row. */
+  .lg-alpha-full, .lg-alpha-pill { display: none !important; }
+
+  /* Drop the flex row for a plain block of running text. As flex items the
+     warning and the "what's missing" link were forced onto separate rows --
+     flex blockifies its children, so `display: inline` on the span computes
+     to `block` -- which cost a whole row to a 126px link. Flowing them as one
+     paragraph lets the link finish the last line instead. */
+  .lg-alpha-bar {
+    display: block !important;
+    text-align: center !important;
+    padding: 8px 14px !important;
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }
+  .lg-alpha-brief { display: inline !important; }
+  .lg-alpha-bar a { margin-left: 6px !important; }
 
   /* Give the pill room for one line instead of orphaning the SDK version. */
   .lg-pill { font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }
@@ -633,7 +657,7 @@ html, body { overflow-x: clip; }
 .hv-18:hover { transform: translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18); }
 .hv-19:hover { transform: translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18); }
 .hv-20:hover { background: #5590f5; }
-.hv-21:hover { border-color: #3d4a5c; }
+.hv-21:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
 .hv-22:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
 .hv-23:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
 .hv-24:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
@@ -641,22 +665,20 @@ html, body { overflow-x: clip; }
 .hv-26:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
 .hv-27:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
 .hv-28:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
-.hv-29:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-29:hover { border-color: #4a3814; transform: translateY(-3px); }
 .hv-30:hover { border-color: #4a3814; transform: translateY(-3px); }
 .hv-31:hover { border-color: #4a3814; transform: translateY(-3px); }
 .hv-32:hover { border-color: #4a3814; transform: translateY(-3px); }
-.hv-33:hover { border-color: #4a3814; transform: translateY(-3px); }
-.hv-34:hover { background: #5590f5; }
-.hv-35:hover { border-color: #35496a; transform: translateY(-4px); }
-.hv-36:hover { border-color: #3d4a5c; }
-.hv-37:hover { border-color: #3d4a5c; }
-.hv-38:hover { border-color: #35496a; transform: translateY(-4px); }
-.hv-39:hover { border-color: #5a7f5a; }
+.hv-33:hover { background: #5590f5; }
+.hv-34:hover { border-color: #35496a; transform: translateY(-4px); }
+.hv-35:hover { border-color: #3d4a5c; }
+.hv-36:hover { border-color: #35496a; transform: translateY(-4px); }
+.hv-37:hover { border-color: #5a7f5a; }
+.hv-38:hover { color: #d5dee9; }
+.hv-39:hover { color: #d5dee9; }
 .hv-40:hover { color: #d5dee9; }
 .hv-41:hover { color: #d5dee9; }
 .hv-42:hover { color: #d5dee9; }
-.hv-43:hover { color: #d5dee9; }
-.hv-44:hover { color: #d5dee9; }
 </style>
 <script src="/releases.js" defer></script>
 </head>
@@ -664,11 +686,11 @@ html, body { overflow-x: clip; }
 <div style="min-height: 100vh; background: #0c0f14;">
 
   <div style="position: sticky; top: 0; z-index: 60;">
-  <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: center; padding: 11px 24px; background: #241c0d; border-bottom: 1px solid #4a3814; font-size: 13.5px; line-height: 1.45; color: #f0d6a0;">
-    <span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #e8a33d;">
+  <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: center; padding: 11px 24px; background: #241c0d; border-bottom: 1px solid #4a3814; font-size: 13.5px; line-height: 1.45; color: #f0d6a0;" class="lg-alpha-bar">
+    <span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #e8a33d;" class="lg-alpha-pill">
       <span style="width: 7px; height: 7px; border-radius: 50%; background: #e8a33d;"></span>Alpha
     </span>
-    <span style="max-width: 780px;">Lightning is in alpha (0.7.x). It works for everyday chat, but there's been <strong style="color: #fbeccd; font-weight: 700;">no security audit</strong>, the packages <strong style="color: #fbeccd; font-weight: 700;">aren't code-signed</strong>, and calls don't work yet.</span>
+    <span style="max-width: 780px;" class="lg-alpha-full">Lightning is in alpha (<span data-lg-bind="version">0.7.4</span>). It works for everyday chat, but there's been <strong style="color: #fbeccd; font-weight: 700;">no security audit</strong>, the packages <strong style="color: #fbeccd; font-weight: 700;">aren't code-signed</strong>, and calls don't work yet.</span><span class="lg-alpha-brief">Alpha <span data-lg-bind="version">0.7.4</span> — <strong style="color: #fbeccd; font-weight: 700;">no security audit</strong>, <strong style="color: #fbeccd; font-weight: 700;">no code signing</strong>, no calls yet.</span>
     <a href="#status" style="color: #ffd68a; border-bottom: 1px solid #7a5c22; white-space: nowrap;">What's still missing →</a>
   </div>
 
@@ -682,7 +704,7 @@ html, body { overflow-x: clip; }
       <a href="#screenshots" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-1 lg-navlink">Screenshots</a>
       <a href="#features" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-2 lg-navlink">Features</a>
       <a href="#privacy" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-3 lg-navlink">Privacy</a>
-      <a href="https://gitlab.smetonis.net/Mizerd/lightning" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-4 lg-navlink">Source</a>
+      <a href="https://github.com/Mizerd/lightning" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-4 lg-navlink">Source</a>
       <a href="#download" style="padding: 9px 18px; border-radius: 8px; background: #3b7ff0; color: #fff; font-size: 14px; font-weight: 600; box-shadow: 0 1px 0 rgba(255,255,255,0.14) inset;" class="hv-5">Download</a>
     </nav>
   </header>
@@ -708,7 +730,7 @@ html, body { overflow-x: clip; }
         <a href="#download" style="position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 10px; padding: 15px 26px; border-radius: 10px; background: #3b7ff0; color: #fff; font-size: 15.5px; font-weight: 600; box-shadow: 0 1px 0 rgba(255,255,255,0.16) inset, 0 8px 26px rgba(59,127,240,0.28); transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;" class="hv-6" style-before="content: ''; position: absolute; top: 0; bottom: 0; width: 42px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.42), rgba(255,255,255,0)); animation: lgSweep 3.6s ease-in-out infinite;">
           <span style="position: relative;">Download for Linux or Windows</span>
         </a>
-        <a href="https://gitlab.smetonis.net/Mizerd/lightning" style="display: inline-flex; align-items: center; gap: 10px; padding: 15px 26px; border-radius: 10px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 15.5px; font-weight: 600;" class="hv-7">
+        <a href="https://github.com/Mizerd/lightning" style="display: inline-flex; align-items: center; gap: 10px; padding: 15px 26px; border-radius: 10px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 15.5px; font-weight: 600;" class="hv-7">
           Read the source
         </a>
       </div>
@@ -937,7 +959,6 @@ html, body { overflow-x: clip; }
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 12px;">
           <a data-lg-href="releasesUrl" href="https://github.com/Mizerd/lightning/releases" style="padding: 13px 22px; border-radius: 9px; background: #3b7ff0; color: #fff; font-size: 14.5px; font-weight: 600;" class="hv-20">Releases (GitHub)</a>
-          <a data-lg-href="mirrorUrl" href="https://gitlab.smetonis.net/Mizerd/lightning/-/releases" style="padding: 13px 22px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14.5px; font-weight: 600;" class="hv-21">Releases (GitLab)</a>
         </div>
       </div>
 
@@ -949,7 +970,7 @@ html, body { overflow-x: clip; }
           </div>
           <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 18px;">
             
-              <div data-lg-pkg="linux" data-lg-format=".deb" data-lg-file="lightning_0.7.4_amd64.deb" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-22">
+              <div data-lg-pkg="linux" data-lg-format=".deb" data-lg-file="lightning_0.7.4_amd64.deb" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-21">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.deb</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Debian / Ubuntu / Mint / Pop!_OS</span></span>
@@ -957,7 +978,7 @@ html, body { overflow-x: clip; }
                 <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo apt install ./lightning_0.7.4_amd64.deb</span></div>
               </div>
             
-              <div data-lg-pkg="linux" data-lg-format=".rpm" data-lg-file="lightning-0.7.4-1.x86_64.rpm" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-23">
+              <div data-lg-pkg="linux" data-lg-format=".rpm" data-lg-file="lightning-0.7.4-1.x86_64.rpm" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-22">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.rpm</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Fedora / RHEL / openSUSE</span></span>
@@ -965,7 +986,7 @@ html, body { overflow-x: clip; }
                 <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo dnf install ./lightning-0.7.4-1.x86_64.rpm</span></div>
               </div>
             
-              <div data-lg-pkg="linux" data-lg-format="AppImage" data-lg-file="Lightning-0.7.4-x86_64.AppImage" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-24">
+              <div data-lg-pkg="linux" data-lg-format="AppImage" data-lg-file="Lightning-0.7.4-x86_64.AppImage" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-23">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">AppImage</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Any distribution, nothing installed</span></span>
@@ -973,7 +994,7 @@ html, body { overflow-x: clip; }
                 <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">chmod +x Lightning-0.7.4-x86_64.AppImage &amp;&amp; ./Lightning-0.7.4-x86_64.AppImage</span></div>
               </div>
             
-              <div data-lg-pkg="linux" data-lg-format=".flatpak" data-lg-file="lightning_0.7.4_amd64.flatpak" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-25">
+              <div data-lg-pkg="linux" data-lg-format=".flatpak" data-lg-file="lightning_0.7.4_amd64.flatpak" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-24">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.flatpak</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Flatpak (KDE Platform 6.9 runtime)</span></span>
@@ -981,7 +1002,7 @@ html, body { overflow-x: clip; }
                 <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">flatpak install --user ./lightning_0.7.4_amd64.flatpak</span></div>
               </div>
             
-              <div data-lg-pkg="linux" data-lg-format=".snap" data-lg-file="lightning_0.7.4_amd64.snap" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-26">
+              <div data-lg-pkg="linux" data-lg-format=".snap" data-lg-file="lightning_0.7.4_amd64.snap" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-25">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.snap</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Snap, strict confinement, local file</span></span>
@@ -999,7 +1020,7 @@ html, body { overflow-x: clip; }
           </div>
           <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 18px;">
             
-              <div data-lg-pkg="windows" data-lg-format=".msi" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64.msi" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-27">
+              <div data-lg-pkg="windows" data-lg-format=".msi" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64.msi" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-26">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.msi</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">MSI installer, per-user</span></span>
@@ -1007,7 +1028,7 @@ html, body { overflow-x: clip; }
                 <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">msiexec /i Lightning-0.7.4-e8139ed-windows-x86_64.msi</span></div>
               </div>
             
-              <div data-lg-pkg="windows" data-lg-format=".exe" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-28">
+              <div data-lg-pkg="windows" data-lg-format=".exe" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-27">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.exe</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Setup EXE, per-user</span></span>
@@ -1015,7 +1036,7 @@ html, body { overflow-x: clip; }
                 <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">run the installer</span></div>
               </div>
             
-              <div data-lg-pkg="windows" data-lg-format=".zip" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-29">
+              <div data-lg-pkg="windows" data-lg-format=".zip" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-28">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.zip</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Portable ZIP, installs nothing</span></span>
@@ -1027,7 +1048,7 @@ html, body { overflow-x: clip; }
 
           <div style="margin-top: 20px; padding: 20px; border: 1px solid #4a3814; border-radius: 11px; background: #1c1609;">
             <div style="font-size: 14.5px; font-weight: 600; color: #f0d6a0;">Windows packages aren't signed</div>
-            <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #c4a874;">You'll get an "unknown publisher" warning from SmartScreen. If you've checked the download against the checksum, pick <em style="font-style: normal; color: #f0d6a0;">More info → Run anyway</em>. Signing through the SignPath Foundation is something we'd like to do, but we <strong style="color: #f0d6a0; font-weight: 600;">haven't even applied yet</strong>, so no release is signed today.</p>
+            <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #c4a874;">You'll get an "unknown publisher" warning from SmartScreen. If you've checked the download against the checksum, pick <em style="font-style: normal; color: #f0d6a0;">More info → Run anyway</em>. We've applied to the SignPath Foundation and the <strong style="color: #f0d6a0; font-weight: 600;">application is in progress</strong>, so no release is signed today.</p>
           </div>
 
           <div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
@@ -1038,11 +1059,40 @@ html, body { overflow-x: clip; }
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 32px;">
-        <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
-          <div style="font-size: 15px; font-weight: 600;">macOS</div>
-          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Not supported yet. There's a macOS build in the pipeline, but it won't be published until it can be signed.</p>
+      <div style="margin-top: 24px; padding: 26px; border: 1px solid #1e2631; border-radius: 13px; background: linear-gradient(180deg, #141a23, #10151c);">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px;">
+          <h3 style="font-size: 20px; font-weight: 600;">macOS</h3>
+          <span style="padding: 3px 9px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; color: #9dbdf5;">Coming soon</span>
         </div>
+        <p style="max-width: 780px; margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">A macOS build is in progress. There is nothing to download yet, and no date -- when there is a release it appears on the GitHub releases page with everything else.</p>
+
+        <div style="margin-top: 18px; padding: 18px 20px; border: 1px solid #4a3814; border-radius: 11px; background: #1c1609;">
+          <div style="font-size: 14.5px; font-weight: 600; color: #f0d6a0;">It will not be signed or notarised</div>
+          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #c4a874;">Notarising needs a paid Apple Developer account, and there is no company behind Lightning to hold one. Gatekeeper will refuse to open the app on the first try. That is expected, and the steps below are how you get past it -- so <strong style="color: #f0d6a0; font-weight: 600;">check the checksum first</strong>, because you are the one vouching for the download.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;" class="lg-grid">
+          <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #5f88cc;">STEP 1</div>
+            <div style="margin-top: 8px; font-size: 15px; font-weight: 600;">Check it before you open it</div>
+            <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Compare the download against the SHA256SUMS file from the same release.</p>
+            <div style="margin-top: 10px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd">shasum -a 256 -c SHA256SUMS --ignore-missing</div>
+          </div>
+          <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #5f88cc;">STEP 2</div>
+            <div style="margin-top: 8px; font-size: 15px; font-weight: 600;">Open it the first time</div>
+            <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Drag Lightning to Applications, then <em style="font-style: normal; color: #c9d5e4;">Control-click</em> it and choose <em style="font-style: normal; color: #c9d5e4;">Open</em>, and <em style="font-style: normal; color: #c9d5e4;">Open</em> again in the dialog. Double-clicking will not offer that choice -- only this route does, and only the first time.</p>
+          </div>
+          <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #5f88cc;">IF IT STILL REFUSES</div>
+            <div style="margin-top: 8px; font-size: 15px; font-weight: 600;">"Damaged and can't be opened"</div>
+            <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Nothing is damaged. That is the quarantine flag macOS attaches to anything downloaded. Clear it, then open the app normally.</p>
+            <div style="margin-top: 10px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd">xattr -d com.apple.quarantine /Applications/Lightning.app</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 32px;">
         <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
           <div style="font-size: 15px; font-weight: 600;">Building from source</div>
           <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">The route we actually test is the repo's Nix flake on Linux, with Qt 6.5+ and Rust from the dev shell. <a href="https://github.com/Mizerd/lightning/blob/main/docs/build-and-test.md">docs/build-and-test.md</a></p>
@@ -1081,8 +1131,8 @@ html, body { overflow-x: clip; }
       </div>
 
       <div style="margin-top: 24px; padding: 30px; border: 1px solid #1e2631; border-radius: 13px; background: linear-gradient(180deg, #141a23, #10151c);">
-        <h3 style="font-size: 19px; font-weight: 600;">GitLab decides what a release is</h3>
-        <p style="max-width: 860px; margin-top: 12px; font-size: 15px; line-height: 1.62; color: #97a4b4;">It's the only thing that decides which versions exist and what their bytes should hash to. Downloads come from the GitHub mirror first, to keep the traffic off the project's own server, and fall back to GitLab. Lightning never calls the GitHub API or reads anything GitHub says about a release. The mirror's URL is part of the signed manifest, and whatever comes back is checked against a hash that was fixed before the download started. <strong style="color: #dde5f0; font-weight: 600;">Someone who took over the mirror could break your download. They couldn't push you an update.</strong></p>
+        <h3 style="font-size: 19px; font-weight: 600;">The signed manifest decides what a release is</h3>
+        <p style="max-width: 860px; margin-top: 12px; font-size: 15px; line-height: 1.62; color: #97a4b4;">It's the only thing that decides which versions exist and what their bytes should hash to. Downloads come from GitHub, but Lightning never calls the GitHub API or reads anything GitHub says about a release. The download URL is part of the signed manifest, and whatever comes back is checked against a hash that was fixed before the download started. <strong style="color: #dde5f0; font-weight: 600;">Someone who took over the download host could break your download. They couldn't push you an update.</strong></p>
       </div>
     </div>
   </section>
@@ -1096,19 +1146,19 @@ html, body { overflow-x: clip; }
       <p style="max-width: 720px; margin-top: 18px; font-size: 17px; line-height: 1.6; color: #a4b1c2;">Lightning is in the Matrix.org client directory, listed as <strong style="color: #dde5f0; font-weight: 600;">Alpha</strong> for Windows and Linux. That's a listing, not an endorsement. The Matrix.org Foundation hasn't certified or approved anything here.</p>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-top: 44px;" class="lg-grid">
-        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-30">
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-29">
           <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Calls don't work yet</h3>
           <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">There's a 1:1 voice stack in the code, with MSC2746 signalling and a WebRTC engine, but it's switched off on purpose. Nobody has confirmed an answered call over a real network yet, so the button says "coming soon" instead of pretending otherwise.</p>
         </div>
-        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-31">
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-30">
           <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Search is limited in encrypted rooms</h3>
           <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">A homeserver can't search messages it can't read, so full-history search only works in unencrypted rooms. Encrypted ones search the part of the timeline you've loaded, and Lightning says as much instead of quietly giving you fewer results.</p>
         </div>
-        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-32">
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-31">
           <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Nobody has audited it</h3>
           <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">There's been no formal security audit, and no release is code-signed. Anything touching encryption gets reviewed carefully and has to come with tests, but that isn't the same as an audit.</p>
         </div>
-        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-33">
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-32">
           <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Expect rough edges</h3>
           <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">Things still move around: APIs, the interface, the way features behave. Some are experimental, and space-restricted join rules can be seen but not edited. If you need something to interoperate with another client, test it rather than assume it. This isn't a finished product.</p>
         </div>
@@ -1122,25 +1172,24 @@ html, body { overflow-x: clip; }
         <div style="padding: 34px; border: 1px solid #2b3a52; border-radius: 14px; background: linear-gradient(180deg, #14202f, #0f1620);">
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Say hello</div>
           <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Find us on Matrix</h3>
-          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">Bugs and questions are both welcome, either in the room or in the tracker on the mirror.</p>
-          <a href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; background: #3b7ff0; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 500;" class="hv-34">#lightning:matrix.smetonis.net</a>
+          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">Bugs and questions are both welcome, either in the room or in the issue tracker on GitHub.</p>
+          <a href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; background: #3b7ff0; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 500;" class="hv-33">#lightning:matrix.smetonis.net</a>
         </div>
 
-        <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-35">
+        <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-34">
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Contribute</div>
           <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Read the code</h3>
-          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">It's all public, under GPL-3.0-or-later. GitLab is the real repository. GitHub is an automatic read-only mirror, so pull requests opened there don't reach anyone.</p>
+          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">It's all public, under GPL-3.0-or-later. The code, the full release history and the build scripts are all on GitHub.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;">
-            <a href="https://gitlab.smetonis.net/Mizerd/lightning" style="padding: 12px 18px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14px; font-weight: 600;" class="hv-36">GitLab (canonical)</a>
-            <a href="https://github.com/Mizerd/lightning" style="padding: 12px 18px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14px; font-weight: 600;" class="hv-37">GitHub (mirror)</a>
+            <a href="https://github.com/Mizerd/lightning" style="padding: 12px 18px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14px; font-weight: 600;" class="hv-35">Open on GitHub</a>
           </div>
         </div>
 
-        <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-38">
+        <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-36">
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Support the project</div>
           <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Help pay for the build server</h3>
           <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">One maintainer, no company, no income. Donations cover CI, the release server, and eventually that signing certificate.</p>
-          <a data-lg-href="donateUrl" hidden href="#" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; border: 1px solid #3f5a3f; background: #14201a; color: #a8d5bd; font-size: 14px; font-weight: 600;" class="hv-39">Donate →</a>
+          <a data-lg-href="donateUrl" hidden href="#" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; border: 1px solid #3f5a3f; background: #14201a; color: #a8d5bd; font-size: 14px; font-weight: 600;" class="hv-37">Donate →</a>
         </div>
       </div>
     </div>
@@ -1155,11 +1204,11 @@ html, body { overflow-x: clip; }
           <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5c6878;">v<span data-lg-bind="version">0.7.4</span></span>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px;">
-          <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md" style="color: #8d99a8;" class="hv-40">Privacy policy</a>
-          <a href="https://github.com/Mizerd/lightning/blob/main/docs/updates.md" style="color: #8d99a8;" class="hv-41">Application updates</a>
-          <a href="https://github.com/Mizerd/lightning/blob/main/docs/code-signing-policy.md" style="color: #8d99a8;" class="hv-42">Code signing policy</a>
-          <a href="https://github.com/Mizerd/lightning/blob/main/docs/third-party-notices.md" style="color: #8d99a8;" class="hv-43">Third-party notices</a>
-          <a href="https://github.com/Mizerd/lightning/blob/main/docs/threat-model.md" style="color: #8d99a8;" class="hv-44">Threat model</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md" style="color: #8d99a8;" class="hv-38">Privacy policy</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/updates.md" style="color: #8d99a8;" class="hv-39">Application updates</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/code-signing-policy.md" style="color: #8d99a8;" class="hv-40">Code signing policy</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/third-party-notices.md" style="color: #8d99a8;" class="hv-41">Third-party notices</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/threat-model.md" style="color: #8d99a8;" class="hv-42">Threat model</a>
         </div>
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 10px 32px; margin-top: 30px; padding-top: 26px; border-top: 1px solid #141a22; font-size: 13px; line-height: 1.6; color: #5c6878;">

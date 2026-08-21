@@ -9,6 +9,7 @@ These are the things that have actually broken, not a general test suite:
   * every package card has its own download button, pointing at its own asset
     (the "every Linux button serves the .deb" bug)
   * the page's baked-in version agrees with releases.json
+  * nothing served mentions GitLab -- the site points at GitHub only
   * releases.js is not cacheable for longer than the HTML that it rewrites
     (the cache skew that caused that bug to reach a browser)
 
@@ -78,6 +79,19 @@ check("card filenames match releases.json", card_files == feed_files,
 baked = set(re.findall(r'data-lg-bind="version">([^<]*)<', html))
 check("baked version matches feed", baked == {feed["version"]},
       "%s vs %s" % (baked, feed["version"]))
+
+# ---- GitHub only ----------------------------------------------------------
+# The site must not link to GitLab or name it. unbundle.py asserts this while
+# building; this repeats the check against what is actually on disk, which is
+# what gets deployed.
+gitlab = sorted(
+    os.path.relpath(os.path.join(dirpath, f), ROOT)
+    for dirpath, _dirs, files in os.walk(PUB)
+    for f in files
+    if f.rsplit(".", 1)[-1] in ("html", "json", "js", "txt", "xml")
+    and "gitlab" in open(os.path.join(dirpath, f), encoding="utf-8",
+                         errors="ignore").read().lower())
+check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
 
 # ---- no cache skew between the HTML and the script that rewrites it -------
 js_rule = re.search(r"^/releases\.js\s*\n\s*Cache-Control:\s*(.+)$",

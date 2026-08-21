@@ -1,6 +1,6 @@
 # lightning-website
 
-The official website for [Lightning](https://gitlab.smetonis.net/Mizerd/lightning),
+The official website for [Lightning](https://github.com/Mizerd/lightning),
 a native Matrix desktop client for Linux and Windows.
 
 Live at **https://www.lightning-matrix.org**, hosted on Cloudflare Workers.
@@ -48,7 +48,6 @@ version, release date, and every package card on the page come from that file.
   "version":  "0.7.5",
   "released": "2026-09-01",          // ISO date, shown as "Released ..."
   "releases_url": "https://github.com/Mizerd/lightning/releases",
-  "mirror_url":   "https://gitlab.smetonis.net/Mizerd/lightning/-/releases",
   "donate_url":   "",                // empty hides the Donate button
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
   "packages": [
@@ -69,6 +68,10 @@ editing by hand:
 gh release view v0.7.5 --repo Mizerd/lightning --json assets \
   --jq '.assets[].name'
 ```
+
+The alpha bar at the top of the page names the version too. It used to read
+"0.7.x", which nothing kept current; it is now bound like every other version
+on the page, so it follows a release on its own.
 
 `index.html` also ships the current values baked in, so the page is correct
 before `releases.js` runs and stays correct if it never does. Those baked-in
@@ -133,9 +136,9 @@ python3 tools/check.py
 
 Verifies the things that have actually broken: every local reference resolves,
 every package card has its own button pointing at its own asset, the baked-in
-version agrees with `releases.json`, and `releases.js` is not cacheable for
-longer than the HTML it rewrites. Exits non-zero, so it works in a pre-push
-hook.
+version agrees with `releases.json`, nothing served mentions GitLab, and
+`releases.js` is not cacheable for longer than the HTML it rewrites. Exits
+non-zero, so it works in a pre-push hook.
 
 That last check exists because of a real bug. `releases.js` was served with
 `max-age=3600` while `index.html` was `must-revalidate`, so a visitor could run
@@ -162,6 +165,32 @@ both passes *and* the feed-only path with `/api/latest` failing, since the two
 mask each other: the GitHub pass sets every href by format and will paper over
 a broken rebuild in the feed pass.
 
+## GitHub only
+
+The site links to GitHub and names no other host. The project was on a
+self-hosted GitLab when the artifact was written, so `unbundle.py` rewrites
+every link, button and sentence that referred to it (correction 1), and fails
+the build if any survive. `check.py` repeats the check against what is on disk.
+
+If the repository ever moves again, change it in `unbundle.py` — editing
+`public/index.html` alone means the next rebuild reinstates the old wording.
+
+## macOS
+
+There is no macOS release. The download section carries a "Coming soon" block
+with Gatekeeper instructions for an unsigned app, written as static copy in
+`unbundle.py` (correction 6): no package card, no entry in `releases.json`, so
+neither `releases.js` nor `/api/latest` touches it.
+
+When there is a build, it becomes ordinary packages with `"os": "macos"` in
+`releases.json` — which also needs a third column in the download grid, since
+`packages()` in `releases.js` only rebuilds the `linux` and `windows` lists.
+
+The block promises the app will be unsigned and tells people how to get past
+Gatekeeper. That is a real security instruction, so it leads with checking the
+checksum: someone who clears the quarantine flag is vouching for the download
+themselves.
+
 ## Mobile
 
 The artifact was laid out for desktop only: at a 390 px viewport the document
@@ -180,6 +209,18 @@ block. The measured causes were, worst first:
    width propagated up through every ancestor, because grid and flex children
    default to `min-width: auto`. They wrap on mobile instead.
 5. desktop type sizes (68 px hero, 42 px section heads) at phone width.
+
+The sticky alpha bar was a sixth item, fixed later: it ran to four lines and,
+being sticky, cost that on every scroll. Two things were wrong. The `ALPHA`
+pill is a `<span>`, and `_mark()` can only tag `nav|section|div|figure|a|h1-h3`
+— so a predicate written for it silently matched an unrelated amber label in
+the status section instead, and the pill is now tagged by hand in correction 3.
+And the bar is a flex container, which **blockifies its children**: `display:
+inline` on the warning computed to `block`, so the 126 px "what's missing" link
+was pushed onto a row of its own. On mobile the bar becomes a plain block of
+running text, and a shorter second wording (`.lg-alpha-brief`) replaces the
+full sentence — both are in the markup, so the warning is right with JavaScript
+off. Measured 94 px → 52 px at 390 px.
 
 Because every style in the page is inline, these overrides need `!important` —
 an inline style beats any stylesheet rule without it. The elements are tagged

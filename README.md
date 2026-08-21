@@ -20,7 +20,7 @@ public/              <- everything Cloudflare serves (the assets directory)
   robots.txt
   sitemap.xml
   _headers           <- Cloudflare: CSP, security headers, cache policy
-  _redirects         <- Cloudflare: apex -> www
+  _redirects         <- Cloudflare: same-site path redirects (relative URLs only)
   assets/
     lightning-mark.svg
     screenshot-*.png
@@ -135,18 +135,38 @@ Import a repository → `lightning-website`:
 There is no build step: the repository already contains the finished site.
 `wrangler deploy` reads `wrangler.jsonc` and uploads `public/`.
 
-Then under the Worker's **Settings → Domains & Routes**, add **both**:
+Then under the Worker's **Domains** tab, add **both**:
 
 - `www.lightning-matrix.org` — the canonical hostname
 - `lightning-matrix.org` — the apex
 
-Both must be attached before the apex → www redirect in `_redirects` can fire.
 `www` is canonical: it is what `<link rel="canonical">`, the Open Graph tags
 and `sitemap.xml` all point at.
 
 If DNS for `lightning-matrix.org` is already on Cloudflare, adding the domains
 creates the records for you. Otherwise point the nameservers at Cloudflare
-first.
+first. A custom domain will not attach while the hostname already has A /
+AAAA / CNAME records — delete those first (but never the MX or TXT records,
+which carry email).
+
+### The apex → www redirect
+
+This is **not** in `_redirects`: Workers rejects cross-hostname redirects
+there ("Only relative URLs are allowed", code 100324), and the rejection
+fails the entire deploy.
+
+It is a zone Redirect Rule instead — dashboard → `lightning-matrix.org` →
+**Rules → Redirect Rules**:
+
+| | |
+| --- | --- |
+| Match | URI Full, wildcard `http*://lightning-matrix.org/*` |
+| Target | `https://www.lightning-matrix.org/${2}` |
+| Status | 301, preserve query string |
+
+Redirect Rules run *before* Workers, so anything matching here never reaches
+the site. Watch for leftover parking rules pointing at GitHub — they will
+silently swallow the whole domain.
 
 Deploying by hand, if you ever need to:
 

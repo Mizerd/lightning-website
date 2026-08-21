@@ -1,8 +1,25 @@
-# Cloudflare Pages redirects.
-# https://developers.cloudflare.com/pages/configuration/redirects/
+# Cloudflare Workers static-assets redirects.
+# https://developers.cloudflare.com/workers/static-assets/redirects/
 #
-# www is canonical (it is what <link rel="canonical"> and the sitemap point
-# at), so the bare apex forwards to it. This rule only fires once BOTH
-# lightning-matrix.org and www.lightning-matrix.org are attached to the Pages
-# project as custom domains -- see the README.
-https://lightning-matrix.org/*  https://www.lightning-matrix.org/:splat  301
+# Entries here must use RELATIVE URLs. A cross-hostname redirect is rejected
+# at deploy time -- the whole deploy fails with:
+#
+#   Invalid _redirects configuration:
+#   Line N: Only relative URLs are allowed. [code: 100324]
+#
+# (Pages allowed absolute URLs here; Workers does not. That difference cost
+# two failed builds, so: no scheme, no hostname, in this file.)
+#
+# The apex -> www redirect therefore CANNOT live here. It is a Redirect Rule
+# on the lightning-matrix.org zone instead -- dashboard, Rules -> Redirect
+# Rules, the rule named "apex to www":
+#
+#   Match:  URI Full, wildcard   http*://lightning-matrix.org/*
+#   Target: https://www.lightning-matrix.org/${2}
+#   Status: 301, preserve query string
+#
+# Same-site path redirects DO belong here, one per line, for example:
+#
+#   /download   /#download   301
+#
+# No path redirects are needed yet -- the site is a single page.

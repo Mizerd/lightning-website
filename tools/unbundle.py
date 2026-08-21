@@ -98,7 +98,12 @@ for subset, block in face_re.findall(font_css):
     if not (u and fam):
         continue
     slug = fam.group(1).lower().replace(" ", "-")
-    names[u.group(1)] = "assets/fonts/%s-%s.woff2" % (slug, subset)
+    # Fonts live at /fonts/, NOT under /assets/. Cloudflare's _headers applies
+    # EVERY matching rule and merges the results, so a nested /assets/fonts/*
+    # rule under an /assets/* rule emits two Cache-Control values in one
+    # header and the browser takes the first -- silently capping the fonts at
+    # the shorter age. Disjoint prefixes are the only reliable fix.
+    names[u.group(1)] = "fonts/%s-%s.woff2" % (slug, subset)
 
 # ------------------------------------------------------- everything remaining
 for uuid, entry in manifest.items():

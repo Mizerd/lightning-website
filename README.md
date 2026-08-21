@@ -24,7 +24,7 @@ public/              <- everything Cloudflare serves (the assets directory)
   assets/
     lightning-mark.svg
     screenshot-*.png
-    fonts/*.woff2    <- Manrope, JetBrains Mono, Space Grotesk (self-hosted)
+  fonts/*.woff2      <- Manrope, JetBrains Mono, Space Grotesk (self-hosted)
 
 wrangler.jsonc       <- Cloudflare config: serve public/, 404.html on miss
 artifact/
@@ -185,6 +185,11 @@ Caching is deliberately split: fonts are immutable (family + unicode subset
 fully identify the file), screenshots get a day because their filenames are
 not content-hashed, and **`releases.json` is `no-cache`** so a release is
 visible immediately.
+
+Fonts sit at `/fonts/`, not `/assets/fonts/`, because Cloudflare applies
+*every* matching rule in `_headers` and merges the results — a nested rule
+emitted two `Cache-Control` values in one header and the browser honoured the
+first, capping fonts at a day. Keep header prefixes disjoint.
 
 If you add a third-party embed later, the CSP will block it until you add the
 origin to the matching directive.

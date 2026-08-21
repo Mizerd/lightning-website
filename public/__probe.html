@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<title>Lightning — a native Matrix desktop client for Linux and Windows</title>
+<meta name="description" content="Lightning is a native Qt 6 Matrix desktop client built on the official Rust Matrix SDK. Real GIF browsing, voice messages, working threads, multi-account, eleven WCAG-AA themes. GPL-3.0-or-later.">
+<meta property="og:title" content="Lightning — a native Matrix desktop client">
+<meta property="og:description" content="Everything other Matrix clients fake. Native Qt 6, official Rust Matrix SDK, real E2EE. Linux and Windows.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/assets/lightning-mark.svg">
+<style>/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: #0c0f14; color: #e8edf5; font-family: Manrope, system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+  a { color: #6fa4ff; text-decoration: none; }
+  a:hover { color: #a5c6ff; }
+  h1, h2, h3, h4 { margin: 0; font-family: "Space Grotesk", Manrope, sans-serif; letter-spacing: -0.02em; }
+  p { margin: 0; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  code { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  ::selection { background: #3b7ff0; color: #fff; }
+  @keyframes lgFlicker { 0%, 100% { opacity: 0.55; } 45% { opacity: 0.85; } 55% { opacity: 0.35; } }
+  @keyframes lgRise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+  @keyframes lgWipe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes lgDrift { 0% { transform: translate3d(-4%, 0, 0) scale(1); } 50% { transform: translate3d(4%, -3%, 0) scale(1.12); } 100% { transform: translate3d(-4%, 0, 0) scale(1); } }
+  @keyframes lgStrike { 0%, 92%, 100% { opacity: 0; } 93% { opacity: 0.9; } 94% { opacity: 0.15; } 96% { opacity: 0.7; } 97% { opacity: 0; } }
+  @keyframes lgMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes lgSweep { 0% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  section[id] { scroll-margin-top: 172px; }
+</style>
+<link rel="canonical" href="https://www.lightning-matrix.org/">
+<meta name="theme-color" content="#0c0f14">
+<meta property="og:url" content="https://www.lightning-matrix.org/">
+<meta property="og:site_name" content="Lightning">
+<meta property="og:image" content="https://www.lightning-matrix.org/assets/screenshot-rooms-and-gifs.png">
+<meta property="og:image:alt" content="Lightning's room timeline with the GIF picker open over the composer">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* The `hidden` attribute gets its display:none from the UA stylesheet, which
+   an inline style="display: inline-block" outranks -- and every element on
+   this page is styled inline. Without this rule, hiding anything (the Donate
+   button, for one) silently does nothing. */
+[hidden] { display: none !important; }
+
+/* Per-package download buttons. One shared class rather than the generated
+   per-element hv-N classes, so eight identical rules do not ship. */
+.dlbtn {
+  margin-left: auto;
+  padding: 7px 13px;
+  border-radius: 7px;
+  border: 1px solid #35496a;
+  background: #16202e;
+  color: #9dbdf5;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+.dlbtn:hover { background: #1d2c40; border-color: #4a648f; color: #cfe0ff; }
+.dlbtn:focus-visible { outline: 2px solid #5590f5; outline-offset: 2px; }
+
+/* ---- phones and small tablets -------------------------------------------
+   Overrides for the desktop-only inline styles. !important is unavoidable:
+   an inline style beats any stylesheet rule without it. See the responsive
+   pass in tools/unbundle.py for what each class is attached to. */
+@media (max-width: 760px) {
+  /* The nav's seven links in a nowrap row were the widest element on the
+     page (719px at a 390px viewport) and what forced the horizontal scroll.
+     Brand + Download stay; the five in-page links go, since every one of
+     them is reachable by scrolling and duplicated in the footer. */
+  .lg-navlink { display: none !important; }
+  .lg-nav { gap: 12px !important; padding: 12px 18px !important; }
+
+  /* A shorter header needs a shorter anchor offset. */
+  section[id] { scroll-margin-top: 108px !important; }
+
+  .lg-shell { padding: 52px 20px !important; }
+
+  /* One column, rather than a 420px column in a 326px box. */
+  .lg-grid, .lg-rows { grid-template-columns: 1fr !important; }
+  /* The row number ("01") reads as a label above the heading once stacked. */
+  .lg-rows { gap: 10px !important; }
+
+  /* Desktop type at phone width: 68px of hero is about four words a line. */
+  .lg-t1 { font-size: 38px !important; line-height: 1.06 !important; }
+  .lg-t2 { font-size: 27px !important; }
+  .lg-t3 { font-size: 23px !important; }
+  .lg-t4 { font-size: 20px !important; }
+
+  /* Let a long command wrap inside its card instead of demanding 624px and
+     forcing every ancestor wide. Wrapping beats a horizontal scroll inside a
+     card you are already scrolling vertically. */
+  .lg-cmd {
+    white-space: pre-wrap !important;
+    overflow-x: visible !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Stop any remaining max-content demand from propagating up a grid. */
+  .lg-grid > *, .lg-rows > * { min-width: 0 !important; }
+
+  pre, code { overflow-wrap: anywhere; }
+
+  /* Give the pill room for one line instead of orphaning the SDK version. */
+  .lg-pill { font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }
+
+  /* One consistent full-width tap target per card. Without this the button
+     sits inline after short labels (".msi") and on its own line after long
+     ones, which reads as a mistake down a column of eight. */
+  .dlbtn {
+    margin-left: 0 !important;
+    flex-basis: 100% !important;
+    text-align: center !important;
+    padding: 10px 13px !important;
+  }
+}
+
+/* Nothing on this page is allowed to widen the document. Every known cause is
+   fixed above; this is the backstop so a future edit degrades into a clipped
+   element rather than shoving the whole layout sideways again. */
+html, body { overflow-x: clip; }
+.hv-0:hover { color: #e8edf5; }
+.hv-1:hover { color: #e8edf5; }
+.hv-2:hover { color: #e8edf5; }
+.hv-3:hover { color: #e8edf5; }
+.hv-4:hover { color: #e8edf5; }
+.hv-5:hover { background: #5590f5; }
+.hv-6:hover { background: #5590f5; transform: translateY(-2px); box-shadow: 0 1px 0 rgba(255,255,255,0.16) inset, 0 14px 34px rgba(59,127,240,0.42); }
+.hv-7:hover { border-color: #3d4a5c; background: #1a212b; }
+.hv-8:hover { background: #151d28; }
+.hv-9:hover { background: #151d28; }
+.hv-10:hover { background: #151d28; }
+.hv-11:hover { background: #151d28; }
+.hv-12:hover { background: linear-gradient(90deg, rgba(59,127,240,0.07), rgba(59,127,240,0)); }
+.hv-13:hover { background: linear-gradient(90deg, rgba(59,127,240,0.07), rgba(59,127,240,0)); }
+.hv-14:hover { background: linear-gradient(90deg, rgba(59,127,240,0.07), rgba(59,127,240,0)); }
+.hv-15:hover { background: linear-gradient(90deg, rgba(59,127,240,0.07), rgba(59,127,240,0)); }
+.hv-16:hover { transform: translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18); }
+.hv-17:hover { transform: translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18); }
+.hv-18:hover { transform: translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18); }
+.hv-19:hover { transform: translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18); }
+.hv-20:hover { background: #5590f5; }
+.hv-21:hover { border-color: #3d4a5c; }
+.hv-22:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-23:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-24:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-25:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-26:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-27:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-28:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-29:hover { border-color: #35496a; background: #131a24; transform: translateX(4px); }
+.hv-30:hover { border-color: #4a3814; transform: translateY(-3px); }
+.hv-31:hover { border-color: #4a3814; transform: translateY(-3px); }
+.hv-32:hover { border-color: #4a3814; transform: translateY(-3px); }
+.hv-33:hover { border-color: #4a3814; transform: translateY(-3px); }
+.hv-34:hover { background: #5590f5; }
+.hv-35:hover { border-color: #35496a; transform: translateY(-4px); }
+.hv-36:hover { border-color: #3d4a5c; }
+.hv-37:hover { border-color: #3d4a5c; }
+.hv-38:hover { border-color: #35496a; transform: translateY(-4px); }
+.hv-39:hover { border-color: #5a7f5a; }
+.hv-40:hover { color: #d5dee9; }
+.hv-41:hover { color: #d5dee9; }
+.hv-42:hover { color: #d5dee9; }
+.hv-43:hover { color: #d5dee9; }
+.hv-44:hover { color: #d5dee9; }
+</style>
+<script src="/releases.js" defer></script>
+</head>
+<body>
+<div style="min-height: 100vh; background: #0c0f14;">
+
+  <div style="position: sticky; top: 0; z-index: 60;">
+  <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: center; padding: 11px 24px; background: #241c0d; border-bottom: 1px solid #4a3814; font-size: 13.5px; line-height: 1.45; color: #f0d6a0;">
+    <span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #e8a33d;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: #e8a33d;"></span>Alpha
+    </span>
+    <span style="max-width: 780px;">Lightning is in alpha (0.7.x). It works for everyday chat, but there's been <strong style="color: #fbeccd; font-weight: 700;">no security audit</strong>, the packages <strong style="color: #fbeccd; font-weight: 700;">aren't code-signed</strong>, and calls don't work yet.</span>
+    <a href="#status" style="color: #ffd68a; border-bottom: 1px solid #7a5c22; white-space: nowrap;">What's still missing →</a>
+  </div>
+
+  <header style="backdrop-filter: blur(14px); background: rgba(12, 15, 20, 0.82); border-bottom: 1px solid #1b222c;">
+    <nav style="display: flex; align-items: center; gap: 28px; max-width: 1180px; margin: 0 auto; padding: 14px 32px;" class="lg-nav">
+      <a href="#top" style="display: flex; align-items: center; gap: 11px; color: #e8edf5; margin-right: auto;">
+        <img src="/assets/lightning-mark.svg" alt="" width="26" height="26" style="display: block;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.01em;">Lightning</span>
+      </a>
+      <a href="#different" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-0 lg-navlink">Why Lightning</a>
+      <a href="#screenshots" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-1 lg-navlink">Screenshots</a>
+      <a href="#features" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-2 lg-navlink">Features</a>
+      <a href="#privacy" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-3 lg-navlink">Privacy</a>
+      <a href="https://gitlab.smetonis.net/Mizerd/lightning" style="font-size: 14px; font-weight: 500; color: #93a0b1;" class="hv-4 lg-navlink">Source</a>
+      <a href="#download" style="padding: 9px 18px; border-radius: 8px; background: #3b7ff0; color: #fff; font-size: 14px; font-weight: 600; box-shadow: 0 1px 0 rgba(255,255,255,0.14) inset;" class="hv-5">Download</a>
+    </nav>
+  </header>
+  </div>
+
+  <section id="top" style="position: relative; overflow: hidden; border-bottom: 1px solid #1b222c;">
+    <div style="position: absolute; top: -340px; left: 50%; transform: translateX(-50%); width: 1100px; height: 700px; background: radial-gradient(ellipse at center, rgba(59,127,240,0.20), rgba(59,127,240,0) 62%); pointer-events: none; animation: lgDrift 22s ease-in-out infinite;"></div>
+    <div style="position: absolute; top: -180px; right: 8%; width: 520px; height: 520px; background: radial-gradient(circle at center, rgba(127,209,166,0.10), rgba(127,209,166,0) 60%); pointer-events: none; animation: lgDrift 31s ease-in-out infinite reverse;"></div>
+    <div style="position: absolute; inset: 0; background: linear-gradient(100deg, rgba(255,255,255,0) 44%, rgba(159,190,255,0.07) 50%, rgba(255,255,255,0) 56%); pointer-events: none; animation: lgStrike 11s linear infinite;"></div>
+    <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(59,127,240,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(59,127,240,0.05) 1px, transparent 1px); background-size: 68px 68px; mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000, transparent 75%); -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000, transparent 75%); pointer-events: none;"></div>
+    <div style="position: relative; max-width: 1180px; margin: 0 auto; padding: 96px 32px 88px;">
+      <div style="display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px; border: 1px solid #2b3a52; border-radius: 100px; background: rgba(59,127,240,0.08); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.06em; color: #9dbdf5;" class="lg-pill">
+        <img src="/assets/lightning-mark.svg" alt="" width="14" height="14" style="display: block; animation: lgFlicker 5s ease-in-out infinite;">
+        v<span data-lg-bind="version">0.7.4</span> · Qt 6 · matrix-rust-sdk 0.18
+      </div>
+      <h1 style="max-width: 900px; margin-top: 26px; font-size: 68px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em; animation: lgRise 0.9s cubic-bezier(0.16,1,0.3,1) both;" class="lg-t1">
+        Everything other Matrix<br><span style="background: linear-gradient(96deg, #ffffff 8%, #9dbdf5 55%, #7fd1a6 96%); -webkit-background-clip: text; background-clip: text; color: transparent;">clients fake.</span>
+      </h1>
+      <p style="max-width: 610px; margin-top: 26px; font-size: 19.5px; line-height: 1.55; color: #a4b1c2; animation: lgRise 0.9s cubic-bezier(0.16,1,0.3,1) 0.09s both;">
+        GIF search, voice messages, threads that work properly, and several accounts signed in at the same time. It's written in Qt 6 on top of the official Rust Matrix SDK, so it behaves like a desktop app instead of <span style="color: #dde5f0;">a website in a window</span>.
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 38px;">
+        <a href="#download" style="position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 10px; padding: 15px 26px; border-radius: 10px; background: #3b7ff0; color: #fff; font-size: 15.5px; font-weight: 600; box-shadow: 0 1px 0 rgba(255,255,255,0.16) inset, 0 8px 26px rgba(59,127,240,0.28); transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;" class="hv-6" style-before="content: ''; position: absolute; top: 0; bottom: 0; width: 42px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.42), rgba(255,255,255,0)); animation: lgSweep 3.6s ease-in-out infinite;">
+          <span style="position: relative;">Download for Linux or Windows</span>
+        </a>
+        <a href="https://gitlab.smetonis.net/Mizerd/lightning" style="display: inline-flex; align-items: center; gap: 10px; padding: 15px 26px; border-radius: 10px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 15.5px; font-weight: 600;" class="hv-7">
+          Read the source
+        </a>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px 30px; margin-top: 34px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #7d8b9c;">
+        <span>GPL-3.0-or-later</span>
+        <span>Linux + Windows x86-64</span>
+        <span>No telemetry or analytics</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; margin-top: 72px; background: #1b222c; border: 1px solid #1b222c; border-radius: 12px; overflow: hidden;">
+        <div style="padding: 22px 24px; background: #10151c; transition: background 0.3s ease;" class="hv-8">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #e8edf5;">A real desktop app</div>
+          <div style="margin-top: 7px; font-size: 13.5px; line-height: 1.5; color: #8d99a8;">Qt 6 and QML, with a four-pane layout and the same scrolling feel everywhere.</div>
+        </div>
+        <div style="padding: 22px 24px; background: #10151c; transition: background 0.3s ease;" class="hv-9">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #e8edf5;">Encryption that works</div>
+          <div style="margin-top: 7px; font-size: 13.5px; line-height: 1.5; color: #8d99a8;">Olm and Megolm, cross-signing, emoji and QR verification, and key backup.</div>
+        </div>
+        <div style="padding: 22px 24px; background: #10151c; transition: background 0.3s ease;" class="hv-10">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #e8edf5;">Eleven themes</div>
+          <div style="margin-top: 7px; font-size: 13.5px; line-height: 1.5; color: #8d99a8;">All checked for WCAG-AA contrast, led by the Storm theme. Set one per account.</div>
+        </div>
+        <div style="padding: 22px 24px; background: #10151c; transition: background 0.3s ease;" class="hv-11">
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #e8edf5;">Nothing home-rolled</div>
+          <div style="margin-top: 7px; font-size: 13.5px; line-height: 1.5; color: #8d99a8;">Lightning writes none of its own cryptography. The SDK handles all of it.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="different" style="border-bottom: 1px solid #1b222c;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5f88cc;">Why Lightning</div>
+      <h2 style="max-width: 760px; margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">Things most Matrix clients don't do</h2>
+      <p style="max-width: 640px; margin-top: 18px; font-size: 17px; line-height: 1.6; color: #a4b1c2;">All four of these work today. Lightning is still young, so some of it is rough around the edges.</p>
+
+      <div style="display: flex; flex-direction: column; margin-top: 52px; border-top: 1px solid #232b35;">
+
+        <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; gap: 28px 40px; padding: 34px 12px 34px 0; border-bottom: 1px solid #1c232d; transition: background 0.4s ease, padding 0.4s ease; animation: lgRise 0.7s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 22%;" class="hv-12 lg-rows">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 700; line-height: 1; color: #1f2b3d; letter-spacing: -0.03em;" class="lg-t3">01</div>
+          <h3 style="font-size: 27px; line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;" class="lg-t4">GIF search that's<br>actually built in</h3>
+          <div>
+            <p style="font-size: 15.5px; line-height: 1.65; color: #97a4b4;">GIPHY and KLIPY sit side by side, with trending, search, categories, recents, safe search and an autoplay setting. GIFs send as normal Matrix media and get encrypted like any other attachment. Star one, in the picker or in a chat, and it goes to your <strong style="color: #cfd9e6; font-weight: 600;">Saved</strong> list.</p>
+            <p style="margin-top: 14px; padding-left: 15px; border-left: 2px solid #2b3a52; font-size: 14.5px; line-height: 1.6; color: #7d8b9c;">The provider only ever sees what you typed in the search box. Not your Matrix ID, not the room, not your messages.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; gap: 28px 40px; padding: 34px 12px 34px 0; border-bottom: 1px solid #1c232d; transition: background 0.4s ease; animation: lgRise 0.7s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 22%;" class="hv-13 lg-rows">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 700; line-height: 1; color: #1f2b3d; letter-spacing: -0.03em;" class="lg-t3">02</div>
+          <h3 style="font-size: 27px; line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;" class="lg-t4">Voice messages you<br>can see as you talk</h3>
+          <div>
+            <p style="font-size: 15.5px; line-height: 1.65; color: #97a4b4;">Hit record, watch the level move while you speak, then send it to a room or straight into a thread. They go as mono Opus (MSC3245) through the SDK, so encryption is handled the same way as any other upload.</p>
+            <div style="display: flex; align-items: flex-end; gap: 3px; height: 34px; margin-top: 16px;">
+              <span style="width: 3px; height: 30%; border-radius: 2px; background: #3b7ff0;"></span><span style="width: 3px; height: 58%; border-radius: 2px; background: #3b7ff0;"></span><span style="width: 3px; height: 88%; border-radius: 2px; background: #4d8cf5;"></span><span style="width: 3px; height: 45%; border-radius: 2px; background: #3b7ff0;"></span><span style="width: 3px; height: 72%; border-radius: 2px; background: #4d8cf5;"></span><span style="width: 3px; height: 100%; border-radius: 2px; background: #7fd1a6;"></span><span style="width: 3px; height: 62%; border-radius: 2px; background: #4d8cf5;"></span><span style="width: 3px; height: 35%; border-radius: 2px; background: #3b7ff0;"></span><span style="width: 3px; height: 80%; border-radius: 2px; background: #4d8cf5;"></span><span style="width: 3px; height: 50%; border-radius: 2px; background: #3b7ff0;"></span><span style="width: 3px; height: 26%; border-radius: 2px; background: #2c4f80;"></span><span style="width: 3px; height: 66%; border-radius: 2px; background: #3b7ff0;"></span><span style="width: 3px; height: 40%; border-radius: 2px; background: #2c4f80;"></span><span style="width: 3px; height: 18%; border-radius: 2px; background: #24405f;"></span>
+            </div>
+            <p style="margin-top: 14px; padding-left: 15px; border-left: 2px solid #2b3a52; font-size: 14.5px; line-height: 1.6; color: #7d8b9c;">Threads take text, images, files and voice notes, encrypted rooms included.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; gap: 28px 40px; padding: 34px 12px 34px 0; border-bottom: 1px solid #1c232d; transition: background 0.4s ease; animation: lgRise 0.7s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 22%;" class="hv-14 lg-rows">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 700; line-height: 1; color: #1f2b3d; letter-spacing: -0.03em;" class="lg-t3">03</div>
+          <h3 style="font-size: 27px; line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;" class="lg-t4">Several accounts,<br>signed in at once</h3>
+          <div>
+            <p style="font-size: 15.5px; line-height: 1.65; color: #97a4b4;">Switch between accounts on different homeservers without logging in again. Each one gets its own SDK and its own encryption store, and only the one you're looking at syncs.</p>
+            <p style="margin-top: 14px; padding-left: 15px; border-left: 2px solid #2b3a52; font-size: 14.5px; line-height: 1.6; color: #7d8b9c;">Logging in happens in two steps, so a device the server has just created can't end up attached to another device's keys.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; gap: 28px 40px; padding: 34px 12px 34px 0; border-bottom: 1px solid #1c232d; transition: background 0.4s ease; animation: lgRise 0.7s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 22%;" class="hv-15 lg-rows">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 700; line-height: 1; color: #1f2b3d; letter-spacing: -0.03em;" class="lg-t3">04</div>
+          <h3 style="font-size: 27px; line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;" class="lg-t4">Updates that check<br>themselves first</h3>
+          <div>
+            <p style="font-size: 15.5px; line-height: 1.65; color: #97a4b4;">A signed manifest (Ed25519) sets the exact filename, size and SHA-256 of an update. Lightning checks the signature over the raw bytes before it reads any of the fields, and if that check fails the update stops there. There's no "install anyway" button.</p>
+            <p style="margin-top: 14px; padding-left: 15px; border-left: 2px solid #2b3a52; font-size: 14.5px; line-height: 1.6; color: #7d8b9c;">A manifest can name a file to download. It can't name a command to run.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="position: relative; overflow: hidden; margin-top: 68px; padding: 18px 0; border-top: 1px solid #1c232d; border-bottom: 1px solid #1c232d; mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);">
+        <div style="display: flex; width: max-content; gap: 0; animation: lgMarquee 42s linear infinite;">
+          <div style="display: flex; align-items: center; gap: 30px; padding-right: 30px; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.02em; color: #5c6878; white-space: nowrap;">
+            <span>Threads</span><span style="color: #2b3a52;">✦</span><span>Polls</span><span style="color: #2b3a52;">✦</span><span>Spaces &amp; subspaces</span><span style="color: #2b3a52;">✦</span><span>Read receipts</span><span style="color: #2b3a52;">✦</span><span>Pinned messages</span><span style="color: #2b3a52;">✦</span><span>SAS &amp; QR verification</span><span style="color: #2b3a52;">✦</span><span>Key backup</span><span style="color: #2b3a52;">✦</span><span>Eleven WCAG-AA themes</span><span style="color: #2b3a52;">✦</span><span>Quick switcher</span><span style="color: #2b3a52;">✦</span><span>Link previews</span><span style="color: #2b3a52;">✦</span><span>Server push rules</span><span style="color: #2b3a52;">✦</span><span>OIDC sign-in</span><span style="color: #2b3a52;">✦</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 30px; padding-right: 30px; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.02em; color: #5c6878; white-space: nowrap;" aria-hidden="true">
+            <span>Threads</span><span style="color: #2b3a52;">✦</span><span>Polls</span><span style="color: #2b3a52;">✦</span><span>Spaces &amp; subspaces</span><span style="color: #2b3a52;">✦</span><span>Read receipts</span><span style="color: #2b3a52;">✦</span><span>Pinned messages</span><span style="color: #2b3a52;">✦</span><span>SAS &amp; QR verification</span><span style="color: #2b3a52;">✦</span><span>Key backup</span><span style="color: #2b3a52;">✦</span><span>Eleven WCAG-AA themes</span><span style="color: #2b3a52;">✦</span><span>Quick switcher</span><span style="color: #2b3a52;">✦</span><span>Link previews</span><span style="color: #2b3a52;">✦</span><span>Server push rules</span><span style="color: #2b3a52;">✦</span><span>OIDC sign-in</span><span style="color: #2b3a52;">✦</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screenshots" style="border-bottom: 1px solid #1b222c; background: #0a0d12;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; justify-content: space-between;">
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5f88cc;">Screenshots</div>
+          <h2 style="margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">What it looks like</h2>
+        </div>
+        <p style="max-width: 420px; font-size: 14px; line-height: 1.6; color: #7d8b9c;">These come from Lightning's demo mode, which uses made-up <code style="color: #9dbdf5;">*.example</code> accounts and local test media. No real conversations.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 26px; margin-top: 44px;" class="lg-grid">
+        <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
+          <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-16">
+            <img src="/assets/screenshot-rooms-and-gifs.png" alt="A room timeline with replies, reactions, an image and the GIF picker open over the composer" loading="lazy" style="display: block; width: 100%; height: auto;">
+          </div>
+          <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Rooms and GIFs.</strong> The timeline, with the GIF picker open above the composer.</figcaption>
+        </figure>
+        <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
+          <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-17">
+            <img src="/assets/screenshot-threads.png" alt="A thread panel open beside the main timeline" loading="lazy" style="display: block; width: 100%; height: auto;">
+          </div>
+          <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Threads.</strong> Their own panel next to the room, with summary cards in the timeline.</figcaption>
+        </figure>
+        <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
+          <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-18">
+            <img src="/assets/screenshot-emoji.png" alt="An encrypted direct message with the emoji picker open over the composer" loading="lazy" style="display: block; width: 100%; height: auto;">
+          </div>
+          <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Emoji.</strong> Categories, search and a preview, here in an encrypted DM.</figcaption>
+        </figure>
+        <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
+          <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-19">
+            <img src="/assets/screenshot-polls.png" alt="A poll with four options and live vote counts in a room timeline" loading="lazy" style="display: block; width: 100%; height: auto;">
+          </div>
+          <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Polls.</strong> Make one and vote in the timeline, with counts updating live.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="border-bottom: 1px solid #1b222c;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5f88cc;">Features</div>
+      <h2 style="max-width: 700px; margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">What's in it today</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px 48px; margin-top: 52px;" class="lg-grid">
+
+        <div>
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Accounts, rooms and Spaces</h3>
+          <ul style="display: flex; flex-direction: column; gap: 13px; margin-top: 18px; font-size: 14.5px; line-height: 1.55; color: #94a1b1;">
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Browser sign-in (OAuth 2.0 / OIDC)</strong> on homeservers that support it. Lightning checks the server as you type and only offers the methods it really has.</li>
+            <li>Spaces, including <strong style="color: #cfd9e6; font-weight: 600;">subspaces inside them</strong>, indented in the rail and browsable from a Space's front page.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Finding and joining rooms</strong> through the public directory, room addresses, <code style="color: #9dbdf5;">matrix:</code> links and matrix.to links. You can knock, and take a knock back. If a join is refused, you get told why.</li>
+            <li>Moderation tools that leave odd power levels alone. Someone set to 42 shows up as "Custom (42)" and stays at 42.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Presence</strong> is only fetched for people you can see. If it's unknown, Lightning shows nothing instead of guessing "offline".</li>
+            <li>A quick switcher on Ctrl-K, for jumping around and running commands, plus Ctrl-F to search the timeline.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Messaging and timelines</h3>
+          <ul style="display: flex; flex-direction: column; gap: 13px; margin-top: 18px; font-size: 14.5px; line-height: 1.55; color: #94a1b1;">
+            <li>Live timelines with replies, edits, reactions, deletions, mentions and typing indicators.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Read receipts</strong> as small avatars down the right edge. Click them to see who read a message and when.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Pinned messages</strong> in their own tab. If a pin has been deleted or can't be loaded, it tells you, rather than dumping you somewhere random in the room.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Search</strong> across a room's whole history where it isn't encrypted. A server can't search encrypted messages, so in those rooms Lightning searches what's loaded and tells you that's what it did.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Forwarding</strong> re-uploads the file instead of copying the link, so a key from one room never turns up in another.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Drafts</strong> survive switching rooms. In encrypted rooms they stay in memory only, and if Lightning isn't sure whether a room is encrypted it assumes it is.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Threads</h3>
+          <ul style="display: flex; flex-direction: column; gap: 13px; margin-top: 18px; font-size: 14.5px; line-height: 1.55; color: #94a1b1;">
+            <li>Real Matrix threads from the SDK, with replies and their own read receipts.</li>
+            <li>A Threads list per room, a side panel, follow and unfollow, and paging back through older ones.</li>
+            <li>Summary cards in the timeline showing who's taking part.</li>
+            <li>Text, images, files and voice notes in threads, encrypted rooms included.</li>
+          </ul>
+
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; margin-top: 36px; font-size: 17px; font-weight: 600; color: #e8edf5;">Media</h3>
+          <ul style="display: flex; flex-direction: column; gap: 13px; margin-top: 18px; font-size: 14.5px; line-height: 1.55; color: #94a1b1;">
+            <li>Video and audio play in the timeline, with posters, durations and waveforms. One volume setting covers every player.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Media</strong> and <strong style="color: #cfd9e6; font-weight: 600;">Files</strong> tabs in room info, with thumbnails loaded as you scroll.</li>
+            <li>Link previews fetched by Lightning itself, with separate settings for encrypted rooms, and an image viewer you can save from.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Encryption and account security</h3>
+          <ul style="display: flex; flex-direction: column; gap: 13px; margin-top: 18px; font-size: 14.5px; line-height: 1.55; color: #94a1b1;">
+            <li>Sending and receiving in encrypted rooms through the Rust SDK. Keys are handled for you, messages that arrive before their key decrypt in place later, and you can retry by hand.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Emoji verification, started from either side</strong>, and QR verification. Both happen in a dialog in the middle of the screen, so the emoji you're comparing aren't buried at the bottom of a long page.</li>
+            <li><strong style="color: #cfd9e6; font-weight: 600;">Nagging you can switch off.</strong> "Stop reminding me" hides the unverified-session badges. It doesn't pretend the session is verified.</li>
+            <li>Secure Backup restore, importing encrypted room keys, signing out individual devices, and a diagnostics export with identifiers hashed and no file paths or tokens in it.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Desktop experience</h3>
+          <ul style="display: flex; flex-direction: column; gap: 13px; margin-top: 18px; font-size: 14.5px; line-height: 1.55; color: #94a1b1;">
+            <li>The <strong style="color: #cfd9e6; font-weight: 600;">Storm look</strong> across every menu, with keycap shortcuts, a quick-reaction strip, rebuilt pickers and identity cards in the account switcher.</li>
+            <li>Full-window settings you can search, Manrope, JetBrains Mono and Space Grotesk bundled in, and letter avatars when there's no picture.</li>
+            <li>Proper desktop notifications, with privacy options and the sender's avatar. <strong style="color: #cfd9e6; font-weight: 600;">Per-room settings are saved to your account's push rules</strong>, so a room you mute here stays muted in your other clients.</li>
+            <li>Pickers you can resize, which stay the size you left them, layouts that hold up from narrow to wide, and keyboard navigation everywhere.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Architecture</h3>
+          <p style="margin-top: 18px; font-size: 14.5px; line-height: 1.6; color: #94a1b1;">The interface, the app's state and the Matrix work are kept apart.</p>
+          <div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; border-radius: 10px; background: #0a0d12; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.85; color: #8d99a8; overflow-x: auto;">
+            <div><span style="color: #9dbdf5;">Qt 6 / QML</span> — presentation, interaction, theming</div>
+            <div style="color: #4a5666;">│</div>
+            <div><span style="color: #9dbdf5;">C++</span> — application state, Qt-facing models,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;account/room/thread isolation</div>
+            <div style="color: #4a5666;">│</div>
+            <div><span style="color: #9dbdf5;">Rust bridge</span> — FFI to…</div>
+            <div style="color: #4a5666;">│</div>
+            <div><span style="color: #7fd1a6;">matrix-rust-sdk</span> — sync, timelines, threads,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;media, Olm/Megolm E2EE, verification,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key backup, receipts</div>
+          </div>
+          <p style="margin-top: 16px; font-size: 14.5px; line-height: 1.6; color: #94a1b1;">QML only draws the interface. It never touches the protocol, your credentials, encryption or storage. The mock backends used in development aren't compiled into releases.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="download" style="border-bottom: 1px solid #1b222c; background: #0a0d12;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; justify-content: space-between;">
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5f88cc;">Download</div>
+          <h2 style="margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">Version <span data-lg-bind="version">0.7.4</span></h2>
+          <p style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7d8b9c;">Released <span data-lg-bind="released">2026-08-19</span> · every release comes with a SHA256SUMS file</p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <a data-lg-href="releasesUrl" href="https://github.com/Mizerd/lightning/releases" style="padding: 13px 22px; border-radius: 9px; background: #3b7ff0; color: #fff; font-size: 14.5px; font-weight: 600;" class="hv-20">Releases (GitHub)</a>
+          <a data-lg-href="mirrorUrl" href="https://gitlab.smetonis.net/Mizerd/lightning/-/releases" style="padding: 13px 22px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14.5px; font-weight: 600;" class="hv-21">Releases (GitLab)</a>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-top: 44px;" class="lg-grid">
+        <div>
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <h3 style="font-size: 20px; font-weight: 600;">Linux</h3>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #7fd1a6;">best supported</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 18px;">
+            
+              <div data-lg-pkg="linux" data-lg-format=".deb" data-lg-file="lightning_0.7.4_amd64.deb" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-22">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.deb</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Debian / Ubuntu / Mint / Pop!_OS</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.deb" aria-label="Download lightning_0.7.4_amd64.deb">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo apt install ./lightning_0.7.4_amd64.deb</span></div>
+              </div>
+            
+              <div data-lg-pkg="linux" data-lg-format=".rpm" data-lg-file="lightning-0.7.4-1.x86_64.rpm" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-23">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.rpm</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Fedora / RHEL / openSUSE</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning-0.7.4-1.x86_64.rpm" aria-label="Download lightning-0.7.4-1.x86_64.rpm">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo dnf install ./lightning-0.7.4-1.x86_64.rpm</span></div>
+              </div>
+            
+              <div data-lg-pkg="linux" data-lg-format="AppImage" data-lg-file="Lightning-0.7.4-x86_64.AppImage" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-24">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">AppImage</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Any distribution, nothing installed</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-x86_64.AppImage" aria-label="Download Lightning-0.7.4-x86_64.AppImage">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">chmod +x Lightning-0.7.4-x86_64.AppImage &amp;&amp; ./Lightning-0.7.4-x86_64.AppImage</span></div>
+              </div>
+            
+              <div data-lg-pkg="linux" data-lg-format=".flatpak" data-lg-file="lightning_0.7.4_amd64.flatpak" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-25">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.flatpak</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Flatpak (KDE Platform 6.9 runtime)</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.flatpak" aria-label="Download lightning_0.7.4_amd64.flatpak">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">flatpak install --user ./lightning_0.7.4_amd64.flatpak</span></div>
+              </div>
+            
+              <div data-lg-pkg="linux" data-lg-format=".snap" data-lg-file="lightning_0.7.4_amd64.snap" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-26">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.snap</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Snap, strict confinement, local file</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.snap" aria-label="Download lightning_0.7.4_amd64.snap">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo snap install --dangerous ./lightning_0.7.4_amd64.snap</span></div>
+              </div>
+            
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <h3 style="font-size: 20px; font-weight: 600;">Windows</h3>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #7d8b9c;">10 or later, x86-64</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 18px;">
+            
+              <div data-lg-pkg="windows" data-lg-format=".msi" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64.msi" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-27">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.msi</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">MSI installer, per-user</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-e8139ed-windows-x86_64.msi" aria-label="Download Lightning-0.7.4-e8139ed-windows-x86_64.msi">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">msiexec /i Lightning-0.7.4-e8139ed-windows-x86_64.msi</span></div>
+              </div>
+            
+              <div data-lg-pkg="windows" data-lg-format=".exe" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-28">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.exe</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Setup EXE, per-user</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe" aria-label="Download Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">run the installer</span></div>
+              </div>
+            
+              <div data-lg-pkg="windows" data-lg-format=".zip" data-lg-file="Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-29">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                  <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.zip</span></span>
+                  <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Portable ZIP, installs nothing</span></span>
+                <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip" aria-label="Download Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip">Download</a></div>
+                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">extract anywhere, run Lightning.exe</span></div>
+              </div>
+            
+          </div>
+
+          <div style="margin-top: 20px; padding: 20px; border: 1px solid #4a3814; border-radius: 11px; background: #1c1609;">
+            <div style="font-size: 14.5px; font-weight: 600; color: #f0d6a0;">Windows packages aren't signed</div>
+            <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #c4a874;">You'll get an "unknown publisher" warning from SmartScreen. If you've checked the download against the checksum, pick <em style="font-style: normal; color: #f0d6a0;">More info → Run anyway</em>. Signing through the SignPath Foundation is something we'd like to do, but we <strong style="color: #f0d6a0; font-weight: 600;">haven't even applied yet</strong>, so no release is signed today.</p>
+          </div>
+
+          <div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+            <div style="font-size: 14.5px; font-weight: 600;">Verify your download</div><a class="dlbtn" data-lg-dl-sha href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/SHA256SUMS" style="margin-left: 0; margin-top: 12px; display: inline-block;">Get SHA256SUMS</a>
+            <div style="margin-top: 12px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd">sha256sum -c SHA256SUMS --ignore-missing</div>
+            <p style="margin-top: 12px; font-size: 13.5px; line-height: 1.55; color: #8d99a8;">All three Windows formats install for your user only. None of them needs admin rights, and none of them touches PATH, file associations, URL handlers, services, scheduled tasks, firewall rules or autostart.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 32px;">
+        <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+          <div style="font-size: 15px; font-weight: 600;">macOS</div>
+          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Not supported yet. There's a macOS build in the pipeline, but it won't be published until it can be signed.</p>
+        </div>
+        <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+          <div style="font-size: 15px; font-weight: 600;">Building from source</div>
+          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">The route we actually test is the repo's Nix flake on Linux, with Qt 6.5+ and Rust from the dev shell. <a href="https://github.com/Mizerd/lightning/blob/main/docs/build-and-test.md">docs/build-and-test.md</a></p>
+        </div>
+        <div style="padding: 22px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
+          <div style="font-size: 15px; font-weight: 600;">Uninstalling</div>
+          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Removing Lightning takes the app and its shortcuts and leaves your session, settings and message stores where they are. Those go when you sign the account out.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" style="border-bottom: 1px solid #1b222c;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5f88cc;">Security and privacy</div>
+      <h2 style="max-width: 780px; margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">We don't collect anything, and there's no server</h2>
+      <p style="max-width: 700px; margin-top: 18px; font-size: 17px; line-height: 1.6; color: #a4b1c2;">No analytics, no telemetry, no crash reports. Apart from the homeserver you signed in to, the only outside services Lightning talks to are the GIF providers, and only while the GIF picker is open.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1px; margin-top: 44px; background: #1b222c; border: 1px solid #1b222c; border-radius: 13px; overflow: hidden;" class="lg-grid">
+        <div style="padding: 26px; background: #10151c;">
+          <h3 style="font-size: 16px; font-weight: 600;">Messages stay in memory</h3>
+          <p style="margin-top: 10px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Decrypted messages aren't written to Lightning's caches, and keys, tokens, recovery keys and message text never go into the logs.</p>
+        </div>
+        <div style="padding: 26px; background: #10151c;">
+          <h3 style="font-size: 16px; font-weight: 600;">Tokens go in your keyring</h3>
+          <p style="margin-top: 10px; font-size: 14px; line-height: 1.6; color: #8d99a8;">libsecret on Linux, Credential Manager on Windows. If neither is there, Lightning falls back to something less secure and tells you it has.</p>
+        </div>
+        <div style="padding: 26px; background: #10151c;">
+          <h3 style="font-size: 16px; font-weight: 600;">Link previews start off</h3>
+          <p style="margin-top: 10px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Lightning fetches previews itself, not through your homeserver, so a link someone sends you would see your IP address. That's why it's off until you turn it on.</p>
+        </div>
+        <div style="padding: 26px; background: #10151c;">
+          <h3 style="font-size: 16px; font-weight: 600;">Update checks send a version</h3>
+          <p style="margin-top: 10px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Just <code style="color: #9dbdf5;">Lightning/&lt;version&gt;</code>. No Matrix ID, homeserver, device ID, token or room data, and there's no tracking ID to send in the first place. It's on by default and you can switch it off.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; padding: 30px; border: 1px solid #1e2631; border-radius: 13px; background: linear-gradient(180deg, #141a23, #10151c);">
+        <h3 style="font-size: 19px; font-weight: 600;">GitLab decides what a release is</h3>
+        <p style="max-width: 860px; margin-top: 12px; font-size: 15px; line-height: 1.62; color: #97a4b4;">It's the only thing that decides which versions exist and what their bytes should hash to. Downloads come from the GitHub mirror first, to keep the traffic off the project's own server, and fall back to GitLab. Lightning never calls the GitHub API or reads anything GitHub says about a release. The mirror's URL is part of the signed manifest, and whatever comes back is checked against a hash that was fixed before the download started. <strong style="color: #dde5f0; font-weight: 600;">Someone who took over the mirror could break your download. They couldn't push you an update.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="status" style="border-bottom: 1px solid #1b222c; background: #0a0d12;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="display: inline-flex; align-items: center; gap: 9px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #e8a33d;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #e8a33d;"></span>Project status
+      </div>
+      <h2 style="max-width: 820px; margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">What isn't finished</h2>
+      <p style="max-width: 720px; margin-top: 18px; font-size: 17px; line-height: 1.6; color: #a4b1c2;">Lightning is in the Matrix.org client directory, listed as <strong style="color: #dde5f0; font-weight: 600;">Alpha</strong> for Windows and Linux. That's a listing, not an endorsement. The Matrix.org Foundation hasn't certified or approved anything here.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-top: 44px;" class="lg-grid">
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-30">
+          <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Calls don't work yet</h3>
+          <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">There's a 1:1 voice stack in the code, with MSC2746 signalling and a WebRTC engine, but it's switched off on purpose. Nobody has confirmed an answered call over a real network yet, so the button says "coming soon" instead of pretending otherwise.</p>
+        </div>
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-31">
+          <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Search is limited in encrypted rooms</h3>
+          <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">A homeserver can't search messages it can't read, so full-history search only works in unencrypted rooms. Encrypted ones search the part of the timeline you've loaded, and Lightning says as much instead of quietly giving you fewer results.</p>
+        </div>
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-32">
+          <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Nobody has audited it</h3>
+          <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">There's been no formal security audit, and no release is code-signed. Anything touching encryption gets reviewed carefully and has to come with tests, but that isn't the same as an audit.</p>
+        </div>
+        <div style="padding: 26px; border: 1px solid #2a2213; border-radius: 12px; background: #14110a; transition: border-color 0.3s ease, transform 0.3s ease;" class="hv-33">
+          <h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">Expect rough edges</h3>
+          <p style="margin-top: 11px; font-size: 14.5px; line-height: 1.6; color: #b9a476;">Things still move around: APIs, the interface, the way features behave. Some are experimental, and space-restricted join rules can be seen but not edited. If you need something to interoperate with another client, test it rather than assume it. This isn't a finished product.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="community">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 88px 32px;" class="lg-shell">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 22px;">
+        <div style="padding: 34px; border: 1px solid #2b3a52; border-radius: 14px; background: linear-gradient(180deg, #14202f, #0f1620);">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Say hello</div>
+          <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Find us on Matrix</h3>
+          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">Bugs and questions are both welcome, either in the room or in the tracker on the mirror.</p>
+          <a href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; background: #3b7ff0; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 500;" class="hv-34">#lightning:matrix.smetonis.net</a>
+        </div>
+
+        <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-35">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Contribute</div>
+          <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Read the code</h3>
+          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">It's all public, under GPL-3.0-or-later. GitLab is the real repository. GitHub is an automatic read-only mirror, so pull requests opened there don't reach anyone.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;">
+            <a href="https://gitlab.smetonis.net/Mizerd/lightning" style="padding: 12px 18px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14px; font-weight: 600;" class="hv-36">GitLab (canonical)</a>
+            <a href="https://github.com/Mizerd/lightning" style="padding: 12px 18px; border-radius: 9px; border: 1px solid #2c3644; background: #151a22; color: #d5dee9; font-size: 14px; font-weight: 600;" class="hv-37">GitHub (mirror)</a>
+          </div>
+        </div>
+
+        <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-38">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Support the project</div>
+          <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Help pay for the build server</h3>
+          <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">One maintainer, no company, no income. Donations cover CI, the release server, and eventually that signing certificate.</p>
+          <a data-lg-href="donateUrl" hidden href="#" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; border: 1px solid #3f5a3f; background: #14201a; color: #a8d5bd; font-size: 14px; font-weight: 600;" class="hv-39">Donate →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid #1b222c; background: #080a0e;">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 46px 32px;">
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <img src="/assets/lightning-mark.svg" alt="" width="20" height="20" style="display: block; opacity: 0.7;">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #b6c2d0;">Lightning</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5c6878;">v<span data-lg-bind="version">0.7.4</span></span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px;">
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md" style="color: #8d99a8;" class="hv-40">Privacy policy</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/updates.md" style="color: #8d99a8;" class="hv-41">Application updates</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/code-signing-policy.md" style="color: #8d99a8;" class="hv-42">Code signing policy</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/third-party-notices.md" style="color: #8d99a8;" class="hv-43">Third-party notices</a>
+          <a href="https://github.com/Mizerd/lightning/blob/main/docs/threat-model.md" style="color: #8d99a8;" class="hv-44">Threat model</a>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px 32px; margin-top: 30px; padding-top: 26px; border-top: 1px solid #141a22; font-size: 13px; line-height: 1.6; color: #5c6878;">
+        <span>Copyright © 2026 Rokas Smetonis. Free software under the GNU General Public License v3.0 or later.</span>
+        <span>Maintainer: <a href="mailto:antrasrokas@gmail.com" style="color: #7d8b9c;">antrasrokas@gmail.com</a></span>
+      </div>
+      <p style="margin-top: 18px; font-size: 12.5px; line-height: 1.6; color: #4d5765;">Matrix is a trademark of The Matrix.org Foundation C.I.C. Lightning is an independent client and is not affiliated with or endorsed by the Foundation.</p>
+    </div>
+  </footer>
+
+</div>
+
+<div id="__diag" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff;color:#000;font:11px/1.35 monospace;padding:6px;white-space:pre-wrap"></div>
+<script>
+var __feed = {
+  "version": "0.7.4",
+  "released": "2026-08-19",
+  "releases_url": "https://github.com/Mizerd/lightning/releases",
+  "mirror_url": "https://gitlab.smetonis.net/Mizerd/lightning/-/releases",
+  "donate_url": "",
+  "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
+  "packages": [
+    { "os": "linux", "label": "Debian / Ubuntu / Mint / Pop!_OS", "format": ".deb", "file": "lightning_0.7.4_amd64.deb", "install": "sudo apt install ./lightning_0.7.4_amd64.deb", "remove": "sudo apt remove lightning" },
+    { "os": "linux", "label": "Fedora / RHEL / openSUSE", "format": ".rpm", "file": "lightning-0.7.4-1.x86_64.rpm", "install": "sudo dnf install ./lightning-0.7.4-1.x86_64.rpm", "remove": "sudo dnf remove lightning" },
+    { "os": "linux", "label": "Any distribution, nothing installed", "format": "AppImage", "file": "Lightning-0.7.4-x86_64.AppImage", "install": "chmod +x Lightning-0.7.4-x86_64.AppImage && ./Lightning-0.7.4-x86_64.AppImage", "remove": "delete the file" },
+    { "os": "linux", "label": "Flatpak (KDE Platform 6.9 runtime)", "format": ".flatpak", "file": "lightning_0.7.4_amd64.flatpak", "install": "flatpak install --user ./lightning_0.7.4_amd64.flatpak", "remove": "flatpak uninstall --user net.smetonis.Lightning" },
+    { "os": "linux", "label": "Snap, strict confinement, local file", "format": ".snap", "file": "lightning_0.7.4_amd64.snap", "install": "sudo snap install --dangerous ./lightning_0.7.4_amd64.snap", "remove": "sudo snap remove lightning" },
+    { "os": "windows", "label": "MSI installer, per-user", "format": ".msi", "file": "Lightning-0.7.4-e8139ed-windows-x86_64.msi", "install": "msiexec /i Lightning-0.7.4-e8139ed-windows-x86_64.msi", "remove": "Settings \u2192 Apps \u2192 Installed apps" },
+    { "os": "windows", "label": "Setup EXE, per-user", "format": ".exe", "file": "Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe", "install": "run the installer", "remove": "Uninstall Lightning shortcut" },
+    { "os": "windows", "label": "Portable ZIP, installs nothing", "format": ".zip", "file": "Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip", "install": "extract anywhere, run Lightning.exe", "remove": "delete the folder" }
+  ]
+}
+, __latest = {"version":"0.7.4","released":"2026-08-19","release_url":"https://github.com/Mizerd/lightning/releases/tag/v0.7.4","assets":[{"name":"lightning-0.7.4-1.x86_64.rpm","size":17977804,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning-0.7.4-1.x86_64.rpm"},{"name":"Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip","size":101404203,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-e8139ed-windows-x86_64-portable.zip"},{"name":"Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe","size":68763309,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-e8139ed-windows-x86_64-setup.exe"},{"name":"Lightning-0.7.4-e8139ed-windows-x86_64.msi","size":110652928,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-e8139ed-windows-x86_64.msi"},{"name":"Lightning-0.7.4-x86_64.AppImage","size":121140416,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-x86_64.AppImage"},{"name":"lightning_0.7.4_amd64.deb","size":15578340,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.deb"},{"name":"lightning_0.7.4_amd64.flatpak","size":15103808,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.flatpak"},{"name":"lightning_0.7.4_amd64.snap","size":101036032,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.snap"},{"name":"SHA256SUMS","size":816,"url":"https://github.com/Mizerd/lightning/releases/download/v0.7.4/SHA256SUMS"}]};
+// Resolve immediately so every .then settles in microtasks, i.e. before load.
+window.fetch = function(u){
+  return Promise.resolve({ok:true, json:function(){
+    return Promise.resolve(String(u).indexOf('/api/latest')>=0 ? __latest : __feed);
+  }});
+};
+</script>
+<script>
+/* Keeps a deployed page in step with releases.json.
+ *
+ * index.html is already rendered from releases.json at build time, so this
+ * script is not what makes the page work -- it is what keeps a deployed page
+ * current. If it never runs, the page still shows the version it was built
+ * with, and every download button still points at a real release asset.
+ *
+ * Two sources, applied in order:
+ *   1. /releases.json  -- this repo's feed. Editing it is how you change the
+ *      wording, the package list, or the donate link.
+ *   2. /api/latest     -- the Worker's view of the newest GitHub release.
+ *      This is what makes a new release appear here on its own: it overrides
+ *      the version, the date and every download URL with whatever GitHub
+ *      actually published, and rewrites the filenames inside the install
+ *      commands to match.
+ *
+ * Every step fails soft: a bad fetch, bad JSON or a missing field leaves the
+ * built-in content exactly as it is.
+ */
+(function () {
+  "use strict";
+
+  function text(key, value) {
+    document.querySelectorAll('[data-lg-bind="' + key + '"]').forEach(function (el) {
+      el.textContent = value;
+    });
+  }
+
+  function link(key, url) {
+    document.querySelectorAll('[data-lg-href="' + key + '"]').forEach(function (el) {
+      if (url) {
+        el.href = url;
+        el.hidden = false;
+      } else {
+        // No destination configured -- keep the markup, keep it unclickable.
+        el.hidden = true;
+        el.removeAttribute("href");
+      }
+    });
+  }
+
+  // Point one card's download button at a URL, or hide it if there is none.
+  function setDownload(scope, url, fileName) {
+    var a = scope.querySelector("[data-lg-dl]");
+    if (!a) return;
+    if (url) {
+      a.href = url;
+      a.hidden = false;
+      if (fileName) a.setAttribute("aria-label", "Download " + fileName);
+    } else {
+      a.hidden = true;
+      a.removeAttribute("href");
+    }
+  }
+
+  function packages(osName, list) {
+    var cards = document.querySelectorAll('[data-lg-pkg="' + osName + '"]');
+    if (!cards.length || !list.length) return;
+
+    var parent = cards[0].parentNode;
+    var proto = cards[0].cloneNode(true);
+
+    var built = list.map(function (pkg) {
+      var card = proto.cloneNode(true);
+      card.querySelectorAll("[data-lg-bind]").forEach(function (slot) {
+        var field = slot.getAttribute("data-lg-bind").split(".")[1];
+        if (pkg[field] != null) slot.textContent = pkg[field];
+      });
+      // The prototype card carries the previous package's URL; re-point it.
+      setDownload(card, pkg.download_url, pkg.file);
+      // Remember the format so the GitHub pass can match this card to an asset.
+      if (pkg.format) card.setAttribute("data-lg-format", pkg.format);
+      return card;
+    });
+
+    // Swap in place: replace the first card, drop the rest. Doing it in this
+    // order keeps the new cards at the original position among their siblings
+    // rather than appending them to the end of the column.
+    parent.replaceChild(built[0], cards[0]);
+    for (var i = 1; i < cards.length; i++) parent.removeChild(cards[i]);
+    for (var j = built.length - 1; j >= 1; j--) {
+      built[0].parentNode.insertBefore(built[j], built[0].nextSibling);
+    }
+  }
+
+  // "https://.../download/v${version}/${file}" -> a real URL.
+  function fromTemplate(tpl, version, file) {
+    if (!tpl || !file) return "";
+    return tpl.replace("${version}", version).replace("${file}", file);
+  }
+
+  // ---- pass 1: this repo's feed -------------------------------------------
+  function applyFeed(d) {
+    if (!d || !d.version) return;
+
+    text("version", d.version);
+    if (d.released) text("released", d.released);
+    if (d.releases_url) link("releasesUrl", d.releases_url);
+    if (d.mirror_url) link("mirrorUrl", d.mirror_url);
+    link("donateUrl", d.donate_url);
+
+    if (Array.isArray(d.packages) && d.packages.length) {
+      // Give each package its download URL before the cards are rebuilt.
+      d.packages.forEach(function (p) {
+        p.download_url = fromTemplate(d.asset_url, d.version, p.file);
+      });
+      packages("linux", d.packages.filter(function (p) { return p.os === "linux"; }));
+      packages("windows", d.packages.filter(function (p) { return p.os === "windows"; }));
+    }
+
+    var sha = document.querySelector("[data-lg-dl-sha]");
+    if (sha) {
+      var shaUrl = fromTemplate(d.asset_url, d.version, "SHA256SUMS");
+      if (shaUrl) sha.href = shaUrl;
+    }
+  }
+
+  // ---- pass 2: whatever GitHub actually published --------------------------
+  // This is what makes a new release appear without touching this repo. Each
+  // card knows its format (".deb", "AppImage", ...) and every release publishes
+  // exactly one asset per format, so the card's format is enough to find its
+  // asset -- no version or filename is assumed anywhere.
+  function applyLatest(d) {
+    if (!d || !d.version || !Array.isArray(d.assets) || !d.assets.length) return;
+
+    text("version", d.version);
+    if (d.released) text("released", d.released);
+
+    function assetFor(format) {
+      var f = String(format).toLowerCase();
+      for (var i = 0; i < d.assets.length; i++) {
+        var name = String(d.assets[i].name || "").toLowerCase();
+        if (name.slice(-f.length) === f) return d.assets[i];
+      }
+      return null;
+    }
+
+    document.querySelectorAll("[data-lg-format]").forEach(function (card) {
+      var asset = assetFor(card.getAttribute("data-lg-format"));
+      if (!asset || !asset.url) return;
+
+      setDownload(card, asset.url, asset.name);
+
+      // The install command names the file, so a stale name would contradict
+      // the button right next to it.
+      var was = card.getAttribute("data-lg-file");
+      if (was && was !== asset.name) {
+        var cmd = card.querySelector('[data-lg-bind="pkg.install"]');
+        if (cmd && cmd.textContent.indexOf(was) >= 0) {
+          cmd.textContent = cmd.textContent.split(was).join(asset.name);
+        }
+        card.setAttribute("data-lg-file", asset.name);
+      }
+    });
+
+    var sha = document.querySelector("[data-lg-dl-sha]");
+    var shaAsset = null;
+    for (var i = 0; i < d.assets.length; i++) {
+      if (d.assets[i].name === "SHA256SUMS") { shaAsset = d.assets[i]; break; }
+    }
+    if (sha && shaAsset && shaAsset.url) sha.href = shaAsset.url;
+
+    var rel = document.querySelector('[data-lg-href="releasesUrl"]');
+    if (rel && d.release_url) rel.href = d.release_url;
+  }
+
+  function load(url, apply, opts) {
+    return fetch(url, opts)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(apply)
+      .catch(function () { /* keep whatever is on the page */ });
+  }
+
+  // Sequential, not parallel: the GitHub pass must land last, because it is
+  // the more authoritative of the two and rebuilt cards would otherwise
+  // discard the URLs it just set.
+  load("/releases.json", applyFeed, { cache: "no-cache" })
+    .then(function () { return load("/api/latest", applyLatest); });
+})();
+
+</script>
+<script>
+window.addEventListener('load', function(){
+  var out = [];
+  document.querySelectorAll('[data-lg-pkg]').forEach(function(c){
+    var a = c.querySelector('[data-lg-dl]');
+    var badge = c.querySelector('[data-lg-bind="pkg.format"]');
+    var href = a ? (a.getAttribute('href')||'') : '(none)';
+    out.push((badge?badge.textContent:'?').padEnd(9) + ' ' +
+             href.split('/').pop().slice(0,46));
+  });
+  var uniq = {}; out.forEach(function(l){ uniq[l.split(' ').pop()]=1; });
+  document.getElementById('__diag').textContent =
+    'cards='+out.length+'  distinct hrefs='+Object.keys(uniq).length+'\n'+out.join('\n');
+});
+</script>
+</body>
+</html>

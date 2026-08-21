@@ -33,6 +33,7 @@ artifact/
   Lightning.html     <- the original Claude artifact this site was built from
 tools/
   unbundle.py        <- converts that artifact into public/
+  check.py           <- invariant checks; run after editing public/
 ```
 
 Nothing outside `public/` is deployed.
@@ -123,6 +124,43 @@ that JavaScript unpacked into `blob:` URLs at runtime, rendered through React
 The script does that work ahead of time instead — unpacking the assets to real
 files, expanding the loops, and rewriting `style-hover` attributes into real
 CSS `:hover` rules. The published page needs no framework.
+
+## Checking a change
+
+```sh
+python3 tools/check.py
+```
+
+Verifies the things that have actually broken: every local reference resolves,
+every package card has its own button pointing at its own asset, the baked-in
+version agrees with `releases.json`, and `releases.js` is not cacheable for
+longer than the HTML it rewrites. Exits non-zero, so it works in a pre-push
+hook.
+
+That last check exists because of a real bug. `releases.js` was served with
+`max-age=3600` while `index.html` was `must-revalidate`, so a visitor could run
+**new HTML against an hour-old script**. The old script rebuilt the package
+cards by cloning card zero and knew nothing about the download buttons, so
+every clone inherited card zero's href: every Linux button served the `.deb`
+and every Windows button the `.msi`. The links in the HTML were all correct —
+which is why this could not be found by inspecting the page or the URLs.
+
+The lesson generalises: **any script that rewrites the generated DOM must not
+outlive that DOM in a cache.** `releases.js` is now `no-cache`, like
+`releases.json`.
+
+`check.py` cannot test the JavaScript paths — those need a DOM. For those:
+
+```sh
+npm install jsdom          # not a repo dependency; install where convenient
+```
+
+Load `index.html` in jsdom, stub `window.fetch` to return `releases.json` and
+`/api/latest`, eval `releases.js`, dispatch `DOMContentLoaded`, then assert
+that the eight `[data-lg-pkg]` cards still have eight distinct `href`s. Test
+both passes *and* the feed-only path with `/api/latest` failing, since the two
+mask each other: the GitHub pass sets every href by format and will paper over
+a broken rebuild in the feed pass.
 
 ## Mobile
 

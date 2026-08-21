@@ -66,10 +66,15 @@
         var field = slot.getAttribute("data-lg-bind").split(".")[1];
         if (pkg[field] != null) slot.textContent = pkg[field];
       });
-      // The prototype card carries the previous package's URL; re-point it.
+      // Everything below is per-card state inherited from the prototype, which
+      // is card zero. Each one must be overwritten or the clone silently keeps
+      // card zero's value -- the bug that made every Linux button serve the
+      // .deb and every Windows button the .msi. setDownload is called
+      // unconditionally so a missing URL hides the button rather than leaving
+      // it pointing at the wrong file.
       setDownload(card, pkg.download_url, pkg.file);
-      // Remember the format so the GitHub pass can match this card to an asset.
-      if (pkg.format) card.setAttribute("data-lg-format", pkg.format);
+      card.setAttribute("data-lg-format", pkg.format || "");
+      card.setAttribute("data-lg-file", pkg.file || "");
       return card;
     });
 

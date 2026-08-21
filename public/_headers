@@ -33,5 +33,17 @@
 /releases.json
   Cache-Control: no-cache
 
+# Revalidated on every load, exactly like releases.json and index.html.
+#
+# This was max-age=3600, which shipped a real bug: index.html is
+# must-revalidate and so always fresh, while releases.js could be up to an
+# hour stale -- so a visitor ran NEW html against OLD script. The old script
+# rebuilt the package cards by cloning card zero, knew nothing about the
+# download buttons, and every clone inherited card zero's href: every Linux
+# button served the .deb and every Windows button the .msi.
+#
+# The file is 7 KB and a revalidation is a 304, so the cost is nil. Any script
+# that reads the DOM the generator emits must never be cacheable for longer
+# than that DOM.
 /releases.js
-  Cache-Control: public, max-age=3600
+  Cache-Control: no-cache

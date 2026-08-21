@@ -4,6 +4,7 @@
   "releases_url": "https://github.com/Mizerd/lightning/releases",
   "mirror_url": "https://gitlab.smetonis.net/Mizerd/lightning/-/releases",
   "donate_url": "",
+  "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
   "packages": [
     { "os": "linux", "label": "Debian / Ubuntu / Mint / Pop!_OS", "format": ".deb", "file": "lightning_0.7.4_amd64.deb", "install": "sudo apt install ./lightning_0.7.4_amd64.deb", "remove": "sudo apt remove lightning" },
     { "os": "linux", "label": "Fedora / RHEL / openSUSE", "format": ".rpm", "file": "lightning-0.7.4-1.x86_64.rpm", "install": "sudo dnf install ./lightning-0.7.4-1.x86_64.rpm", "remove": "sudo dnf remove lightning" },

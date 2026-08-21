@@ -1,19 +1,26 @@
 {
   // Cloudflare Workers static-assets configuration.
   // https://developers.cloudflare.com/workers/static-assets/
-  //
-  // This is a static site with no server-side code, so there is deliberately
-  // no "main" script and no "binding" -- the assets binding is only needed
-  // when a Worker script is present. Cloudflare serves ./public directly.
 
   "name": "lightning-website",
   "compatibility_date": "2026-08-21",
+
+  // One route, GET /api/latest, which reports the newest release so the
+  // download buttons stay current without editing this repo. Everything else
+  // is static. run_worker_first is deliberately NOT set: assets are served
+  // straight from the asset layer and a normal page load never runs this code.
+  "main": "src/worker.js",
 
   "assets": {
     // Everything Cloudflare serves. Paths in the site are absolute
     // (/assets/...), so this directory becomes the site root: public/index.html
     // is served at https://www.lightning-matrix.org/.
     "directory": "./public",
+
+    // Required now that a Worker script exists: unmatched paths reach the
+    // Worker, which defers back through this binding so not_found_handling
+    // still applies.
+    "binding": "ASSETS",
 
     // Serve public/404.html for unknown paths. The default ("none") would
     // return a bare Cloudflare error page instead. Not "single-page-

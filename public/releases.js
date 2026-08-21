@@ -1,9 +1,18 @@
 /* Keeps a deployed page in step with releases.json.
  *
  * index.html is already rendered from releases.json at build time, so this
- * script is not what makes the page work -- it is what lets you cut a release
- * by editing releases.json alone, with no HTML change and no rebuild. If it
- * never runs, the page still shows the version it was built with.
+ * script is not what makes the page work -- it is what keeps a deployed page
+ * current. If it never runs, the page still shows the version it was built
+ * with, and every download button still points at a real release asset.
+ *
+ * Two sources, applied in order:
+ *   1. /releases.json  -- this repo's feed. Editing it is how you change the
+ *      wording, the package list, or the donate link.
+ *   2. /api/latest     -- the Worker's view of the newest GitHub release.
+ *      This is what makes a new release appear here on its own: it overrides
+ *      the version, the date and every download URL with whatever GitHub
+ *      actually published, and rewrites the filenames inside the install
+ *      commands to match.
  *
  * Every step fails soft: a bad fetch, bad JSON or a missing field leaves the
  * built-in content exactly as it is.
@@ -30,6 +39,20 @@
     });
   }
 
+  // Point one card's download button at a URL, or hide it if there is none.
+  function setDownload(scope, url, fileName) {
+    var a = scope.querySelector("[data-lg-dl]");
+    if (!a) return;
+    if (url) {
+      a.href = url;
+      a.hidden = false;
+      if (fileName) a.setAttribute("aria-label", "Download " + fileName);
+    } else {
+      a.hidden = true;
+      a.removeAttribute("href");
+    }
+  }
+
   function packages(osName, list) {
     var cards = document.querySelectorAll('[data-lg-pkg="' + osName + '"]');
     if (!cards.length || !list.length) return;
@@ -43,6 +66,10 @@
         var field = slot.getAttribute("data-lg-bind").split(".")[1];
         if (pkg[field] != null) slot.textContent = pkg[field];
       });
+      // The prototype card carries the previous package's URL; re-point it.
+      setDownload(card, pkg.download_url, pkg.file);
+      // Remember the format so the GitHub pass can match this card to an asset.
+      if (pkg.format) card.setAttribute("data-lg-format", pkg.format);
       return card;
     });
 
@@ -56,21 +83,97 @@
     }
   }
 
-  fetch("/releases.json", { cache: "no-cache" })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
-      if (!d || !d.version) return;
+  // "https://.../download/v${version}/${file}" -> a real URL.
+  function fromTemplate(tpl, version, file) {
+    if (!tpl || !file) return "";
+    return tpl.replace("${version}", version).replace("${file}", file);
+  }
 
-      text("version", d.version);
-      if (d.released) text("released", d.released);
-      if (d.releases_url) link("releasesUrl", d.releases_url);
-      if (d.mirror_url) link("mirrorUrl", d.mirror_url);
-      link("donateUrl", d.donate_url);
+  // ---- pass 1: this repo's feed -------------------------------------------
+  function applyFeed(d) {
+    if (!d || !d.version) return;
 
-      if (Array.isArray(d.packages) && d.packages.length) {
-        packages("linux", d.packages.filter(function (p) { return p.os === "linux"; }));
-        packages("windows", d.packages.filter(function (p) { return p.os === "windows"; }));
+    text("version", d.version);
+    if (d.released) text("released", d.released);
+    if (d.releases_url) link("releasesUrl", d.releases_url);
+    if (d.mirror_url) link("mirrorUrl", d.mirror_url);
+    link("donateUrl", d.donate_url);
+
+    if (Array.isArray(d.packages) && d.packages.length) {
+      // Give each package its download URL before the cards are rebuilt.
+      d.packages.forEach(function (p) {
+        p.download_url = fromTemplate(d.asset_url, d.version, p.file);
+      });
+      packages("linux", d.packages.filter(function (p) { return p.os === "linux"; }));
+      packages("windows", d.packages.filter(function (p) { return p.os === "windows"; }));
+    }
+
+    var sha = document.querySelector("[data-lg-dl-sha]");
+    if (sha) {
+      var shaUrl = fromTemplate(d.asset_url, d.version, "SHA256SUMS");
+      if (shaUrl) sha.href = shaUrl;
+    }
+  }
+
+  // ---- pass 2: whatever GitHub actually published --------------------------
+  // This is what makes a new release appear without touching this repo. Each
+  // card knows its format (".deb", "AppImage", ...) and every release publishes
+  // exactly one asset per format, so the card's format is enough to find its
+  // asset -- no version or filename is assumed anywhere.
+  function applyLatest(d) {
+    if (!d || !d.version || !Array.isArray(d.assets) || !d.assets.length) return;
+
+    text("version", d.version);
+    if (d.released) text("released", d.released);
+
+    function assetFor(format) {
+      var f = String(format).toLowerCase();
+      for (var i = 0; i < d.assets.length; i++) {
+        var name = String(d.assets[i].name || "").toLowerCase();
+        if (name.slice(-f.length) === f) return d.assets[i];
       }
-    })
-    .catch(function () { /* keep the built-in content */ });
+      return null;
+    }
+
+    document.querySelectorAll("[data-lg-format]").forEach(function (card) {
+      var asset = assetFor(card.getAttribute("data-lg-format"));
+      if (!asset || !asset.url) return;
+
+      setDownload(card, asset.url, asset.name);
+
+      // The install command names the file, so a stale name would contradict
+      // the button right next to it.
+      var was = card.getAttribute("data-lg-file");
+      if (was && was !== asset.name) {
+        var cmd = card.querySelector('[data-lg-bind="pkg.install"]');
+        if (cmd && cmd.textContent.indexOf(was) >= 0) {
+          cmd.textContent = cmd.textContent.split(was).join(asset.name);
+        }
+        card.setAttribute("data-lg-file", asset.name);
+      }
+    });
+
+    var sha = document.querySelector("[data-lg-dl-sha]");
+    var shaAsset = null;
+    for (var i = 0; i < d.assets.length; i++) {
+      if (d.assets[i].name === "SHA256SUMS") { shaAsset = d.assets[i]; break; }
+    }
+    if (sha && shaAsset && shaAsset.url) sha.href = shaAsset.url;
+
+    var rel = document.querySelector('[data-lg-href="releasesUrl"]');
+    if (rel && d.release_url) rel.href = d.release_url;
+  }
+
+  function load(url, apply, opts) {
+    return fetch(url, opts)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(apply)
+      .catch(function () { /* keep whatever is on the page */ });
+  }
+
+  // Sequential, not parallel: the GitHub pass must land last, because it is
+  // the more authoritative of the two and rebuilt cards would otherwise
+  // discard the URLs it just set.
+  load("/releases.json", applyFeed, { cache: "no-cache" })
+    .then(function () { return load("/api/latest", applyLatest); });
 })();

@@ -159,6 +159,21 @@ values = {
 }
 
 
+def asset_url(pkg):
+    """Direct download URL for one package, from the releases.json template.
+
+    The template carries ${version} and ${file} rather than a bare base URL
+    because GitHub's asset layout (/releases/download/<tag>/<name>) is not
+    GitLab's. Returns "" when either the template or the package's filename is
+    missing, which hides that card's button instead of emitting a dead link.
+    """
+    tpl = releases.get("asset_url", "")
+    if not tpl or not pkg.get("file"):
+        return ""
+    return (tpl.replace("${version}", str(releases.get("version", "")))
+               .replace("${file}", pkg["file"]))
+
+
 def expand(fragment, ctx):
     """Substitute {{ bindings }}, leaving a hook releases.js can re-target.
 
@@ -186,9 +201,33 @@ def unroll(m):
     for pkg in pkgs:
         ctx = {"%s.%s" % (asname, k): v for k, v in pkg.items()}
         card = expand(body, ctx)
-        # Tag the card's root element; releases.js clones card zero as its
-        # prototype when a fetched feed brings a different package set.
-        card = card.replace("<div", '<div data-lg-pkg="%s"' % os_key, 1)
+
+        # A real download button per package, pointing straight at the release
+        # asset. The first </div> in the card closes the format+label header
+        # row, so this lands at the end of that row; margin-left:auto pushes it
+        # to the right edge. data-lg-dl lets releases.js re-point it.
+        url = asset_url(pkg)
+        button = (
+            '<a class="dlbtn" data-lg-dl%s href="%s"%s>Download</a>'
+            % ("" if url else " hidden",
+               html.escape(url or "#", quote=True),
+               ' aria-label="Download %s"' % html.escape(pkg["file"], quote=True)
+               if pkg.get("file") else "")
+        )
+        card = card.replace("</div>", button + "</div>", 1)
+
+        # Tag the card's root element. data-lg-pkg groups the column (and
+        # releases.js clones card zero as its prototype when a fetched feed
+        # brings a different package set); format and file let the /api/latest
+        # pass match this card to a GitHub asset and rewrite the filename
+        # inside its install command.
+        card = card.replace(
+            "<div",
+            '<div data-lg-pkg="%s" data-lg-format="%s" data-lg-file="%s"'
+            % (os_key,
+               html.escape(pkg.get("format", ""), quote=True),
+               html.escape(pkg.get("file", ""), quote=True)),
+            1)
         out.append(card)
     return "".join(out)
 
@@ -241,6 +280,21 @@ doc = doc.replace(
     '<a href="https://github.com/Mizerd/lightning/blob/main/docs/build-and-test.md">'
     'docs/build-and-test.md</a>', 1)
 
+# 3. The verify box tells you to run sha256sum against SHA256SUMS but gave you
+#    no way to get the file. Link it, from the same release as the packages.
+_sha = releases.get("asset_url", "")
+if _sha:
+    _sha = (_sha.replace("${version}", str(releases.get("version", "")))
+                .replace("${file}", "SHA256SUMS"))
+    _needle = '<div style="font-size: 14.5px; font-weight: 600;">Verify your download</div>'
+    if _needle not in doc:
+        raise SystemExit("verify-box heading not found")
+    doc = doc.replace(
+        _needle,
+        _needle + '<a class="dlbtn" data-lg-dl-sha href="%s" '
+                  'style="margin-left: 0; margin-top: 12px; display: inline-block;">'
+                  'Get SHA256SUMS</a>' % html.escape(_sha, quote=True), 1)
+
 # ------------------------------------------------------------- style-hover CSS
 hover_rules = []
 
@@ -256,6 +310,94 @@ doc = re.sub(r'\s+style-hover="([^"]*)"', hoverize, doc)
 print("  hover  %d style-hover attributes -> CSS :hover rules" % len(hover_rules))
 
 # --------------------------------------------------------------- head / body
+# ------------------------------------------------------------ responsive pass
+# The artifact was laid out for a desktop viewport only: on a 390 px screen the
+# document measured 719 px wide, so the whole page sat squeezed against the
+# left edge with the rest requiring a horizontal scroll. Measured causes, in
+# order of damage:
+#
+#   1. the nav's seven links in a nowrap flex row  -> 719 px, the widest thing
+#      on the page and the reason the viewport blew out at all
+#   2. grids of repeat(auto-fit, minmax(>=300px, 1fr)) -> a 420 px column
+#      inside a 326 px container (screenshots, downloads, status)
+#   3. the "why" rows' 88px + 1fr + 1.15fr three-column grid, which kept all
+#      three columns and wrapped the prose to roughly one word per line
+#   4. desktop type sizes (68 px hero, 42 px section heads) at phone width
+#
+# Every style on this page is inline, so a stylesheet can only win with
+# !important. Rather than scatter !important through attribute selectors, the
+# elements that need to move get a class here and the media query below does
+# the rest -- greppable, and it survives a re-bundle.
+TAG_RE = re.compile(r"<(nav|section|div|figure|a|h1|h2|h3)((?:[^<>\"]|\"[^\"]*\")*)>")
+
+
+def add_class(markup, cls, want):
+    """Add `cls` to every opening tag whose attributes satisfy want(attrs)."""
+    hits = [0]
+
+    def sub(m):
+        tag, attrs = m.group(1), m.group(2)
+        if not want(attrs):
+            return m.group(0)
+        hits[0] += 1
+        # Merge rather than add a second class attribute: hoverize has already
+        # given some of these elements a class="hv-N".
+        if re.search(r'\bclass="', attrs):
+            attrs = re.sub(r'\bclass="([^"]*)"',
+                           lambda c: 'class="%s %s"' % (c.group(1), cls), attrs, count=1)
+        else:
+            attrs += ' class="%s"' % cls
+        return "<%s%s>" % (tag, attrs)
+
+    return TAG_RE.sub(sub, markup), hits[0]
+
+
+_counts = {}
+
+
+def _mark(cls, want):
+    global doc
+    doc, n = add_class(doc, cls, want)
+    _counts[cls] = n
+
+
+# The nav row itself, and the five section links that overflow it. The brand
+# and the Download button stay visible at every width.
+_mark("lg-nav", lambda a: "<nav" == "<nav" and "display: flex" in a and "gap: 28px" in a
+      and "max-width: 1180px" in a and "padding: 14px 32px" in a)
+_NAVLINKS = ("#different", "#screenshots", "#features", "#privacy",
+             "gitlab.smetonis.net/Mizerd/lightning\"")
+_mark("lg-navlink", lambda a: 'font-size: 14px; font-weight: 500; color: #93a0b1;' in a
+      and any(h in a for h in _NAVLINKS))
+
+# Section inner wrappers: 88px vertical / 32px horizontal is a lot of a phone.
+_mark("lg-shell", lambda a: "padding: 88px 32px" in a)
+
+# Grids whose minimum column is wider than a phone's content box.
+_mark("lg-grid", lambda a: re.search(r"minmax\((?:3\d\d|4\d\d)px, 1fr\)", a) is not None)
+
+# The three-column "why" rows.
+_mark("lg-rows", lambda a: "88px minmax(0, 1fr) minmax(0, 1.15fr)" in a)
+
+# The install-command boxes. white-space:pre gives each a max-content width of
+# ~624px, and because grid and flex children default to min-width:auto that
+# demand propagates up through every ancestor and inflates the whole download
+# section. Tagged here so the media query can let them wrap instead.
+_mark("lg-cmd", lambda a: "overflow-x: auto" in a and "white-space: pre" in a)
+
+# The hero's version pill. At 11.5px the line runs ~319px, so on a 390px screen
+# it breaks after "matrix-rust-sdk" and leaves "0.18" alone on a second line.
+_mark("lg-pill", lambda a: "border-radius: 100px" in a and "inline-flex" in a
+      and "JetBrains Mono" in a)
+
+# Type scale, keyed off the desktop size so nothing is guessed.
+for _cls, _px in (("lg-t1", "68px"), ("lg-t2", "42px"),
+                  ("lg-t3", "34px"), ("lg-t4", "27px")):
+    _mark(_cls, lambda a, _p=_px: ("font-size: %s;" % _p) in a)
+_mark("lg-t4", lambda a: "font-size: 26px;" in a)
+
+print("  resp   " + ", ".join("%s=%d" % (k, v) for k, v in _counts.items()))
+
 helmet = re.search(r"<helmet>(.*?)</helmet>", doc, re.S).group(1)
 doc = re.sub(r"<helmet>.*?</helmet>", "", doc, flags=re.S)
 
@@ -279,6 +421,86 @@ extra_head = """
    this page is styled inline. Without this rule, hiding anything (the Donate
    button, for one) silently does nothing. */
 [hidden] {{ display: none !important; }}
+
+/* Per-package download buttons. One shared class rather than the generated
+   per-element hv-N classes, so eight identical rules do not ship. */
+.dlbtn {{
+  margin-left: auto;
+  padding: 7px 13px;
+  border-radius: 7px;
+  border: 1px solid #35496a;
+  background: #16202e;
+  color: #9dbdf5;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}}
+.dlbtn:hover {{ background: #1d2c40; border-color: #4a648f; color: #cfe0ff; }}
+.dlbtn:focus-visible {{ outline: 2px solid #5590f5; outline-offset: 2px; }}
+
+/* ---- phones and small tablets -------------------------------------------
+   Overrides for the desktop-only inline styles. !important is unavoidable:
+   an inline style beats any stylesheet rule without it. See the responsive
+   pass in tools/unbundle.py for what each class is attached to. */
+@media (max-width: 760px) {{
+  /* The nav's seven links in a nowrap row were the widest element on the
+     page (719px at a 390px viewport) and what forced the horizontal scroll.
+     Brand + Download stay; the five in-page links go, since every one of
+     them is reachable by scrolling and duplicated in the footer. */
+  .lg-navlink {{ display: none !important; }}
+  .lg-nav {{ gap: 12px !important; padding: 12px 18px !important; }}
+
+  /* A shorter header needs a shorter anchor offset. */
+  section[id] {{ scroll-margin-top: 108px !important; }}
+
+  .lg-shell {{ padding: 52px 20px !important; }}
+
+  /* One column, rather than a 420px column in a 326px box. */
+  .lg-grid, .lg-rows {{ grid-template-columns: 1fr !important; }}
+  /* The row number ("01") reads as a label above the heading once stacked. */
+  .lg-rows {{ gap: 10px !important; }}
+
+  /* Desktop type at phone width: 68px of hero is about four words a line. */
+  .lg-t1 {{ font-size: 38px !important; line-height: 1.06 !important; }}
+  .lg-t2 {{ font-size: 27px !important; }}
+  .lg-t3 {{ font-size: 23px !important; }}
+  .lg-t4 {{ font-size: 20px !important; }}
+
+  /* Let a long command wrap inside its card instead of demanding 624px and
+     forcing every ancestor wide. Wrapping beats a horizontal scroll inside a
+     card you are already scrolling vertically. */
+  .lg-cmd {{
+    white-space: pre-wrap !important;
+    overflow-x: visible !important;
+    overflow-wrap: anywhere !important;
+  }}
+
+  /* Stop any remaining max-content demand from propagating up a grid. */
+  .lg-grid > *, .lg-rows > * {{ min-width: 0 !important; }}
+
+  pre, code {{ overflow-wrap: anywhere; }}
+
+  /* Give the pill room for one line instead of orphaning the SDK version. */
+  .lg-pill {{ font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }}
+
+  /* One consistent full-width tap target per card. Without this the button
+     sits inline after short labels (".msi") and on its own line after long
+     ones, which reads as a mistake down a column of eight. */
+  .dlbtn {{
+    margin-left: 0 !important;
+    flex-basis: 100% !important;
+    text-align: center !important;
+    padding: 10px 13px !important;
+  }}
+}}
+
+/* Nothing on this page is allowed to widen the document. Every known cause is
+   fixed above; this is the backstop so a future edit degrades into a clipped
+   element rather than shoving the whole layout sideways again. */
+html, body {{ overflow-x: clip; }}
 {hover}
 </style>
 """.format(site=SITE_URL, hover="\n".join(hover_rules))

@@ -3,7 +3,7 @@
 The official website for [Lightning](https://gitlab.smetonis.net/Mizerd/lightning),
 a native Matrix desktop client for Linux and Windows.
 
-Live at **https://www.lightning-matrix.org**, hosted on Cloudflare Pages.
+Live at **https://www.lightning-matrix.org**, hosted on Cloudflare Workers.
 
 It is a single static page. There is no build step, no framework and no
 JavaScript required to read it — one optional 70-line script keeps a deployed
@@ -12,7 +12,7 @@ page in step with `releases.json`.
 ## Layout
 
 ```
-public/              <- everything Cloudflare Pages serves (the output directory)
+public/              <- everything Cloudflare serves (the assets directory)
   index.html         <- the site; hand-editable
   releases.json      <- the release feed; edit this to cut a release
   releases.js        <- optional: refreshes a live page from releases.json
@@ -26,6 +26,7 @@ public/              <- everything Cloudflare Pages serves (the output directory
     screenshot-*.png
     fonts/*.woff2    <- Manrope, JetBrains Mono, Space Grotesk (self-hosted)
 
+wrangler.jsonc       <- Cloudflare config: serve public/, 404.html on miss
 artifact/
   Lightning.html     <- the original Claude artifact this site was built from
 tools/
@@ -109,24 +110,32 @@ Then open http://localhost:8899. Serve from `public/`, not the repository
 root — every path in the page is absolute (`/assets/...`).
 
 `_headers` and `_redirects` are Cloudflare features and do nothing locally.
+Workers static assets supports both natively, the same as Pages did.
 
 ## Deploying
 
-Cloudflare Pages, connected to this GitHub repository. Every push to `main`
-deploys; pull requests get preview URLs.
+Cloudflare **Workers** (static assets), connected to this GitHub repository.
+Every push to `main` deploys.
+
+`wrangler.jsonc` is the whole configuration: it points Cloudflare at `public/`
+and asks for `404.html` on unknown paths. There is no `main` script and no
+assets binding, because the site is static — Cloudflare serves the directory
+directly.
 
 **One-time setup** — Cloudflare dashboard → Workers & Pages → Create →
-Pages → Connect to Git:
+Import a repository → `lightning-website`:
 
-| Setting | Value |
+| Field | Value |
 | --- | --- |
-| Repository | `Mizerd/lightning-website` |
-| Production branch | `main` |
-| Framework preset | None |
 | Build command | *(leave empty)* |
-| Build output directory | `public` |
+| Deploy command | `npx wrangler deploy` |
+| Version-preview command | *(leave empty)* |
+| Root directory | `/` |
 
-Then under the project's **Custom domains**, add **both**:
+There is no build step: the repository already contains the finished site.
+`wrangler deploy` reads `wrangler.jsonc` and uploads `public/`.
+
+Then under the Worker's **Settings → Domains & Routes**, add **both**:
 
 - `www.lightning-matrix.org` — the canonical hostname
 - `lightning-matrix.org` — the apex
@@ -135,9 +144,15 @@ Both must be attached before the apex → www redirect in `_redirects` can fire.
 `www` is canonical: it is what `<link rel="canonical">`, the Open Graph tags
 and `sitemap.xml` all point at.
 
-If DNS for `lightning-matrix.org` is already on Cloudflare, adding the custom
-domains creates the records for you. Otherwise point the nameservers at
-Cloudflare first.
+If DNS for `lightning-matrix.org` is already on Cloudflare, adding the domains
+creates the records for you. Otherwise point the nameservers at Cloudflare
+first.
+
+Deploying by hand, if you ever need to:
+
+```sh
+npx wrangler deploy          # or: npx wrangler versions upload
+```
 
 ### Response headers
 

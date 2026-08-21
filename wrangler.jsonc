@@ -1,0 +1,23 @@
+{
+  // Cloudflare Workers static-assets configuration.
+  // https://developers.cloudflare.com/workers/static-assets/
+  //
+  // This is a static site with no server-side code, so there is deliberately
+  // no "main" script and no "binding" -- the assets binding is only needed
+  // when a Worker script is present. Cloudflare serves ./public directly.
+
+  "name": "lightning-website",
+  "compatibility_date": "2026-08-21",
+
+  "assets": {
+    // Everything Cloudflare serves. Paths in the site are absolute
+    // (/assets/...), so this directory becomes the site root: public/index.html
+    // is served at https://www.lightning-matrix.org/.
+    "directory": "./public",
+
+    // Serve public/404.html for unknown paths. The default ("none") would
+    // return a bare Cloudflare error page instead. Not "single-page-
+    // application" -- this is a real multi-URL static site, not an SPA.
+    "not_found_handling": "404-page"
+  }
+}

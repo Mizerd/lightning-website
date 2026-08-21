@@ -679,20 +679,35 @@ _lin_i = doc.index(">Linux</h3>")
 _win_i = doc.index(">Windows</h3>")
 _col = doc[_lin_i:_win_i]
 
-_BTN = ("position: absolute; top: 8px; right: 8px; padding: 4px 9px; "
-        "border-radius: 6px; border: 1px solid #24303f; background: #10161e; "
-        "color: #9fb0c4; font-family: 'JetBrains Mono', monospace; "
-        "font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; "
-        "text-transform: uppercase; line-height: 1.4; cursor: pointer;")
+_BTN = ("flex: none; padding: 6px 10px; border-radius: 6px; "
+        "border: 1px solid #24303f; background: #10161e; color: #9fb0c4; "
+        "font-family: 'JetBrains Mono', monospace; font-size: 10.5px; "
+        "font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; "
+        "line-height: 1.4; cursor: pointer;")
 
 def _addcopy(m):
     style, body = m.group(1), m.group(2)
-    # Keep the command clear of the button; the box scrolls under it.
-    box = ('<div style="%s padding-right: 68px;" data-lg-copy>%s</div>'
-           % (style, body))
-    return ('<div style="position: relative;">%s'
+    # The button is a flex sibling, not an overlay. Absolute positioning put
+    # it on top of the box, and reserving room with padding-right does not
+    # help: the box scrolls (white-space: pre, overflow-x: auto), so that
+    # padding sits at the end of the scrollable content rather than at the
+    # right edge of what you can see. A long command -- the AppImage one --
+    # ran straight under the button at scroll position zero.
+    #
+    # The box's own top margin moves to the row, or the button would sit that
+    # much higher than the box it belongs to.
+    _mt = re.match(r"margin-top: [\d.]+px;\s*", style)
+    row_margin = _mt.group(0) if _mt else ""
+    box_style = style[_mt.end():] if _mt else style
+
+    box = ('<div style="%s flex: 1 1 240px; min-width: 0;" data-lg-copy>%s'
+           '</div>' % (box_style, body))
+    # flex-wrap lets the button drop to its own line rather than squeeze the
+    # command when there is no room for both.
+    return ('<div style="%s display: flex; flex-wrap: wrap; '
+            'align-items: center; gap: 8px;">%s'
             '<button type="button" data-lg-copybtn hidden class="lg-copybtn" '
-            'style="%s">Copy</button></div>' % (box, _BTN))
+            'style="%s">Copy</button></div>' % (row_margin, box, _BTN))
 
 _col, _n = re.subn(
     r'<div style="([^"]*white-space: pre;)">((?:(?!</?div\b).)*)</div>',

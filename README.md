@@ -104,12 +104,21 @@ if GitHub is unreachable.
 The Linux install commands each carry a copy button. Windows and macOS get
 none — their boxes hold GUI actions ("double-click ..."), not commands.
 
-Two things about it are deliberate. The button is a **sibling** of the command
-box rather than a child, so `textContent` yields the command with no button
-label mixed in. And clicks are handled by **delegation** on `document`, not by
-a listener per button, because `packages()` rebuilds these cards with
+Three things about it are deliberate. The button is a **sibling** of the
+command box rather than a child, so `textContent` yields the command with no
+button label mixed in. Clicks are handled by **delegation** on `document`, not
+by a listener per button, because `packages()` rebuilds these cards with
 `cloneNode` — which does not copy event listeners, so per-button listeners
 would die on every rebuild.
+
+And the button is a **flex item beside the box, never an overlay**. The first
+version positioned it absolutely over the box and reserved room with
+`padding-right`, which does not work: the box scrolls (`white-space: pre`,
+`overflow-x: auto`), so that padding sits at the end of the scrollable content
+rather than at the right edge of what you can see. The AppImage command — the
+longest one — ran straight under the button at scroll position zero. The row
+is `flex-wrap: wrap`, so on a phone the button drops to its own line instead
+of squeezing the command.
 
 The buttons ship `hidden` and `releases.js` reveals them, so a reader without
 JavaScript is never shown a button that cannot work.

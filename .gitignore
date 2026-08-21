@@ -1,0 +1,16 @@
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+
+# Node (only if you ever add tooling; the site itself needs no build)
+node_modules/
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local scratch
+*.local

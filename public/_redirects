@@ -1,0 +1,8 @@
+# Cloudflare Pages redirects.
+# https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# www is canonical (it is what <link rel="canonical"> and the sitemap point
+# at), so the bare apex forwards to it. This rule only fires once BOTH
+# lightning-matrix.org and www.lightning-matrix.org are attached to the Pages
+# project as custom domains -- see the README.
+https://lightning-matrix.org/*  https://www.lightning-matrix.org/:splat  301

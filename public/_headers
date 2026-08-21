@@ -1,0 +1,31 @@
+# Cloudflare Pages response headers.
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  # The page is entirely self-hosted: one same-origin script, same-origin
+  # fonts and images, no third-party anything. The only loosening is
+  # style-src 'unsafe-inline', which the artifact's 347 inline style="..."
+  # attributes require -- removing it would mean rewriting every one of them.
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Fonts are immutable for a given filename: family + unicode subset fully
+# identify the file, and a new subset would arrive under a new name.
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Screenshots are NOT content-hashed, so a year would strand a stale image
+# behind a redesign. A day is long enough to matter and short enough to fix.
+/assets/*
+  Cache-Control: public, max-age=86400
+
+# The release feed is the whole point of the setup: edit it and the deployed
+# site follows without a rebuild. It must never be served stale.
+/releases.json
+  Cache-Control: no-cache
+
+/releases.js
+  Cache-Control: public, max-age=3600

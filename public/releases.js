@@ -168,6 +168,62 @@
     if (rel && d.release_url) rel.href = d.release_url;
   }
 
+  // ---- copy buttons on the install commands -------------------------------
+  // The buttons ship `hidden` so a reader without JavaScript never sees one
+  // that cannot work. Clicks are handled by delegation because packages()
+  // rebuilds these cards with cloneNode, which does not copy event listeners
+  // -- a listener bound per button would die on every clone.
+
+  function copyText(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value);
+    }
+    // Older browsers, and any context where the async API is unavailable.
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = value;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (err) { ok = false; }
+      document.body.removeChild(ta);
+      ok ? resolve() : reject();
+    });
+  }
+
+  function flash(btn, word) {
+    if (btn.dataset.busy) return;
+    btn.dataset.busy = "1";
+    var was = btn.textContent;
+    btn.textContent = word;
+    setTimeout(function () {
+      btn.textContent = was;
+      delete btn.dataset.busy;
+    }, 1400);
+  }
+
+  function showCopyButtons() {
+    document.querySelectorAll("[data-lg-copybtn]").forEach(function (b) {
+      b.hidden = false;
+    });
+  }
+
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target && ev.target.closest
+      ? ev.target.closest("[data-lg-copybtn]") : null;
+    if (!btn) return;
+    // The command is the button's sibling, so its textContent is the command
+    // and nothing else -- no button label mixed into what gets copied.
+    var box = btn.parentNode.querySelector("[data-lg-copy]");
+    if (!box) return;
+    copyText(box.textContent).then(
+      function () { flash(btn, "Copied"); },
+      function () { flash(btn, "Press Ctrl+C"); }
+    );
+  });
+
   function load(url, apply, opts) {
     return fetch(url, opts)
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -179,5 +235,8 @@
   // the more authoritative of the two and rebuilt cards would otherwise
   // discard the URLs it just set.
   load("/releases.json", applyFeed, { cache: "no-cache" })
-    .then(function () { return load("/api/latest", applyLatest); });
+    .then(function () { return load("/api/latest", applyLatest); })
+    // Last: the passes above replace the cards, and the buttons must be
+    // revealed on whatever cards are actually in the document at the end.
+    .then(showCopyButtons, showCopyButtons);
 })();

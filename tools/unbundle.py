@@ -595,20 +595,111 @@ if _hero not in doc:
     raise SystemExit("hero content wrapper not found")
 
 _lockup = (
-    '      <div style="display: flex; align-items: center; gap: 16px; '
-    'margin-bottom: 30px;" class="lg-brand">\n'
-    '        <img src="/assets/lightning-mark.svg" alt="" width="54" '
-    'height="54" style="display: block; flex: none;" class="lg-brandmark">\n'
+    '      <div style="display: flex; align-items: center; gap: 22px; '
+    'margin-bottom: 34px;" class="lg-brand">\n'
+    '        <img src="/assets/lightning-mark.svg" alt="" width="88" '
+    'height="88" style="display: block; flex: none;" class="lg-brandmark">\n'
     '        <div>\n'
     '          <div style="font-family: \'Space Grotesk\', sans-serif; '
-    'font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: '
-    '-0.02em; color: #f2f6fb;" class="lg-brandname">Lightning</div>\n'
-    '          <div style="margin-top: 7px; font-size: 14.5px; font-weight: '
+    'font-size: 62px; line-height: 1; font-weight: 700; letter-spacing: '
+    '-0.025em; color: #f2f6fb;" class="lg-brandname">Lightning</div>\n'
+    '          <div style="margin-top: 10px; font-size: 17px; font-weight: '
     '500; color: #8d99a8;" class="lg-brandsub">A native Matrix client for '
     'Linux and Windows</div>\n'
     '        </div>\n'
     '      </div>\n')
 doc = doc.replace(_hero, _hero + _lockup, 1)
+
+# 9. The architecture diagram was laid out by hand for one width: each layer
+#    carried literal <br> tags and runs of &nbsp; to indent its continuation
+#    lines. On a phone those breaks land in the wrong places and the natural
+#    wrapping adds its own, so some lines are indented and some are flush
+#    left, and the vertical connectors stop lining up with anything.
+#
+#    Replace the manual breaks with a hanging indent, which produces the same
+#    shape at any width: the first line starts at the margin and every
+#    continuation line is indented under it. Nothing is hard-coded to a
+#    column count, so it reflows instead of breaking.
+_arch_box = ('<div style="margin-top: 16px; padding: 20px; border: 1px solid '
+             '#1e2631; border-radius: 10px; background: #0a0d12; font-family: '
+             "'JetBrains Mono', monospace; font-size: 12px; line-height: 1.85; "
+             'color: #8d99a8; overflow-x: auto;">')
+if _arch_box not in doc:
+    raise SystemExit("architecture diagram not found")
+
+_ai = doc.index(_arch_box)
+_depth, _aend = 0, None
+for _m in re.finditer(r"<div\b|</div>", doc[_ai:]):
+    _depth += 1 if _m.group(0) == "<div" else -1
+    if _depth == 0:
+        _aend = _ai + _m.end()
+        break
+if _aend is None:
+    raise SystemExit("architecture diagram is unbalanced")
+_arch = doc[_ai:_aend]
+
+# The artifact left this one layer unfinished -- every other line describes
+# what it does, this one trailed off mid-sentence.
+_arch = _arch.replace("FFI to&hellip;", "FFI between C++ and the SDK")
+_arch = _arch.replace("FFI to…", "FFI between C++ and the SDK")
+
+# Drop the hand-placed breaks and indents.
+_arch = re.sub(r"<br>(?:&nbsp;)*", " ", _arch)
+_arch = re.sub(r"(?:&nbsp;)+", " ", _arch)
+_arch = re.sub(r"  +", " ", _arch)
+
+# Hanging indent on the layer rows, so a wrapped description sits under the
+# description rather than under the layer name. The connector rows are left
+# alone -- they are one character wide.
+_arch = _arch.replace(
+    "<div><span", '<div style="padding-left: 7ch; text-indent: -7ch;" '
+                  'class="lg-archrow"><span')
+# Nothing overflows once it wraps, so the scrollbar goes with the breaks.
+_arch = _arch.replace(" overflow-x: auto;\">", '" class="lg-arch">', 1)
+doc = doc[:_ai] + _arch + doc[_aend:]
+
+# 10. The Matrix room address is one unbroken token, so at 390px it ran 15px
+#     past the card that holds it. Tag it so mobile can break it.
+_room = '<a href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net"'
+if _room not in doc:
+    raise SystemExit("Matrix room link not found")
+doc = doc.replace(_room, _room + ' class="lg-room"', 1)
+
+# 11. Copy buttons on the Linux install commands. Only Linux: the Windows
+#     boxes say "double-click ..." and "run the installer", which are not
+#     commands, and the macOS block has none at all.
+#
+#     The button is a sibling of the command box, not a child, so reading the
+#     box's textContent gives the command and nothing else. It ships `hidden`
+#     and releases.js reveals it, so a reader without JavaScript is never
+#     shown a button that cannot work. Clicks are handled by delegation --
+#     releases.js rebuilds these cards with cloneNode, which does not copy
+#     event listeners, so a per-button listener would die on every clone.
+_lin_i = doc.index(">Linux</h3>")
+_win_i = doc.index(">Windows</h3>")
+_col = doc[_lin_i:_win_i]
+
+_BTN = ("position: absolute; top: 8px; right: 8px; padding: 4px 9px; "
+        "border-radius: 6px; border: 1px solid #24303f; background: #10161e; "
+        "color: #9fb0c4; font-family: 'JetBrains Mono', monospace; "
+        "font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; "
+        "text-transform: uppercase; line-height: 1.4; cursor: pointer;")
+
+def _addcopy(m):
+    style, body = m.group(1), m.group(2)
+    # Keep the command clear of the button; the box scrolls under it.
+    box = ('<div style="%s padding-right: 68px;" data-lg-copy>%s</div>'
+           % (style, body))
+    return ('<div style="position: relative;">%s'
+            '<button type="button" data-lg-copybtn hidden class="lg-copybtn" '
+            'style="%s">Copy</button></div>' % (box, _BTN))
+
+_col, _n = re.subn(
+    r'<div style="([^"]*white-space: pre;)">((?:(?!</?div\b).)*)</div>',
+    _addcopy, _col, flags=re.S)
+if _n != 6:
+    raise SystemExit("expected 6 Linux command boxes, wrapped %d" % _n)
+doc = doc[:_lin_i] + _col + doc[_win_i:]
 
 # ------------------------------------------------------------- style-hover CSS
 hover_rules = []
@@ -767,6 +858,10 @@ extra_head = """
    Overrides for the desktop-only inline styles. !important is unavoidable:
    an inline style beats any stylesheet rule without it. See the responsive
    pass in tools/unbundle.py for what each class is attached to. */
+.lg-copybtn:hover {{ background: #17202b; color: #dbe6f2;
+                    border-color: #35455a; }}
+.lg-copybtn:active {{ transform: translateY(1px); }}
+
 /* Two wordings of the alpha warning, one visible at a time. The brief one is
    for phones, where the full sentence wrapped to four lines in a bar that is
    sticky -- so it cost a sixth of the screen on every scroll. */
@@ -832,10 +927,20 @@ extra_head = """
   /* The lockup is the first thing on the page; keep it a brand, not a
      banner. The mark shrinks less than the wordmark -- it is the part that
      survives at small sizes. */
-  .lg-brand {{ gap: 12px !important; margin-bottom: 22px !important; }}
-  .lg-brandmark {{ width: 42px !important; height: 42px !important; }}
-  .lg-brandname {{ font-size: 30px !important; }}
-  .lg-brandsub {{ font-size: 13px !important; }}
+  .lg-brand {{ gap: 14px !important; margin-bottom: 24px !important; }}
+  .lg-brandmark {{ width: 58px !important; height: 58px !important; }}
+  .lg-brandname {{ font-size: 38px !important; }}
+  .lg-brandsub {{ font-size: 13.5px !important; }}
+
+  /* "#lightning:matrix.smetonis.net" has no spaces, so it cannot wrap and it
+     ran 15px past its card. Let it break rather than spill. */
+  .lg-room {{ overflow-wrap: anywhere !important; }}
+
+  /* A 7ch hanging indent is a fair slice of a 30-character line, so the
+     architecture diagram gets a shallower one and slightly tighter type. */
+  .lg-arch {{ font-size: 11.5px !important; line-height: 1.75 !important;
+             padding: 16px !important; }}
+  .lg-archrow {{ padding-left: 2ch !important; text-indent: -2ch !important; }}
 
   /* Give the pill room for one line instead of orphaning the SDK version. */
   .lg-pill {{ font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }}

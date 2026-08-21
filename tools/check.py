@@ -10,6 +10,7 @@ These are the things that have actually broken, not a general test suite:
     (the "every Linux button serves the .deb" bug)
   * the page's baked-in version agrees with releases.json
   * nothing served mentions GitLab -- the site points at GitHub only
+  * the Linux commands have copy buttons, and they ship hidden
   * releases.js is not cacheable for longer than the HTML that it rewrites
     (the cache skew that caused that bug to reach a browser)
 
@@ -79,6 +80,26 @@ check("card filenames match releases.json", card_files == feed_files,
 baked = set(re.findall(r'data-lg-bind="version">([^<]*)<', html))
 check("baked version matches feed", baked == {feed["version"]},
       "%s vs %s" % (baked, feed["version"]))
+
+# ---- copy buttons -----------------------------------------------------------
+# Linux install commands get a copy button; Windows and macOS get none,
+# because their boxes hold GUI actions rather than commands. Every button
+# ships hidden, so a reader without JavaScript is never shown one that cannot
+# work -- releases.js reveals them.
+lin_i, win_i = html.index(">Linux</h3>"), html.index(">Windows</h3>")
+linux_col, rest = html[lin_i:win_i], html[win_i:]
+# The responsive pass appends class="lg-cmd" after the attribute, so match the
+# attribute name rather than assuming it closes the tag.
+n_cmds = len(re.findall(r"data-lg-copy(?![a-z-])", linux_col))
+n_linux = linux_col.count("data-lg-copybtn")
+check("a copy button per Linux command", n_linux and n_linux == n_cmds,
+      "%d buttons, %d commands" % (n_linux, n_cmds))
+check("no copy buttons outside the Linux column", "data-lg-copybtn" not in rest,
+      "%d found" % rest.count("data-lg-copybtn"))
+check("every copy button ships hidden",
+      html.count("data-lg-copybtn hidden") == html.count("data-lg-copybtn"),
+      "%d of %d" % (html.count("data-lg-copybtn hidden"),
+                    html.count("data-lg-copybtn")))
 
 # ---- GitHub only ----------------------------------------------------------
 # The site must not link to GitLab or name it. unbundle.py asserts this while

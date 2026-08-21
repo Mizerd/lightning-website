@@ -99,6 +99,21 @@ The `file` values in `releases.json` are still worth keeping accurate: they are
 what a visitor with JavaScript disabled sees, and what the buttons fall back to
 if GitHub is unreachable.
 
+### Copy buttons
+
+The Linux install commands each carry a copy button. Windows and macOS get
+none — their boxes hold GUI actions ("double-click ..."), not commands.
+
+Two things about it are deliberate. The button is a **sibling** of the command
+box rather than a child, so `textContent` yields the command with no button
+label mixed in. And clicks are handled by **delegation** on `document`, not by
+a listener per button, because `packages()` rebuilds these cards with
+`cloneNode` — which does not copy event listeners, so per-button listeners
+would die on every rebuild.
+
+The buttons ship `hidden` and `releases.js` reveals them, so a reader without
+JavaScript is never shown a button that cannot work.
+
 ### The Donate button
 
 The markup is in `index.html` but is hidden, because there is no donation

@@ -556,6 +556,10 @@
    Overrides for the desktop-only inline styles. !important is unavoidable:
    an inline style beats any stylesheet rule without it. See the responsive
    pass in tools/unbundle.py for what each class is attached to. */
+.lg-copybtn:hover { background: #17202b; color: #dbe6f2;
+                    border-color: #35455a; }
+.lg-copybtn:active { transform: translateY(1px); }
+
 /* Two wordings of the alpha warning, one visible at a time. The brief one is
    for phones, where the full sentence wrapped to four lines in a bar that is
    sticky -- so it cost a sixth of the screen on every scroll. */
@@ -621,10 +625,20 @@
   /* The lockup is the first thing on the page; keep it a brand, not a
      banner. The mark shrinks less than the wordmark -- it is the part that
      survives at small sizes. */
-  .lg-brand { gap: 12px !important; margin-bottom: 22px !important; }
-  .lg-brandmark { width: 42px !important; height: 42px !important; }
-  .lg-brandname { font-size: 30px !important; }
-  .lg-brandsub { font-size: 13px !important; }
+  .lg-brand { gap: 14px !important; margin-bottom: 24px !important; }
+  .lg-brandmark { width: 58px !important; height: 58px !important; }
+  .lg-brandname { font-size: 38px !important; }
+  .lg-brandsub { font-size: 13.5px !important; }
+
+  /* "#lightning:matrix.smetonis.net" has no spaces, so it cannot wrap and it
+     ran 15px past its card. Let it break rather than spill. */
+  .lg-room { overflow-wrap: anywhere !important; }
+
+  /* A 7ch hanging indent is a fair slice of a 30-character line, so the
+     architecture diagram gets a shallower one and slightly tighter type. */
+  .lg-arch { font-size: 11.5px !important; line-height: 1.75 !important;
+             padding: 16px !important; }
+  .lg-archrow { padding-left: 2ch !important; text-indent: -2ch !important; }
 
   /* Give the pill room for one line instead of orphaning the SDK version. */
   .lg-pill { font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }
@@ -724,11 +738,11 @@ html, body { overflow-x: clip; }
     <div style="position: absolute; inset: 0; background: linear-gradient(100deg, rgba(255,255,255,0) 44%, rgba(159,190,255,0.07) 50%, rgba(255,255,255,0) 56%); pointer-events: none; animation: lgStrike 11s linear infinite;"></div>
     <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(59,127,240,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(59,127,240,0.05) 1px, transparent 1px); background-size: 68px 68px; mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000, transparent 75%); -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000, transparent 75%); pointer-events: none;"></div>
     <div style="position: relative; max-width: 1180px; margin: 0 auto; padding: 96px 32px 88px;">
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 30px;" class="lg-brand">
-        <img src="/assets/lightning-mark.svg" alt="" width="54" height="54" style="display: block; flex: none;" class="lg-brandmark">
+      <div style="display: flex; align-items: center; gap: 22px; margin-bottom: 34px;" class="lg-brand">
+        <img src="/assets/lightning-mark.svg" alt="" width="88" height="88" style="display: block; flex: none;" class="lg-brandmark">
         <div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; color: #f2f6fb;" class="lg-brandname">Lightning</div>
-          <div style="margin-top: 7px; font-size: 14.5px; font-weight: 500; color: #8d99a8;" class="lg-brandsub">A native Matrix client for Linux and Windows</div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 62px; line-height: 1; font-weight: 700; letter-spacing: -0.025em; color: #f2f6fb;" class="lg-brandname">Lightning</div>
+          <div style="margin-top: 10px; font-size: 17px; font-weight: 500; color: #8d99a8;" class="lg-brandsub">A native Matrix client for Linux and Windows</div>
         </div>
       </div>
       <div style="display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px; border: 1px solid #2b3a52; border-radius: 100px; background: rgba(59,127,240,0.08); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.06em; color: #9dbdf5;" class="lg-pill">
@@ -948,15 +962,15 @@ html, body { overflow-x: clip; }
         <div>
           <h3 style="padding-bottom: 12px; border-bottom: 1px solid #232b35; font-size: 17px; font-weight: 600; color: #e8edf5;">Architecture</h3>
           <p style="margin-top: 18px; font-size: 14.5px; line-height: 1.6; color: #94a1b1;">The interface, the app's state and the Matrix work are kept apart.</p>
-          <div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; border-radius: 10px; background: #0a0d12; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.85; color: #8d99a8; overflow-x: auto;">
-            <div><span style="color: #9dbdf5;">Qt 6 / QML</span> — presentation, interaction, theming</div>
-            <div style="color: #4a5666;">│</div>
-            <div><span style="color: #9dbdf5;">C++</span> — application state, Qt-facing models,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;account/room/thread isolation</div>
-            <div style="color: #4a5666;">│</div>
-            <div><span style="color: #9dbdf5;">Rust bridge</span> — FFI to…</div>
-            <div style="color: #4a5666;">│</div>
-            <div><span style="color: #7fd1a6;">matrix-rust-sdk</span> — sync, timelines, threads,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;media, Olm/Megolm E2EE, verification,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key backup, receipts</div>
-          </div>
+          <div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; border-radius: 10px; background: #0a0d12; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.85; color: #8d99a8;" class="lg-arch">
+ <div style="padding-left: 7ch; text-indent: -7ch;" class="lg-archrow"><span style="color: #9dbdf5;">Qt 6 / QML</span> — presentation, interaction, theming</div>
+ <div style="color: #4a5666;">│</div>
+ <div style="padding-left: 7ch; text-indent: -7ch;" class="lg-archrow"><span style="color: #9dbdf5;">C++</span> — application state, Qt-facing models, account/room/thread isolation</div>
+ <div style="color: #4a5666;">│</div>
+ <div style="padding-left: 7ch; text-indent: -7ch;" class="lg-archrow"><span style="color: #9dbdf5;">Rust bridge</span> — FFI between C++ and the SDK</div>
+ <div style="color: #4a5666;">│</div>
+ <div style="padding-left: 7ch; text-indent: -7ch;" class="lg-archrow"><span style="color: #7fd1a6;">matrix-rust-sdk</span> — sync, timelines, threads, media, Olm/Megolm E2EE, verification, key backup, receipts</div>
+ </div>
           <p style="margin-top: 16px; font-size: 14.5px; line-height: 1.6; color: #94a1b1;">QML only draws the interface. It never touches the protocol, your credentials, encryption or storage. The mock backends used in development aren't compiled into releases.</p>
         </div>
 
@@ -990,7 +1004,7 @@ html, body { overflow-x: clip; }
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.deb</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Debian / Ubuntu / Mint / Pop!_OS</span></span>
                 <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.deb" aria-label="Download lightning_0.7.4_amd64.deb">Download</a></div>
-                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo apt install ./lightning_0.7.4_amd64.deb</span></div>
+                <div style="position: relative;"><div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre; padding-right: 68px;" data-lg-copy class="lg-cmd"><span data-lg-bind="pkg.install">sudo apt install ./lightning_0.7.4_amd64.deb</span></div><button type="button" data-lg-copybtn hidden class="lg-copybtn" style="position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; border: 1px solid #24303f; background: #10161e; color: #9fb0c4; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; cursor: pointer;">Copy</button></div>
               </div>
             
               <div data-lg-pkg="linux" data-lg-format=".rpm" data-lg-file="lightning-0.7.4-1.x86_64.rpm" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-22">
@@ -998,7 +1012,7 @@ html, body { overflow-x: clip; }
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.rpm</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Fedora / RHEL / openSUSE</span></span>
                 <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning-0.7.4-1.x86_64.rpm" aria-label="Download lightning-0.7.4-1.x86_64.rpm">Download</a></div>
-                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo dnf install ./lightning-0.7.4-1.x86_64.rpm</span></div>
+                <div style="position: relative;"><div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre; padding-right: 68px;" data-lg-copy class="lg-cmd"><span data-lg-bind="pkg.install">sudo dnf install ./lightning-0.7.4-1.x86_64.rpm</span></div><button type="button" data-lg-copybtn hidden class="lg-copybtn" style="position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; border: 1px solid #24303f; background: #10161e; color: #9fb0c4; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; cursor: pointer;">Copy</button></div>
               </div>
             
               <div data-lg-pkg="linux" data-lg-format="AppImage" data-lg-file="Lightning-0.7.4-x86_64.AppImage" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-23">
@@ -1006,7 +1020,7 @@ html, body { overflow-x: clip; }
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">AppImage</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Any distribution, nothing installed</span></span>
                 <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/Lightning-0.7.4-x86_64.AppImage" aria-label="Download Lightning-0.7.4-x86_64.AppImage">Download</a></div>
-                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">chmod +x Lightning-0.7.4-x86_64.AppImage &amp;&amp; ./Lightning-0.7.4-x86_64.AppImage</span></div>
+                <div style="position: relative;"><div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre; padding-right: 68px;" data-lg-copy class="lg-cmd"><span data-lg-bind="pkg.install">chmod +x Lightning-0.7.4-x86_64.AppImage &amp;&amp; ./Lightning-0.7.4-x86_64.AppImage</span></div><button type="button" data-lg-copybtn hidden class="lg-copybtn" style="position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; border: 1px solid #24303f; background: #10161e; color: #9fb0c4; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; cursor: pointer;">Copy</button></div>
               </div>
             
               <div data-lg-pkg="linux" data-lg-format=".flatpak" data-lg-file="lightning_0.7.4_amd64.flatpak" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-24">
@@ -1014,7 +1028,7 @@ html, body { overflow-x: clip; }
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.flatpak</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Flatpak (KDE Platform 6.9 runtime)</span></span>
                 <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.flatpak" aria-label="Download lightning_0.7.4_amd64.flatpak">Download</a></div>
-                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">flatpak install --user ./lightning_0.7.4_amd64.flatpak</span></div>
+                <div style="position: relative;"><div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre; padding-right: 68px;" data-lg-copy class="lg-cmd"><span data-lg-bind="pkg.install">flatpak install --user ./lightning_0.7.4_amd64.flatpak</span></div><button type="button" data-lg-copybtn hidden class="lg-copybtn" style="position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; border: 1px solid #24303f; background: #10161e; color: #9fb0c4; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; cursor: pointer;">Copy</button></div>
               </div>
             
               <div data-lg-pkg="linux" data-lg-format=".snap" data-lg-file="lightning_0.7.4_amd64.snap" style="padding: 18px 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;" class="hv-25">
@@ -1022,13 +1036,13 @@ html, body { overflow-x: clip; }
                   <span style="padding: 3px 8px; border-radius: 5px; background: #1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: #9dbdf5;"><span data-lg-bind="pkg.format">.snap</span></span>
                   <span style="font-size: 14px; color: #b6c2d0;"><span data-lg-bind="pkg.label">Snap, strict confinement, local file</span></span>
                 <a class="dlbtn" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/lightning_0.7.4_amd64.snap" aria-label="Download lightning_0.7.4_amd64.snap">Download</a></div>
-                <div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd"><span data-lg-bind="pkg.install">sudo snap install --dangerous ./lightning_0.7.4_amd64.snap</span></div>
+                <div style="position: relative;"><div style="margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; color: #a8d5bd; overflow-x: auto; white-space: pre; padding-right: 68px;" data-lg-copy class="lg-cmd"><span data-lg-bind="pkg.install">sudo snap install --dangerous ./lightning_0.7.4_amd64.snap</span></div><button type="button" data-lg-copybtn hidden class="lg-copybtn" style="position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; border: 1px solid #24303f; background: #10161e; color: #9fb0c4; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; cursor: pointer;">Copy</button></div>
               </div>
             
           </div>
           <div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; border-radius: 11px; background: #10151c;">
             <div style="font-size: 14.5px; font-weight: 600;">Verify your download</div><a class="dlbtn" data-lg-dl-sha href="https://github.com/Mizerd/lightning/releases/download/v0.7.4/SHA256SUMS" style="margin-left: 0; margin-top: 12px; display: inline-block;">Get SHA256SUMS</a>
-            <div style="margin-top: 12px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8d5bd; overflow-x: auto; white-space: pre;" class="lg-cmd">sha256sum -c SHA256SUMS --ignore-missing</div>
+            <div style="position: relative;"><div style="margin-top: 12px; padding: 11px 13px; border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8d5bd; overflow-x: auto; white-space: pre; padding-right: 68px;" data-lg-copy class="lg-cmd">sha256sum -c SHA256SUMS --ignore-missing</div><button type="button" data-lg-copybtn hidden class="lg-copybtn" style="position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; border: 1px solid #24303f; background: #10161e; color: #9fb0c4; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; cursor: pointer;">Copy</button></div>
             
           </div>
         </div>
@@ -1193,7 +1207,7 @@ html, body { overflow-x: clip; }
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5f88cc;">Say hello</div>
           <h3 style="margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 700;" class="lg-t4">Find us on Matrix</h3>
           <p style="margin-top: 12px; font-size: 15px; line-height: 1.6; color: #97a4b4;">Bugs and questions are both welcome, either in the room or in the issue tracker on GitHub.</p>
-          <a href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; background: #3b7ff0; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 500;" class="hv-33">#lightning:matrix.smetonis.net</a>
+          <a href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net" class="lg-room" style="display: inline-block; margin-top: 20px; padding: 13px 20px; border-radius: 9px; background: #3b7ff0; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 500;" class="hv-33">#lightning:matrix.smetonis.net</a>
         </div>
 
         <div style="padding: 34px; border: 1px solid #1e2631; border-radius: 14px; background: #10151c; transition: border-color 0.35s ease, transform 0.35s ease;" class="hv-34">

@@ -327,6 +327,15 @@ if "gitlab" in doc.lower():
 # 2. Code signing. The artifact said the SignPath Foundation application had
 #    not been made; it has, and it is queued. This is the one claim on the page
 #    that can quietly become a lie, so it asserts its own needle.
+# The same box told Windows users to check the download "against the
+# checksum". Correction 7 moves the only checksum command on the page into
+# the Linux column, because it is a Linux command -- so point Windows readers
+# at where the file came from instead, which is what actually protects them.
+_ck = ("If you've checked the download against the checksum, pick ")
+if _ck not in doc:
+    raise SystemExit("SmartScreen checksum sentence not found")
+doc = doc.replace(_ck, "If you got the file from the release page above, pick ", 1)
+
 _before = ("Signing through the SignPath Foundation is something we'd like to "
            "do, but we <strong style=\"color: #f0d6a0; font-weight: 600;\">"
            "haven't even applied yet</strong>, so no release is signed today.")
@@ -401,10 +410,6 @@ doc = doc.replace(_mac_card, "", 1)
 
 _CARD = ("padding: 22px; border: 1px solid #1e2631; border-radius: 11px; "
          "background: #10151c;")
-_CMD = ("margin-top: 10px; padding: 11px 13px; border-radius: 7px; "
-        "background: #070a0e; border: 1px solid #1a212b; font-family: "
-        "'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; "
-        "color: #a8d5bd; overflow-x: auto; white-space: pre;")
 _BODY = "margin-top: 9px; font-size: 14px; line-height: 1.6; color: #8d99a8;"
 _STEP = ("font-family: 'JetBrains Mono', monospace; font-size: 11.5px; "
          "font-weight: 700; color: #5f88cc;")
@@ -431,11 +436,13 @@ _macos = (
     '#f0d6a0;">It will not be signed or notarised</div>\n'
     '          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; '
     'color: #c4a874;">Notarising needs a paid Apple Developer account, and '
-    'there is no company behind Lightning to hold one. Gatekeeper will refuse '
-    'to open the app on the first try. That is expected, and the steps below '
-    'are how you get past it -- so <strong style="color: #f0d6a0; '
-    'font-weight: 600;">check the checksum first</strong>, because you are '
-    'the one vouching for the download.</p>\n'
+    'there is no company behind Lightning to hold one. macOS will refuse to '
+    'open the app the first time and say it cannot check it for malicious '
+    'software. That is expected. The three steps below clear it for good, '
+    'and none of them needs the Terminal &mdash; but because you are the one '
+    'vouching for the app, '
+    '<strong style="color: #f0d6a0; font-weight: 600;">download it only from '
+    'the GitHub releases page</strong> linked above.</p>\n'
     '        </div>\n'
     '\n'
     '        <div style="display: grid; grid-template-columns: repeat('
@@ -443,37 +450,49 @@ _macos = (
     '          <div style="%s">\n'
     '            <div style="%s">STEP 1</div>\n'
     '            <div style="margin-top: 8px; font-size: 15px; font-weight: '
-    '600;">Check it before you open it</div>\n'
-    '            <p style="%s">Compare the download against the SHA256SUMS '
-    'file from the same release.</p>\n'
-    '            <div style="%s">shasum -a 256 -c SHA256SUMS '
-    '--ignore-missing</div>\n'
+    '600;">Try to open it, and let it fail</div>\n'
+    '            <p style="%s">Drag Lightning into your Applications folder, '
+    'then double-click it. macOS blocks it and offers you '
+    '<em style="font-style: normal; color: #c9d5e4;">Done</em> or '
+    '<em style="font-style: normal; color: #c9d5e4;">Move to Bin</em> &mdash; '
+    'choose <em style="font-style: normal; color: #c9d5e4;">Done</em>. This '
+    'step is not optional: the button in step 2 only appears once macOS has '
+    'blocked the app at least once.</p>\n'
     '          </div>\n'
     '          <div style="%s">\n'
     '            <div style="%s">STEP 2</div>\n'
     '            <div style="margin-top: 8px; font-size: 15px; font-weight: '
-    '600;">Open it the first time</div>\n'
-    '            <p style="%s">Drag Lightning to Applications, then '
-    '<em style="font-style: normal; color: #c9d5e4;">Control-click</em> it '
-    'and choose <em style="font-style: normal; color: #c9d5e4;">Open</em>, '
-    'and <em style="font-style: normal; color: #c9d5e4;">Open</em> again in '
-    'the dialog. Double-clicking will not offer that choice -- only this '
-    'route does, and only the first time.</p>\n'
+    '600;">Click Open Anyway</div>\n'
+    '            <p style="%s">Go to '
+    '<em style="font-style: normal; color: #c9d5e4;">Apple menu &rarr; System '
+    'Settings &rarr; Privacy &amp; Security</em> and scroll down to the '
+    '<em style="font-style: normal; color: #c9d5e4;">Security</em> section. '
+    'A line saying Lightning was blocked is waiting there with an '
+    '<em style="font-style: normal; color: #c9d5e4;">Open Anyway</em> button '
+    'next to it. Click it and confirm with Touch ID or your login '
+    'password.</p>\n'
     '          </div>\n'
     '          <div style="%s">\n'
-    '            <div style="%s">IF IT STILL REFUSES</div>\n'
+    '            <div style="%s">STEP 3</div>\n'
     '            <div style="margin-top: 8px; font-size: 15px; font-weight: '
-    '600;">"Damaged and can\'t be opened"</div>\n'
-    '            <p style="%s">Nothing is damaged. That is the quarantine flag '
-    'macOS attaches to anything downloaded. Clear it, then open the app '
-    'normally.</p>\n'
-    '            <div style="%s">xattr -d com.apple.quarantine '
-    '/Applications/Lightning.app</div>\n'
+    '600;">Confirm once, and never again</div>\n'
+    '            <p style="%s">One last dialog asks whether you are sure. '
+    'Click <em style="font-style: normal; color: #c9d5e4;">Open</em>. '
+    'Lightning starts, and from then on it opens by double-click like any '
+    'other app &mdash; you only do this the first time, and again after an '
+    'update replaces the app.</p>\n'
     '          </div>\n'
     '        </div>\n'
+    '\n'
+    '        <p style="max-width: 780px; margin-top: 14px; font-size: 13.5px; '
+    'line-height: 1.55; color: #7d8b9c;">On macOS 14 and earlier there is a '
+    'shortcut: Control-click the app, choose '
+    '<em style="font-style: normal; color: #9fadbd;">Open</em>, then '
+    '<em style="font-style: normal; color: #9fadbd;">Open</em> again. macOS 15 '
+    'removed it, so the route above is the one that always works.</p>\n'
     '      </div>\n'
-    '\n') % (_BODY, _CARD, _STEP, _BODY, _CMD, _CARD, _STEP, _BODY,
-             _CARD, _STEP, _BODY, _CMD)
+    '\n') % (_BODY, _CARD, _STEP, _BODY, _CARD, _STEP, _BODY,
+             _CARD, _STEP, _BODY)
 
 _after_cols = ('      <div style="display: grid; grid-template-columns: '
                'repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; '
@@ -506,6 +525,90 @@ if _sha:
         _needle + '<a class="dlbtn" data-lg-dl-sha href="%s" '
                   'style="margin-left: 0; margin-top: 12px; display: inline-block;">'
                   'Get SHA256SUMS</a>' % html.escape(_sha, quote=True), 1)
+
+# 7. `sha256sum` is a Linux command, and it was sitting in the Windows column
+#    -- the one place it cannot be run. Windows and macOS users get no
+#    terminal instructions at all now, so the verification card moves to the
+#    Linux column, and what stays behind is the part that was always about
+#    Windows: what the installers touch, and where to download from.
+#
+#    This runs after correction 5, so the "Get SHA256SUMS" button is already
+#    inside the card and travels with it.
+_vhead = '<div style="font-size: 14.5px; font-weight: 600;">Verify your download</div>'
+if _vhead not in doc:
+    raise SystemExit("verify card not found")
+_vi = doc.index(_vhead)
+_vstart = doc.rindex("<div ", 0, _vi)
+
+# Walk to the matching close so the card can be moved whole.
+_depth, _vend = 0, None
+for _m in re.finditer(r"<div\b|</div>", doc[_vstart:]):
+    _depth += 1 if _m.group(0) == "<div" else -1
+    if _depth == 0:
+        _vend = _vstart + _m.end()
+        break
+if _vend is None:
+    raise SystemExit("verify card is unbalanced")
+_card_html = doc[_vstart:_vend]
+
+# The trailing paragraph is a Windows scope note, not verification. Split it
+# off and leave it where it is.
+_wp = re.search(r'<p style="[^"]*">All three Windows formats.*?</p>', _card_html, re.S)
+if not _wp:
+    raise SystemExit("Windows scope paragraph not found")
+_verify_card = _card_html.replace(_wp.group(0), "").replace("\n\n", "\n")
+
+_windows_card = (
+    '<div style="margin-top: 16px; padding: 20px; border: 1px solid #1e2631; '
+    'border-radius: 11px; background: #10151c;">\n'
+    '            <div style="font-size: 14.5px; font-weight: 600;">What the '
+    'installers touch</div>\n'
+    '            ' + _wp.group(0) + '\n'
+    '            <p style="margin-top: 12px; font-size: 13.5px; '
+    'line-height: 1.55; color: #8d99a8;">Windows has no way to check a '
+    'download against a checksum without a command prompt, so the thing that '
+    'protects you here is where you get the file: use the release page linked '
+    'above, and nothing that mirrors it.</p>\n'
+    '          </div>')
+doc = doc[:_vstart] + _windows_card + doc[_vend:]
+
+# Drop it in at the end of the Linux column, before the column closes.
+_lin_end = ('        </div>\n\n        <div>\n          <div style="display: '
+            'flex; align-items: baseline; gap: 12px;">\n            '
+            '<h3 style="font-size: 20px; font-weight: 600;">Windows</h3>')
+if _lin_end not in doc:
+    raise SystemExit("Linux/Windows column boundary not found")
+doc = doc.replace(_lin_end, "          " + _verify_card + "\n" + _lin_end, 1)
+
+# 8. The brand was missing from the page it belongs to. "Lightning" appeared
+#    once, at 18px in the nav, and the hero opened on "Everything other Matrix
+#    clients fake." -- a claim from a product that had not introduced itself.
+#    The logo mark existed only as a 26px nav icon and a 14px chip.
+#
+#    So: a real lockup at the top of the hero, mark and wordmark at a size
+#    that reads as a brand, with the one-line description that was already in
+#    <title> but nowhere on the page. The h1 keeps its job as the pitch,
+#    directly under a name that now means something.
+_hero = ('<div style="position: relative; max-width: 1180px; margin: 0 auto; '
+         'padding: 96px 32px 88px;">\n')
+if _hero not in doc:
+    raise SystemExit("hero content wrapper not found")
+
+_lockup = (
+    '      <div style="display: flex; align-items: center; gap: 16px; '
+    'margin-bottom: 30px;" class="lg-brand">\n'
+    '        <img src="/assets/lightning-mark.svg" alt="" width="54" '
+    'height="54" style="display: block; flex: none;" class="lg-brandmark">\n'
+    '        <div>\n'
+    '          <div style="font-family: \'Space Grotesk\', sans-serif; '
+    'font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: '
+    '-0.02em; color: #f2f6fb;" class="lg-brandname">Lightning</div>\n'
+    '          <div style="margin-top: 7px; font-size: 14.5px; font-weight: '
+    '500; color: #8d99a8;" class="lg-brandsub">A native Matrix client for '
+    'Linux and Windows</div>\n'
+    '        </div>\n'
+    '      </div>\n')
+doc = doc.replace(_hero, _hero + _lockup, 1)
 
 # ------------------------------------------------------------- style-hover CSS
 hover_rules = []
@@ -725,6 +828,14 @@ extra_head = """
   }}
   .lg-alpha-brief {{ display: inline !important; }}
   .lg-alpha-bar a {{ margin-left: 6px !important; }}
+
+  /* The lockup is the first thing on the page; keep it a brand, not a
+     banner. The mark shrinks less than the wordmark -- it is the part that
+     survives at small sizes. */
+  .lg-brand {{ gap: 12px !important; margin-bottom: 22px !important; }}
+  .lg-brandmark {{ width: 42px !important; height: 42px !important; }}
+  .lg-brandname {{ font-size: 30px !important; }}
+  .lg-brandsub {{ font-size: 13px !important; }}
 
   /* Give the pill room for one line instead of orphaning the SDK version. */
   .lg-pill {{ font-size: 10.5px !important; gap: 7px !important; letter-spacing: 0.03em !important; }}

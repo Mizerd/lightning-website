@@ -175,21 +175,52 @@ the build if any survive. `check.py` repeats the check against what is on disk.
 If the repository ever moves again, change it in `unbundle.py` — editing
 `public/index.html` alone means the next rebuild reinstates the old wording.
 
+## No terminal for Windows or macOS
+
+Linux users get shell commands, because that is how software is installed
+there. Windows and macOS users get none: they are GUI users, and a command
+prompt is a wall, not an instruction.
+
+This took three fixes. The `.msi` card said `msiexec /i ...` — now
+"double-click" (keeping the filename, so `/api/latest` can still rewrite it).
+The macOS block is click-by-click. And `sha256sum -c SHA256SUMS` was sitting
+in the **Windows** column, which is the one place it cannot run; it moved to
+the Linux column, where it is native. What replaced it in the Windows column
+says plainly that Windows cannot check a checksum without a command prompt, so
+the protection is downloading from the release page and nowhere else — and the
+SmartScreen box no longer tells people to "check the checksum" it cannot help
+them check.
+
 ## macOS
 
 There is no macOS release. The download section carries a "Coming soon" block
-with Gatekeeper instructions for an unsigned app, written as static copy in
-`unbundle.py` (correction 6): no package card, no entry in `releases.json`, so
-neither `releases.js` nor `/api/latest` touches it.
+with the full Gatekeeper walkthrough for an unsigned app, written as static
+copy in `unbundle.py` (correction 6): no package card, no entry in
+`releases.json`, so neither `releases.js` nor `/api/latest` touches it.
+
+The walkthrough is the **Open Anyway** route: try to open it and let macOS
+refuse, then System Settings → Privacy & Security → Security → *Open Anyway*,
+then confirm once. Step 1 is not filler — the button only appears after macOS
+has blocked the app at least once. Control-click → Open is mentioned only as
+the macOS 14-and-earlier shortcut, since macOS 15 removed it.
 
 When there is a build, it becomes ordinary packages with `"os": "macos"` in
 `releases.json` — which also needs a third column in the download grid, since
 `packages()` in `releases.js` only rebuilds the `linux` and `windows` lists.
 
 The block promises the app will be unsigned and tells people how to get past
-Gatekeeper. That is a real security instruction, so it leads with checking the
-checksum: someone who clears the quarantine flag is vouching for the download
+Gatekeeper. That is a real security instruction, so it leads with where to get
+the file: someone clicking *Open Anyway* is vouching for the download
 themselves.
+
+## The brand
+
+The page pitched "Everything other Matrix clients fake." before it had said
+what it was. The name appeared once, at 18 px in the nav; the mark existed as
+a 26 px nav icon and a 14 px chip. The hero now opens on a lockup — mark,
+wordmark, and the one-line description that was already in `<title>` but
+nowhere on the page — and the `<h1>` keeps its job as the pitch, under a name
+that now means something.
 
 ## Mobile
 

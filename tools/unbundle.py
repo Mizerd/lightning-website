@@ -873,6 +873,112 @@ if doc.count(_last) != 1:
     raise SystemExit("end of the screenshot grid not found")
 doc = doc.replace(_last, _last.rstrip("\n") + _strip, 1)
 
+# 14. Motion. The artifact already had a vocabulary -- lgRise on scroll,
+#     drifting hero glows, a marquee, a light strike -- so this adds what was
+#     missing rather than a second style of movement:
+#
+#       * a scroll progress bar across the header
+#       * a ladder on the hero, which arrived all at once
+#       * a cascade across the eleven theme swatches
+#       * a class on the panels so a pointer can light them
+#
+#     Everything here is CSS. `motion.js` only sets state (which section is in
+#     view, where the pointer is); it animates nothing itself, so the whole
+#     lot is still silenced by the artifact's existing
+#     `prefers-reduced-motion` rule.
+
+# ---- the progress bar ------------------------------------------------------
+# Inside the header, so it sits on the border between the header and the page
+# and rides the sticky wrapper. `lgWipe` was already defined in the artifact
+# and never used.
+_hdr = '<header style="backdrop-filter: blur(14px);'
+if doc.count(_hdr) != 1:
+    raise SystemExit("header not found")
+doc = doc.replace(
+    _hdr, '<header style="position: relative; backdrop-filter: blur(14px);', 1)
+
+_navclose = "    </nav>\n  </header>"
+if doc.count(_navclose) != 1:
+    raise SystemExit("end of nav not found")
+doc = doc.replace(
+    _navclose,
+    '    </nav>\n'
+    '    <div class="lg-progress" aria-hidden="true" style="position: absolute;'
+    ' left: 0; right: 0; bottom: -1px; height: 2px; transform: scaleX(0);'
+    ' transform-origin: 0 50%; background: linear-gradient(90deg, #3b7ff0,'
+    ' #7fd1a6); pointer-events: none;"></div>\n  </header>', 1)
+
+# A sentinel above the header. motion.js watches it rather than listening to
+# scroll: an IntersectionObserver fires twice in the life of the page, a
+# scroll listener fires on every frame of every scroll.
+if doc.count("<div style=\"min-height: 100vh; background: #0c0f14;\">") != 1:
+    raise SystemExit("page wrapper not found")
+doc = doc.replace(
+    "<div style=\"min-height: 100vh; background: #0c0f14;\">",
+    "<div style=\"min-height: 100vh; background: #0c0f14;\">\n"
+    "  <div data-lg-top aria-hidden=\"true\" style=\"position: absolute; "
+    "top: 0; height: 1px; width: 1px;\"></div>", 1)
+
+# ---- the hero ladder -------------------------------------------------------
+# The h1 and the paragraph were already staggered (0s and 0.09s); everything
+# else in the hero appeared at once, so the lockup and the buttons landed
+# before the heading they belong to. One ladder over the whole block instead.
+_RISE = "animation: lgRise 0.9s cubic-bezier(0.16,1,0.3,1) %ss both;"
+
+
+def _delay(needle, secs, label):
+    """Give one hero element its rung of the ladder."""
+    global doc
+    if doc.count(needle) != 1:
+        raise SystemExit("hero %s not found (%d matches)" % (label,
+                                                             doc.count(needle)))
+    doc = doc.replace(needle, needle[:-1] + " " + (_RISE % secs) + '"', 1)
+
+
+# The two that already animate are rewritten rather than appended to.
+_h1_old = "letter-spacing: -0.035em; animation: lgRise 0.9s cubic-bezier(0.16,1,0.3,1) both;"
+if doc.count(_h1_old) != 1:
+    raise SystemExit("hero h1 animation not found")
+doc = doc.replace(_h1_old,
+                  "letter-spacing: -0.035em; " + (_RISE % "0.12"), 1)
+
+_p_old = "color: #a4b1c2; animation: lgRise 0.9s cubic-bezier(0.16,1,0.3,1) 0.09s both;"
+if doc.count(_p_old) != 1:
+    raise SystemExit("hero paragraph animation not found")
+doc = doc.replace(_p_old, "color: #a4b1c2; " + (_RISE % "0.19"), 1)
+
+_delay('style="display: flex; align-items: center; gap: 22px; '
+       'margin-bottom: 34px;"', "0", "brand lockup")
+_delay('font-size: 11.5px; letter-spacing: 0.06em; color: #9dbdf5;"',
+       "0.06", "version pill")
+_delay('style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 38px;"',
+       "0.26", "button row")
+_delay("style=\"display: flex; flex-wrap: wrap; gap: 10px 30px; "
+       "margin-top: 34px; font-family: 'JetBrains Mono', monospace; "
+       "font-size: 12.5px; color: #7d8b9c;\"", "0.33", "licence line")
+_delay('style="display: grid; grid-template-columns: repeat(auto-fit, '
+       'minmax(190px, 1fr)); gap: 1px; margin-top: 72px; background: #1b222c; '
+       'border: 1px solid #1b222c; border-radius: 12px; overflow: hidden;"',
+       "0.40", "hero cards")
+
+# ---- the swatch cascade ----------------------------------------------------
+# A scroll-driven animation takes its progress from the scroll position, so
+# `animation-delay` does nothing to it -- the whole row would light up at
+# once. The stagger has to be in `animation-range`: each swatch finishes a
+# little later than the one before it, which reads as a sweep left to right.
+_sw_old = '<figure style="margin: 0;"><span class="lg-swatch"'
+_n_sw = doc.count(_sw_old)
+if _n_sw != 11:
+    raise SystemExit("expected 11 swatches to stagger, found %d" % _n_sw)
+for _i in range(11):
+    doc = doc.replace(
+        _sw_old,
+        '<figure style="margin: 0; animation: lgRise 0.6s '
+        'cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); '
+        'animation-range: entry 0%% cover %d%%;"><span class="lg-swatch"'
+        % (14 + _i * 2), 1)
+
+
 # ------------------------------------------------------------- style-hover CSS
 hover_rules = []
 
@@ -981,6 +1087,12 @@ for _cls, _px in (("lg-t1", "68px"), ("lg-t2", "42px"),
     _mark(_cls, lambda a, _p=_px: ("font-size: %s;" % _p) in a)
 _mark("lg-t4", lambda a: "font-size: 26px;" in a)
 
+# Panels the pointer can light (correction 14). One background colour
+# identifies every panel on the page. The amber warning boxes are a different
+# colour and are deliberately left out: a blue highlight sweeping over a "this
+# is not signed" box would read as decoration on a warning.
+_mark("lg-card", lambda a: "background: #10151c;" in a)
+
 print("  resp   " + ", ".join("%s=%d" % (k, v) for k, v in _counts.items()))
 
 helmet = re.search(r"<helmet>(.*?)</helmet>", doc, re.S).group(1)
@@ -1072,6 +1184,11 @@ extra_head = """
                     border-color: #35455a; }}
 .lg-copybtn:active {{ transform: translateY(1px); }}
 
+@keyframes lgBreathe {{
+  0%, 100% {{ filter: drop-shadow(0 0 0 rgba(59,127,240,0)); }}
+  50% {{ filter: drop-shadow(0 0 14px rgba(93,148,255,0.42)); }}
+}}
+
 /* ---- screenshots open full screen ---------------------------------------
    The trigger is a <button> wrapping the <img> (see correction 12), so it
    already focuses and activates on Enter and Space. All that is left is to
@@ -1154,6 +1271,156 @@ html.lg-lbopen, body.lg-lbopen {{ overflow: hidden !important; }}
    inline, per theme, from the palette table in unbundle.py. */
 .lg-swatch {{ transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }}
 figure:hover > .lg-swatch {{ transform: translateY(-3px); }}
+
+/* ---- scrollbars ---------------------------------------------------------
+   The install boxes scroll horizontally (`white-space: pre`), and the
+   AppImage command is long enough to always show a bar. The platform default
+   is light, which on a #070a0e box looks like a rendering fault rather than
+   a control. `color-scheme` is the part that does the real work -- it also
+   darkens the page's own scrollbar and any form control -- and the explicit
+   colours make the ones inside the code boxes thinner and quieter than the
+   page's. */
+:root {{ color-scheme: dark; }}
+.lg-cmd, [data-lg-copy] {{
+  scrollbar-width: thin;
+  scrollbar-color: #2b3a52 transparent;
+}}
+.lg-cmd::-webkit-scrollbar, [data-lg-copy]::-webkit-scrollbar {{
+  height: 8px;
+}}
+.lg-cmd::-webkit-scrollbar-track, [data-lg-copy]::-webkit-scrollbar-track {{
+  background: transparent;
+}}
+.lg-cmd::-webkit-scrollbar-thumb, [data-lg-copy]::-webkit-scrollbar-thumb {{
+  background: #2b3a52;
+  border-radius: 4px;
+}}
+.lg-cmd::-webkit-scrollbar-thumb:hover,
+[data-lg-copy]::-webkit-scrollbar-thumb:hover {{ background: #3d5175; }}
+
+/* ---- scroll progress ----------------------------------------------------
+   The obvious way to do this is `animation-timeline: scroll(root block)`,
+   which runs off the main thread. It is not used, because Firefox does not
+   support scroll-driven animations -- and Firefox is not a rounding error
+   for a Linux Matrix client. motion.js drives the transform instead, so the
+   bar works in every browser. The inline scaleX(0) is what it looks like
+   before any script runs, and if none ever does it stays invisible. */
+.lg-progress {{ will-change: transform; }}
+
+/* ---- the header reacts to leaving the top ------------------------------
+   Only colour and shadow. Changing its height here would move every anchor
+   on the page, because `section[id]` offsets its scroll-margin by the height
+   of this bar. */
+header {{ transition: background 0.35s ease, box-shadow 0.35s ease,
+                     border-color 0.35s ease; }}
+header.lg-stuck {{
+  background: rgba(9, 12, 16, 0.94);
+  border-bottom-color: #26303d;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.36);
+}}
+
+/* ---- the nav follows the page ------------------------------------------
+   An underline that grows from the left, so moving between sections reads as
+   the marker travelling rather than blinking on and off. */
+.lg-navlink {{ position: relative; transition: color 0.25s ease; }}
+.lg-navlink::after {{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: #3b7ff0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}}
+.lg-navlink.lg-here {{ color: #dbe6f5; }}
+.lg-navlink.lg-here::after {{ transform: scaleX(1); }}
+
+/* ---- panels follow the pointer -----------------------------------------
+   `background-image` rather than an overlay element: the panels set
+   `background` inline as a shorthand, which resets background-image, so this
+   needs !important either way -- and doing it on the element itself avoids a
+   pseudo-element that would have to be kept off the text.
+
+   Fine pointers only. On a touch screen there is no pointer to follow, and
+   the highlight would stick wherever the last tap landed. */
+/* Registered at the top level, not inside the query below: @property is a
+   registration rather than a style, and nesting it in a conditional group is
+   not reliably honoured. Registering it is what makes --lg-spot a <number>
+   the browser can interpolate -- an unregistered custom property is a string
+   and would snap from 0 to 1 instead of fading. */
+@property --lg-spot {{
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}}
+
+@media (hover: hover) and (pointer: fine) {{
+  .lg-card {{
+    background-image: radial-gradient(320px circle at var(--lg-mx, 50%) var(--lg-my, 0%),
+                      rgba(93, 148, 255, calc(0.10 * var(--lg-spot))),
+                      transparent 42%) !important;
+    transition: --lg-spot 0.4s ease, border-color 0.3s ease,
+                transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }}
+  .lg-card:hover {{ --lg-spot: 1; }}
+}}
+
+/* ---- the mark idles ------------------------------------------------------
+   The 14px chip in the pill already flickers. The 88px hero mark gets a
+   slower breath instead -- the same idea at a size where a flicker would be
+   a distraction rather than a detail. */
+.lg-brandmark {{ animation: lgBreathe 6.5s ease-in-out infinite; }}
+
+/* ---- buttons ------------------------------------------------------------- */
+/* The arrow is decorative: every download button carries an aria-label, which
+   replaces the accessible name entirely, so nothing reads "downwards arrow".
+*/
+.dlbtn::after {{
+  content: "↓";
+  display: inline-block;
+  margin-left: 7px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}}
+.dlbtn:hover::after {{ transform: translateY(2px); }}
+.lg-copybtn {{ transition: background 0.2s ease, color 0.2s ease,
+                          border-color 0.2s ease; }}
+.lg-copybtn.lg-copied {{
+  border-color: #2f6b4d !important;
+  background: #10201a !important;
+  color: #7fd1a6 !important;
+}}
+
+/* ---- the overlay arrives ------------------------------------------------
+   `hidden` cannot be transitioned -- display:none has no intermediate state
+   -- so releases.js unhides first and adds .lg-lbon on the next frame, and
+   on the way out waits out the duration before hiding again. */
+.lg-lightbox {{
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}}
+.lg-lightbox.lg-lbon {{ opacity: 1; }}
+.lg-lightbox img, .lg-lightbox figcaption {{
+  transform: scale(0.97);
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.28s ease;
+}}
+.lg-lightbox.lg-lbon img, .lg-lightbox.lg-lbon figcaption {{
+  transform: none;
+  opacity: 1;
+}}
+
+/* Smooth scrolling is in the artifact's own reset; the reduced-motion block
+   there covers animation and transition but not this, and a smooth scroll is
+   exactly the kind of movement that rule exists to stop. */
+@media (prefers-reduced-motion: reduce) {{
+  html {{ scroll-behavior: auto !important; }}
+  .lg-progress {{ display: none !important; }}
+}}
 
 /* Two wordings of the alpha warning, one visible at a time. The brief one is
    for phones, where the full sentence wrapped to four lines in a bar that is
@@ -1288,6 +1555,11 @@ page = (
     "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
     + helmet.strip() + "\n" + extra_head.strip()
     + "\n<script src=\"/releases.js\" defer></script>\n"
+    # Separate from releases.js on purpose: this one has nothing to do with
+    # releases, and keeping the release feed's script free of page furniture
+    # means a change to either cannot break the other. Same cache rule
+    # though -- see _headers.
+    + "<script src=\"/motion.js\" defer></script>\n"
     + "</head>\n<body>\n" + body.strip() + "\n</body>\n</html>\n"
 )
 

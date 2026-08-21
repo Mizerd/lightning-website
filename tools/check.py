@@ -189,14 +189,52 @@ gitlab = sorted(
                          errors="ignore").read().lower())
 check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
 
-# ---- no cache skew between the HTML and the script that rewrites it -------
-js_rule = re.search(r"^/releases\.js\s*\n\s*Cache-Control:\s*(.+)$",
-                    headers, re.M)
-policy = (js_rule.group(1).strip() if js_rule else "(no rule)")
-# A max-age above zero lets an old script run against new HTML.
-stale_ok = re.search(r"max-age=([1-9]\d*)", policy)
-check("releases.js is not cacheable past the HTML", not stale_ok,
-      "policy is %r; use no-cache" % policy)
+# ---- motion ---------------------------------------------------------------
+# The progress bar, the sticky-header state and the nav marker are all driven
+# from motion.js. The bar ships at scaleX(0) so that a reader whose browser
+# never runs the script sees no bar at all, rather than one stuck full or
+# stuck empty.
+check("motion.js is served", os.path.exists(os.path.join(PUB, "motion.js")))
+check("the page loads motion.js", '<script src="/motion.js"' in html)
+check("the progress bar ships empty", "transform: scaleX(0);" in html)
+# Bounded, or a renamed attribute (data-lg-topmost, data-lg-topX) still
+# contains the needle and the check passes over a sentinel motion.js
+# can no longer find.
+check("the scroll sentinel is present",
+      bool(re.search(r"data-lg-top(?![\w-])", html)))
+
+# The hero used to arrive all at once. Every rung of the ladder must be a
+# different delay, or some of it is landing together again.
+rungs = re.findall(r"lgRise 0\.9s cubic-bezier\(0\.16,1,0\.3,1\) ([\d.]+)s both",
+                   html)
+check("the hero arrives as a ladder",
+      len(rungs) == 7 and len(set(rungs)) == 7,
+      "%d rungs, %d distinct: %s" % (len(rungs), len(set(rungs)), rungs))
+
+# A scroll-driven animation ignores animation-delay -- its progress comes from
+# the scroll position -- so the swatch cascade has to live in animation-range.
+# Equal ranges would light all eleven at once.
+ranges = re.findall(r'animation-range: entry 0% cover (\d+)%;"><span class="lg-swatch"',
+                    html)
+check("the swatches cascade", len(ranges) == 11 and len(set(ranges)) == 11,
+      "%d ranges, %d distinct" % (len(ranges), len(set(ranges))))
+
+n_cards = html.count('lg-card"') + html.count('lg-card ')
+check("panels are tagged for the spotlight", n_cards >= 10,
+      "%d tagged" % n_cards)
+
+# ---- no cache skew between the HTML and the scripts that read it ----------
+# Both of these read the DOM the generator emits, so neither may outlive that
+# DOM in a cache. This is the check that would have caught the bug where a
+# new page ran an hour-old script; it covers motion.js for the same reason.
+for script in ("releases.js", "motion.js"):
+    js_rule = re.search(r"^/%s\s*\n\s*Cache-Control:\s*(.+)$"
+                        % re.escape(script), headers, re.M)
+    policy = (js_rule.group(1).strip() if js_rule else "(no rule)")
+    # A max-age above zero lets an old script run against new HTML.
+    stale_ok = re.search(r"max-age=([1-9]\d*)", policy)
+    check("%s is not cacheable past the HTML" % script, not stale_ok,
+          "policy is %r; use no-cache" % policy)
 
 print()
 if failures:

@@ -16,6 +16,7 @@ public/              <- everything Cloudflare serves (the assets directory)
   index.html         <- the site; hand-editable
   releases.json      <- the release feed; edit this to cut a release
   releases.js        <- optional: refreshes a live page from releases.json
+  motion.js          <- optional: scroll state, nav marker, pointer, reveals
   404.html
   robots.txt
   sitemap.xml
@@ -36,6 +37,7 @@ tools/
   unbundle.py        <- converts that artifact into public/
   check.py           <- invariant checks; run after editing public/
   og-card.html       <- source for assets/og-card.png; NOT deployed
+  lightbox-test.js   <- jsdom test for the screenshot overlay (needs jsdom)
 ```
 
 Nothing outside `public/` is deployed.
@@ -370,6 +372,99 @@ can be fixed from here:
 - its description still reads "Mirror of the canonical source at
   gitlab.smetonis.net…", which tells a crawler in as many words that the
   canonical source is somewhere else
+
+## Motion
+
+The artifact arrived with a motion vocabulary already — `lgRise` reveals,
+drifting hero glows, a marquee, a light strike across the header — so what is
+here extends it rather than introducing a second style of movement.
+
+**Almost all of it is CSS.** `motion.js` supplies only the things a stylesheet
+cannot work out for itself: whether the page has left the top, which section
+is on screen, and where the pointer is inside a panel. That split is the point
+— the artifact's own reset already carries
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+```
+
+so a reader who has asked for less movement gets none of the new work either,
+without a second switch that could be forgotten. Verified with Firefox's
+`ui.prefersReducedMotion` pref: nothing animating, nothing transitioning,
+`scroll-behavior: auto`, no content stuck invisible, the overlay still opening
+and closing.
+
+If `motion.js` never loads, the page is what it was: the header keeps its
+resting colour, no nav link is marked, and panels do not light up.
+
+### Firefox has no scroll timelines, and that matters here
+
+Sixteen elements in the artifact animate with
+
+```css
+animation: lgRise ... both;
+animation-timeline: view();
+animation-range: entry 0% cover 20%;
+```
+
+Chrome and Safari tie those to the element's passage through the viewport.
+**Firefox does not support scroll-driven animations at all** — it drops
+`animation-timeline` as unrecognised and the animation falls back to the
+document timeline, so it runs to completion during page load. Every reveal on
+the page had therefore already happened before you scrolled to it, and Firefox
+users saw a page with no reveals. Nothing looked broken, because `both` leaves
+each element at its finished state, which is exactly why it went unnoticed.
+
+`motion.js` now drives them where the browser has no scroll timelines: each
+one is paused (`both` holds it at `from`, opacity 0) and released by an
+IntersectionObserver. Two details keep that safe:
+
+- an element is **paused and observed in the same breath**, so it can never be
+  left at opacity 0 with nothing to start it
+- it is the **last thing the file does**, so a throw earlier on cannot leave
+  the page half-hidden
+
+The scroll progress bar has the same cause. `animation-timeline: scroll(root
+block)` is the right answer and runs off the main thread — and does nothing in
+Firefox, which is not a rounding error for a Linux Matrix client. It is a
+passive scroll listener coalesced onto a frame instead: the listener sets a
+flag and nothing else, so all reading and writing happens once per frame
+inside the rAF callback rather than turning a scroll into a layout thrash.
+
+### Traps in this pass
+
+- **A style attribute is re-serialised from its parsed form.** Setting any
+  property through `el.style` rewrites the whole attribute — and Firefox has
+  already dropped the `animation-timeline` it could not parse. So
+  `[style*="animation-timeline"]` finds those elements before `motion.js`
+  touches them and finds nothing afterwards. Measure them by
+  `animationPlayState`, not by the attribute.
+- **`requestAnimationFrame` is throttled for content the browser is not
+  painting.** The overlay's fade-in was a nested pair of rAF calls, the usual
+  way to get a "before" frame for a transition. In a background tab or an
+  offscreen frame the callback never runs, and the overlay sits open at
+  opacity 0 swallowing every click. Reading `offsetWidth` forces the same
+  style-and-layout flush with no such condition.
+- **`IntersectionObserver` with a null root uses the *top-level* viewport.**
+  An offscreen iframe therefore intersects nothing, which makes a working page
+  measure as broken. Probe frames have to be on screen.
+- **Closing the overlay is two-phase.** The scroll lock and focus come back at
+  once — making a reader wait out a fade before the page scrolls again is
+  worse than the fade is worth — and `hidden` follows on a timer. A timer, not
+  `transitionend`: under reduced motion every transition is `none`, so
+  `transitionend` would never fire and the overlay would stay on top of the
+  page forever.
+
+### Scrollbars
+
+The install boxes scroll horizontally (`white-space: pre`) and the AppImage
+command is long enough to always show a bar. `:root { color-scheme: dark }`
+does most of the work — it darkens the page's own scrollbar and any form
+control too — and the code boxes additionally get `scrollbar-width: thin` with
+explicit colours, plus the `::-webkit-scrollbar` equivalents, so the bar
+inside a `#070a0e` box is quieter than the page's.
 
 ## Mobile
 

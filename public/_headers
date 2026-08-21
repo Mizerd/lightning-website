@@ -47,3 +47,10 @@
 # than that DOM.
 /releases.js
   Cache-Control: no-cache
+
+# Same rule, same reason. motion.js reads the DOM the generator emits --
+# [data-lg-top], .lg-navlink, .lg-card -- so a cached copy outliving a
+# redesign would be looking for elements that are no longer there. It is
+# 4 KB and a revalidation is a 304.
+/motion.js
+  Cache-Control: no-cache

@@ -29,6 +29,12 @@ const html = fs.readFileSync(ROOT + "/public/index.html", "utf8")
 const js = fs.readFileSync(ROOT + "/public/releases.js", "utf8");
 const feed = fs.readFileSync(ROOT + "/public/releases.json", "utf8");
 
+// Closing is two-phase now: the class comes off and the page is released
+// at once, and `hidden` follows once the fade has run. FADE must stay
+// ahead of the 280ms timer in releases.js.
+const FADE = 400;
+const settle = (w) => new Promise((r) => w.setTimeout(r, FADE));
+
 let fails = 0;
 function ok(label, cond, detail) {
   if (!cond) fails++;
@@ -100,26 +106,46 @@ async function run(apiUp) {
   ok(tag + " clicking the image keeps it open", !lb.hidden, "closed on the image");
 
   // --- clicking anywhere else closes -----------------------------------
+  // The scroll lock and focus come back at once; making the reader wait out
+  // a fade before the page scrolls again would be worse than the fade is
+  // worth. Only `hidden` waits.
   click(lb);
-  ok(tag + " clicking the backdrop closes", lb.hidden, "still open");
-  ok(tag + " the scroll lock is released",
+  ok(tag + " closing starts the fade",
+     !lb.classList.contains("lg-lbon"), "still marked open");
+  ok(tag + " the page is released immediately",
      !doc.documentElement.classList.contains("lg-lbopen") &&
      !doc.body.classList.contains("lg-lbopen"), "lock stuck on");
+  ok(tag + " it is not hidden mid-fade", !lb.hidden,
+     "hidden before the transition ran");
+
+  await settle(window);
+  ok(tag + " it is hidden once the fade is done", lb.hidden, "still visible");
   ok(tag + " the image is dropped when closed",
      !lbImg.getAttribute("src"), "src still set");
 
-  // --- the close button -------------------------------------------------
+  // --- reopening mid-fade must not be blanked by the pending hide -------
   click(btns[1]);
-  ok(tag + " a second screenshot opens", !lb.hidden, "did not reopen");
+  click(lb);                       // start closing...
+  click(btns[2]);                  // ...and reopen before the timer fires
+  await settle(window);
+  ok(tag + " reopening cancels the pending hide", !lb.hidden,
+     "the old timer blanked the new image");
+  ok(tag + " and shows the newly clicked screenshot",
+     lbImg.getAttribute("src") === btns[2].querySelector("img").getAttribute("src"),
+     lbImg.getAttribute("src"));
+
+  // --- the close button -------------------------------------------------
   ok(tag + " the overlay is reused, not rebuilt",
      doc.querySelectorAll(".lg-lightbox").length === 1,
      doc.querySelectorAll(".lg-lightbox").length + " overlays");
   click(lb.querySelector(".lg-lbclose"));
+  await settle(window);
   ok(tag + " the close button closes", lb.hidden, "still open");
 
   // --- Escape ------------------------------------------------------------
   click(btns[2]);
   doc.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await settle(window);
   ok(tag + " Escape closes", lb.hidden, "still open");
 
   // --- focus returns to the trigger --------------------------------------
@@ -130,6 +156,7 @@ async function run(apiUp) {
   doc.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   ok(tag + " focus returns to the screenshot", doc.activeElement === btns[3],
      doc.activeElement && doc.activeElement.tagName);
+  await settle(window);
 
   // --- the structured data keeps up with the version ---------------------
   const ld = JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);

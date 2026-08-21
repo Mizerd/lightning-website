@@ -210,13 +210,17 @@
     });
   }
 
-  function flash(btn, word) {
+  function flash(btn, word, good) {
     if (btn.dataset.busy) return;
     btn.dataset.busy = "1";
     var was = btn.textContent;
     btn.textContent = word;
+    // Green only on success. The fallback path's "Press Ctrl+C" is an
+    // instruction, not a result, and colouring it as one would be a lie.
+    if (good) btn.classList.add("lg-copied");
     setTimeout(function () {
       btn.textContent = was;
+      btn.classList.remove("lg-copied");
       delete btn.dataset.busy;
     }, 1400);
   }
@@ -236,7 +240,7 @@
     var box = btn.parentNode.querySelector("[data-lg-copy]");
     if (!box) return;
     copyText(box.textContent).then(
-      function () { flash(btn, "Copied"); },
+      function () { flash(btn, "✓ Copied", true); },
       function () { flash(btn, "Press Ctrl+C"); }
     );
   });
@@ -256,6 +260,7 @@
   var lbImg = null;
   var lbCap = null;
   var lbReturn = null;  // what to hand focus back to when we close
+  var hideTimer = null; // defers display:none until the fade has run
 
   function buildLightbox() {
     lb = document.createElement("div");
@@ -296,6 +301,10 @@
     if (!img) return;
     if (!lb) buildLightbox();
 
+    // Reopened while the last one was still fading out: cancel the pending
+    // hide, or it would fire a moment later and blank the new image.
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+
     lbReturn = btn;
     // Same src, so the browser serves it from cache and the full-size image
     // appears immediately rather than downloading a second time.
@@ -312,20 +321,48 @@
     lb.hidden = false;
     document.documentElement.classList.add("lg-lbopen");
     document.body.classList.add("lg-lbopen");
+
+    // `hidden` is display:none, which has no intermediate state, so putting
+    // the class on in the same breath as the unhide gives the transition
+    // nothing to run from and the overlay simply appears.
+    //
+    // Reading offsetWidth flushes pending style and layout synchronously,
+    // which is what gives the browser a "before" value. This was a pair of
+    // nested requestAnimationFrame calls first, and that is the more commonly
+    // written version, but rAF is throttled for content the browser is not
+    // painting -- a background tab, an offscreen frame -- and the callback
+    // then never runs at all, leaving the overlay open at opacity 0 and
+    // swallowing every click. A forced reflow has no such condition.
+    void lb.offsetWidth;
+    lb.classList.add("lg-lbon");
+
     var closeBtn = lb.querySelector(".lg-lbclose");
     if (closeBtn) closeBtn.focus();
   }
 
   function closeLightbox() {
     if (!lb || lb.hidden) return;
-    lb.hidden = true;
-    // Drop the source so a 3,839px image is not held decoded for a page the
-    // reader has gone back to scrolling.
-    lbImg.removeAttribute("src");
+    lb.classList.remove("lg-lbon");
+
+    // The page is released and focus goes back immediately -- only the
+    // picture is still fading, and making the reader wait 280ms for the
+    // scroll to work again would be worse than any transition is worth.
     document.documentElement.classList.remove("lg-lbopen");
     document.body.classList.remove("lg-lbopen");
     if (lbReturn && lbReturn.focus) lbReturn.focus();
     lbReturn = null;
+
+    // A timer rather than transitionend. Under prefers-reduced-motion the
+    // page's reset sets `transition: none !important` on everything, so no
+    // transitionend would ever fire and the overlay would sit there forever,
+    // invisible but on top of the page and swallowing every click.
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(function () {
+      lb.hidden = true;
+      // Drop the source so a 3,839px image is not held decoded for a page
+      // the reader has gone back to scrolling.
+      lbImg.removeAttribute("src");
+    }, 280);
   }
 
   document.addEventListener("click", function (ev) {

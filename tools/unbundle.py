@@ -27,6 +27,7 @@ import html
 import json
 import os
 import re
+import struct
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -34,6 +35,9 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "artifact", "Ligh
 OUT = os.path.join(ROOT, "public")
 
 SITE_URL = "https://www.lightning-matrix.org"
+# The project's one public repository. Named here because the JSON-LD below
+# has to point at the same place correction 1 rewrites every link to.
+REPO_URL = "https://github.com/Mizerd/lightning"
 
 raw = open(SRC, encoding="utf-8").read()
 
@@ -716,6 +720,159 @@ if _n != 6:
     raise SystemExit("expected 6 Linux command boxes, wrapped %d" % _n)
 doc = doc[:_lin_i] + _col + doc[_win_i:]
 
+# 12. The screenshots: reserve their space, and let them be opened.
+#
+#     They carried no width/height and are loading="lazy", so until each file
+#     arrived its box was zero pixels tall -- the caption sat under nothing
+#     and the whole grid jumped as the images landed. The attributes give the
+#     browser the aspect ratio before a byte is fetched, so the space is held
+#     from the first paint. The sizes are read from the files themselves
+#     rather than typed in, because a re-exported screenshot would otherwise
+#     reserve the wrong shape and nothing would say so.
+#
+#     They are also the only photographs on an 8,800px page, and they render
+#     about 540px wide from a 3,839px original. Each is wrapped in a button
+#     so releases.js can open it full-screen. A <button> rather than a click
+#     handler on the <img>: that way it is in the tab order and announced as
+#     something you can press, both of which a listener on an image gives up.
+
+
+def _png_size(name):
+    """(width, height) from a PNG's IHDR, which is always the first chunk."""
+    path = os.path.join(OUT, "assets", name)
+    if not os.path.exists(path):
+        raise SystemExit("screenshot missing, cannot size it: %s" % path)
+    with open(path, "rb") as fh:
+        head = fh.read(24)
+    if head[:8] != b"\x89PNG\r\n\x1a\n" or head[12:16] != b"IHDR":
+        raise SystemExit("not a PNG: %s" % path)
+    return struct.unpack(">II", head[16:24])
+
+
+# The frame div already clips to a radius, so the button only has to stop
+# being a button: no chrome, full width, and the image left to size itself.
+_ZOOM_BTN = ("display: block; width: 100%; margin: 0; padding: 0; border: 0; "
+             "background: none; font: inherit; color: inherit; "
+             "position: relative; cursor: zoom-in; -webkit-appearance: none;")
+
+# The affordance is visible at rest rather than on hover: a phone has no
+# hover, and this is the one control on the page a touch reader would
+# otherwise have no way of guessing. releases.js unhides it, so it never
+# promises something that JavaScript is not there to deliver.
+_ZOOM_HINT = ("position: absolute; right: 10px; bottom: 10px; "
+              "padding: 5px 9px; border-radius: 6px; "
+              "border: 1px solid rgba(157,189,245,0.30); "
+              "background: rgba(8,12,18,0.82); color: #cfe0ff; "
+              "font-family: 'JetBrains Mono', monospace; font-size: 10px; "
+              "font-weight: 700; letter-spacing: 0.08em; "
+              "text-transform: uppercase; line-height: 1; opacity: 0.72; "
+              "transition: opacity 0.25s ease; pointer-events: none;")
+
+_SHOT_RE = re.compile(
+    r'<img src="/assets/(screenshot-[a-z-]+\.png)" alt="([^"]*)" '
+    r'loading="lazy" style="([^"]*)">')
+
+
+def _zoomable(m):
+    name, alt, style = m.group(1), m.group(2), m.group(3)
+    w, h = _png_size(name)
+    img = ('<img src="/assets/%s" alt="%s" loading="lazy" '
+           'width="%d" height="%d" style="%s">' % (name, alt, w, h, style))
+    return ('<button type="button" class="lg-zoom" data-lg-zoom '
+            'aria-label="Open this screenshot full screen" style="%s">%s'
+            '<span class="lg-zoomhint" data-lg-zoomhint hidden '
+            'style="%s">Expand</span></button>'
+            % (_ZOOM_BTN, img, _ZOOM_HINT))
+
+
+doc, _n = _SHOT_RE.subn(_zoomable, doc)
+if _n != 4:
+    raise SystemExit("expected 4 screenshots to make zoomable, got %d" % _n)
+
+# 13. Eleven themes, shown rather than claimed.
+#
+#     The page said "Eleven themes" in a feature card and "eleven WCAG-AA
+#     themes" in the meta description, and then showed none of them: 8,800px
+#     of one slate palette and a single blue accent. Each swatch is a
+#     miniature of the client -- rail, two received bubbles, one sent bubble
+#     in the accent -- so the strip reads as the app in eleven outfits rather
+#     than as a paint chart.
+#
+#     THE COLOURS ARE NOT DECORATIVE. Every value below is copied from
+#     qml/AppTheme.qml in the client repo (the `_light`, `_dark`, `_graphite`
+#     ... palette objects, resolved through their colour literals). If a
+#     palette changes there, it has to be changed here too -- this repo
+#     cannot see that one at build time. Order and names follow the
+#     SettingsManager::Theme enum, ids 1-11; id 0 is "System", which is not a
+#     palette but a choice between two of these.
+_THEMES = [
+    # name,             background, surface,   accent,    border
+    ("Lightning Light", "#EBF0F7", "#FFFFFF", "#1D57FF", "#C4D2E7"),
+    ("Lightning Dark",  "#0D1117", "#161C26", "#1D57FF", "#212A39"),
+    ("Graphite",        "#1A1A1D", "#26262B", "#2E6EEB", "#37373E"),
+    ("Midnight",        "#0F172A", "#192332", "#1D57FF", "#334155"),
+    ("Nordic",          "#2E3440", "#3B4252", "#4D6D95", "#434C5E"),
+    ("Purple Dusk",     "#1E1B2E", "#2A2440", "#7C5CD6", "#3A3255"),
+    ("Warm",            "#F6F1E7", "#FFFDF8", "#C2410C", "#DCD0B8"),
+    ("Moss Light",      "#F1F9F3", "#FFFFFF", "#12A67F", "#DEE8E0"),
+    ("Indigo Night",    "#101016", "#1B1B24", "#4A4EED", "#23232D"),
+    ("Deep Teal",       "#031919", "#0C2526", "#27C2AD", "#193535"),
+    ("Storm",           "#02051D", "#202473", "#FFD447", "#303C80"),
+]
+
+
+def _swatch(name, bg, surface, accent, border):
+    bar = ('<span style="display: block; height: 7px; border-radius: 4px; '
+           'background: %s; width: %s;"></span>')
+    return (
+        '<figure style="margin: 0;">'
+        '<span class="lg-swatch" aria-hidden="true" style="display: flex; '
+        'gap: 5px; height: 58px; padding: 7px; border-radius: 9px; '
+        'background: %s; border: 1px solid %s;">'
+        '<span style="flex: 0 0 12px; border-radius: 4px; background: %s;">'
+        '</span>'
+        '<span style="flex: 1; min-width: 0; display: flex; '
+        'flex-direction: column; justify-content: flex-end; gap: 5px;">'
+        '%s%s'
+        '<span style="display: block; height: 7px; border-radius: 4px; '
+        'background: %s; width: 58%%; align-self: flex-end;"></span>'
+        '</span></span>'
+        '<figcaption style="margin-top: 9px; font-family: '
+        "'JetBrains Mono', monospace" '; font-size: 10px; line-height: 1.4; '
+        'color: #7d8b9c;">%s</figcaption>'
+        '</figure>'
+    ) % (bg, border, surface, bar % (surface, "82%"), bar % (surface, "60%"),
+         accent, html.escape(name))
+
+
+_strip = (
+    '\n      <div style="margin-top: 56px; padding-top: 34px; '
+    'border-top: 1px solid #1b222c;" class="lg-themes">\n'
+    '        <div style="display: flex; flex-wrap: wrap; align-items: '
+    'baseline; gap: 10px 20px; justify-content: space-between;">\n'
+    '          <h3 style="font-size: 21px; font-weight: 600; '
+    'letter-spacing: -0.01em;">Eleven themes, and a twelfth that follows your '
+    'desktop</h3>\n'
+    '          <p style="max-width: 430px; font-size: 13.5px; line-height: '
+    '1.6; color: #7d8b9c;">Set per account, so a work login and a personal '
+    'one do not have to look the same. Every one is checked for WCAG-AA '
+    'contrast on every surface.</p>\n'
+    '        </div>\n'
+    '        <div style="display: grid; grid-template-columns: '
+    'repeat(11, minmax(0, 1fr)); gap: 18px 12px; '
+    'margin-top: 26px;" class="lg-swatches">\n          '
+    + "\n          ".join(_swatch(*t) for t in _THEMES)
+    + '\n        </div>\n      </div>\n')
+
+# Inside the screenshots section, after the picture grid closes. Anchored on
+# the last caption so a reordered grid fails here instead of dropping the
+# strip into the wrong section.
+_last = ('with counts updating live.</figcaption>\n        </figure>\n'
+         '      </div>\n')
+if doc.count(_last) != 1:
+    raise SystemExit("end of the screenshot grid not found")
+doc = doc.replace(_last, _last.rstrip("\n") + _strip, 1)
+
 # ------------------------------------------------------------- style-hover CSS
 hover_rules = []
 
@@ -835,14 +992,52 @@ helmet = re.sub(r'<link rel="preconnect"[^>]*>\s*', "", helmet)
 
 body = re.search(r"<x-dc>(.*?)</x-dc>", doc, re.S).group(1)
 
+# Structured data. This exists for one reason: Google had already picked
+# https://github.com/Mizerd/lightning as the canonical page for this content,
+# because the domain used to redirect there and a redirect is the strongest
+# duplicate signal there is. The self-referencing <link rel="canonical">
+# below says "this URL is the original". `sameAs` says the rest of it: the
+# GitHub repository is the same project, not a competing copy of this page.
+#
+# It is a <script type="application/ld+json"> data block, which is never
+# executed, so `script-src 'self'` does not have to be loosened to carry it.
+_ld = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Lightning",
+    "url": SITE_URL + "/",
+    "applicationCategory": "CommunicationApplication",
+    "applicationSubCategory": "Matrix client",
+    "operatingSystem": "Linux, Windows",
+    "softwareVersion": str(releases.get("version", "")),
+    "softwareRequirements": "Qt 6.5 or later",
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "isAccessibleForFree": True,
+    "description": (
+        "A native Matrix desktop client written in Qt 6 on top of the "
+        "official Rust Matrix SDK, with GIF search, voice messages, "
+        "threads and several accounts signed in at once."),
+    "offers": {"@type": "Offer", "price": "0",
+               "priceCurrency": "USD"},
+    "sameAs": [REPO_URL],
+    "codeRepository": REPO_URL,
+    "screenshot": [SITE_URL + "/assets/" + n
+                   for n in sorted(set(SHOT_NAMES.values()))],
+    "author": {"@type": "Person", "name": "Rokas Smetonis"},
+}
+
 extra_head = """
 <link rel="canonical" href="{site}/">
 <meta name="theme-color" content="#0c0f14">
 <meta property="og:url" content="{site}/">
 <meta property="og:site_name" content="Lightning">
-<meta property="og:image" content="{site}/assets/screenshot-rooms-and-gifs.png">
+<meta property="og:image" content="{site}/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:alt" content="Lightning's room timeline with the GIF picker open over the composer">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{ld}</script>
 <style>
 /* The `hidden` attribute gets its display:none from the UA stylesheet, which
    an inline style="display: inline-block" outranks -- and every element on
@@ -877,10 +1072,104 @@ extra_head = """
                     border-color: #35455a; }}
 .lg-copybtn:active {{ transform: translateY(1px); }}
 
+/* ---- screenshots open full screen ---------------------------------------
+   The trigger is a <button> wrapping the <img> (see correction 12), so it
+   already focuses and activates on Enter and Space. All that is left is to
+   look like it. */
+.lg-zoom:focus-visible {{ outline: 2px solid #5590f5; outline-offset: 3px; }}
+.lg-zoom:hover .lg-zoomhint,
+.lg-zoom:focus-visible .lg-zoomhint {{ opacity: 1; }}
+
+/* The overlay. z-index 2000 against the sticky header's 60, which is the
+   only other stacking context the page creates. */
+.lg-lightbox {{
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 30px;
+  background: rgba(4, 7, 12, 0.94);
+  /* Stops a flick at the top or bottom of the overlay from scrolling the
+     page behind it once the overlay itself has nowhere left to go. */
+  overscroll-behavior: contain;
+  /* Not decoration: iOS only dispatches click for a plain <div> when it
+     looks interactive, and a cursor is what makes it look interactive.
+     Without this the backdrop swallows the tap and nothing closes. */
+  cursor: zoom-out;
+}}
+/* 100dvh, not 100vh: on a phone the browser chrome is counted in vh, so vh
+   would size the image to a viewport taller than the one you can see and
+   crop the bottom of it behind the address bar. */
+.lg-lightbox img {{
+  max-width: 100%;
+  max-height: calc(100dvh - 150px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #1e2631;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}}
+.lg-lightbox figcaption {{
+  max-width: 640px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #93a0b0;
+  cursor: default;
+}}
+.lg-lbclose {{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid #24303f;
+  background: #10161e;
+  color: #cfe0ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}}
+.lg-lbclose:hover {{ background: #1a2432; border-color: #3a4a61; }}
+.lg-lbclose:focus-visible {{ outline: 2px solid #5590f5; outline-offset: 2px; }}
+/* Held while the overlay is open, so the page behind it cannot be scrolled
+   away underneath. Both elements, because which one scrolls is not the same
+   on every browser. */
+html.lg-lbopen, body.lg-lbopen {{ overflow: hidden !important; }}
+
+/* A theme swatch is a miniature of the client: rail, two received bubbles,
+   one sent bubble in the accent. Nothing here sets a colour -- every one is
+   inline, per theme, from the palette table in unbundle.py. */
+.lg-swatch {{ transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }}
+figure:hover > .lg-swatch {{ transform: translateY(-3px); }}
+
 /* Two wordings of the alpha warning, one visible at a time. The brief one is
    for phones, where the full sentence wrapped to four lines in a bar that is
    sticky -- so it cost a sixth of the screen on every scroll. */
 .lg-alpha-brief {{ display: none; }}
+
+/* Eleven across needs about 1,080px of window. Below that they go two
+   rows deep (6 + 5) rather than orphaning the last two, which is what
+   auto-fit did: nine in a row and a stranded pair underneath. */
+@media (max-width: 1080px) {{
+  /* !important, because the grid is an inline style on the element and
+     an inline style beats any stylesheet rule without it. Same reason
+     as every override in the phone block below. */
+  .lg-swatches {{ grid-template-columns: repeat(6, minmax(0, 1fr))
+                 !important; }}
+}}
 
 @media (max-width: 760px) {{
   /* The nav's seven links in a nowrap row were the widest element on the
@@ -951,6 +1240,21 @@ extra_head = """
      ran 15px past its card. Let it break rather than spill. */
   .lg-room {{ overflow-wrap: anywhere !important; }}
 
+  /* Four to a row on a phone: 4 + 4 + 3. At 320px that is a 62px column,
+     so the longer names ("Lightning Light") wrap -- reserving both lines
+     everywhere keeps the strip a grid instead of a ragged edge, and costs
+     one line of nothing on the short names. */
+  .lg-swatches {{ grid-template-columns: repeat(4, minmax(0, 1fr))
+                 !important; gap: 14px 10px !important; }}
+  .lg-swatches figcaption {{ min-height: 2.8em !important; }}
+  .lg-swatch {{ height: 46px !important; padding: 5px !important; }}
+
+  /* Edge to edge, and less furniture around the picture: a phone screen is
+     mostly the picture or it is not worth opening. */
+  .lg-lightbox {{ padding: 14px !important; gap: 12px !important; }}
+  .lg-lightbox img {{ max-height: calc(100dvh - 130px) !important; }}
+  .lg-lightbox figcaption {{ font-size: 12.5px !important; }}
+
   /* A 7ch hanging indent is a fair slice of a 30-character line, so the
      architecture diagram gets a shallower one and slightly tighter type. */
   .lg-arch {{ font-size: 11.5px !important; line-height: 1.75 !important;
@@ -977,7 +1281,8 @@ extra_head = """
 html, body {{ overflow-x: clip; }}
 {hover}
 </style>
-""".format(site=SITE_URL, hover="\n".join(hover_rules))
+""".format(site=SITE_URL, hover="\n".join(hover_rules),
+           ld=json.dumps(_ld, separators=(",", ":")))
 
 page = (
     "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"

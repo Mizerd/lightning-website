@@ -24,6 +24,7 @@ public/              <- everything Cloudflare serves (the assets directory)
   assets/
     lightning-mark.svg
     screenshot-*.png
+    og-card.png        <- 1200x630 link preview; source in tools/og-card.html
   fonts/*.woff2      <- Manrope, JetBrains Mono, Space Grotesk (self-hosted)
 
 wrangler.jsonc       <- Cloudflare config: serve public/, 404.html on miss
@@ -34,6 +35,7 @@ artifact/
 tools/
   unbundle.py        <- converts that artifact into public/
   check.py           <- invariant checks; run after editing public/
+  og-card.html       <- source for assets/og-card.png; NOT deployed
 ```
 
 Nothing outside `public/` is deployed.
@@ -160,9 +162,15 @@ python3 tools/check.py
 
 Verifies the things that have actually broken: every local reference resolves,
 every package card has its own button pointing at its own asset, the baked-in
-version agrees with `releases.json`, nothing served mentions GitLab, and
+version agrees with `releases.json`, every screenshot declares the size the
+file actually is, the theme strip still has eleven swatches, the canonical and
+the JSON-LD agree with the page, nothing served mentions GitLab, and
 `releases.js` is not cacheable for longer than the HTML it rewrites. Exits
 non-zero, so it works in a pre-push hook.
+
+A check that cannot fail is decoration. When adding one, inject the defect it
+is meant to catch, watch it fail, then restore — all of the above have been
+put through that.
 
 That last check exists because of a real bug. `releases.js` was served with
 `max-age=3600` while `index.html` was `must-revalidate`, so a visitor could run
@@ -188,6 +196,21 @@ that the eight `[data-lg-pkg]` cards still have eight distinct `href`s. Test
 both passes *and* the feed-only path with `/api/latest` failing, since the two
 mask each other: the GitHub pass sets every href by format and will paper over
 a broken rebuild in the feed pass.
+
+The lightbox is worth testing the same way, and the useful assertions are the
+ones about what must *not* happen: clicking the image does not close it, the
+overlay is reused rather than rebuilt on the second open, the scroll lock is
+released, and focus returns to the screenshot that was clicked.
+
+Anything about **layout** needs a real browser instead — jsdom has none.
+Headless Firefox works, with one trap: `--screenshot` fires at the load event,
+so a probe on a timer renders nothing. Measure synchronously in an iframe's
+`onload` and write the numbers into the page, one page load per viewport
+width. Scroll-driven `lgRise` animations also sit at their `from` state
+(`opacity: 0`) in a screenshot, so probe pages want
+`*{animation:none!important;opacity:1!important}`, and `loading="lazy"`
+images never arrive at all — strip it before measuring anything below the
+fold.
 
 ## GitHub only
 
@@ -245,6 +268,108 @@ a 26 px nav icon and a 14 px chip. The hero now opens on a lockup — mark,
 wordmark, and the one-line description that was already in `<title>` but
 nowhere on the page — and the `<h1>` keeps its job as the pitch, under a name
 that now means something.
+
+## Screenshots
+
+The four screenshots are the only photographs on an 8,800 px page, and they
+had two problems.
+
+They carried **no `width`/`height`** and are `loading="lazy"`, so until each
+file arrived its box was zero pixels tall: the caption sat under nothing and
+the grid jumped as the images landed. Correction 12 reads the real dimensions
+out of each PNG's IHDR at build time and writes them onto the tag, so the
+browser reserves the right shape before a byte is fetched. They are read from
+the files rather than typed in because a re-exported screenshot would
+otherwise reserve the *wrong* shape, which is worse than reserving none —
+`check.py` compares the two.
+
+They also render about 540 px wide from a 3,839 px original, so each is now
+wrapped in a `<button data-lg-zoom>` and `releases.js` opens it full screen.
+
+A **button** rather than a click handler on the `<img>`: that way it is in the
+tab order, activates on Enter and Space, and is announced as something you can
+press. All three are free with a button and all three have to be rebuilt by
+hand without one.
+
+Three things about the overlay are load-bearing:
+
+- **The image is the one thing that does not close it.** Everything else does
+  — backdrop, caption, close button, Escape. On a phone that is what lets you
+  pinch and pan a screenshot without the first touch dismissing it.
+- **`cursor: zoom-out` on the backdrop is not decoration.** iOS only
+  dispatches `click` for a plain `<div>` when it looks interactive, and a
+  cursor is what makes it look interactive. Without it the backdrop swallows
+  the tap and nothing closes.
+- **`max-height: calc(100dvh - 150px)`, not `100vh`.** On a phone the browser
+  chrome counts towards `vh`, so `vh` sizes the image to a viewport taller
+  than the one you can see and crops the bottom of it behind the address bar.
+
+The overlay is built once on first use and reused; closing it drops the `src`
+so a 3,839 px image is not held decoded for a page you have gone back to
+scrolling. Focus moves to the close button on open and returns to the
+screenshot on close.
+
+## The theme strip
+
+The page claimed "Eleven themes" in a feature card and "eleven WCAG-AA themes"
+in its meta description, and then showed none of them — 8,800 px of one slate
+palette and a single blue accent. Correction 13 puts eleven swatches under the
+screenshots, each a miniature of the client: rail, two received bubbles, one
+sent bubble in the accent.
+
+**The colours are not decorative.** Every value in the `_THEMES` table in
+`unbundle.py` is copied from `qml/AppTheme.qml` in the client repo — the
+`_light`, `_dark`, `_graphite` … palette objects, resolved through their
+colour literals, in `SettingsManager::Theme` enum order. This repository
+cannot see that one at build time, so **if a palette changes there it has to
+be changed here too.** `check.py` cannot prove they are current; it only
+proves nobody quietly dropped one, which is the failure that would leave the
+page saying "Eleven themes" above ten swatches.
+
+Eleven is prime, so the grid is set explicitly rather than left to `auto-fit`:
+eleven across on desktop, `6 + 5` below 1080 px, `4 + 4 + 3` on a phone.
+`auto-fit` gave nine in a row and a stranded pair underneath. The 1080 px rule
+needs `!important` for the usual reason — the grid is an inline style on the
+element.
+
+## Search engines
+
+Google had already picked **`https://github.com/Mizerd/lightning`** as the
+canonical page for this content. That is not a mistake on its part: the domain
+used to redirect there, and a redirect is the strongest duplicate signal there
+is. The fix is to say the opposite, in every way a crawler reads:
+
+- a self-referencing `<link rel="canonical">` — this URL is the original
+- `SoftwareApplication` JSON-LD with **`sameAs`** pointing at the repository —
+  the same project, not a competing copy of this page
+- `og:url`, `og:site_name`, `twitter:card`, and a real 1200x630 `og:image`
+
+The JSON-LD is a `<script type="application/ld+json">` **data block**, which
+is never executed, so `script-src 'self'` does not have to be loosened to
+carry it. `releases.js` keeps its `softwareVersion` in step with the rest of
+the page, because `data-lg-bind` reaches DOM and this is JSON.
+
+`og:image` was `screenshot-rooms-and-gifs.png`: 3839x2043 and 545 KB, which is
+7.8 megapixels for a card rendered about 500 px wide, and past the size some
+scrapers will fetch at all. It is now `assets/og-card.png`, 1200x630 and
+154 KB. Its source is `tools/og-card.html` — screenshotted in Firefox rather
+than drawn in ImageMagick, so the type is the site's own webfonts laid out by
+the same engine as the site. That file is a **build input and must not be left
+in `public/`**.
+
+Note that `og:image` is referenced by `content=`, not `src=`/`href=`, so the
+generic "local references resolve" check never sees it. It has its own check —
+a social card that 404s is invisible until someone shares a link and gets a
+blank box.
+
+**Two things outside this repository still point the wrong way**, and neither
+can be fixed from here:
+
+- the GitHub repository has **no homepage URL set**, so the page Google
+  currently treats as canonical does not link back to the site
+- its description still reads "Mirror of the canonical source at
+  gitlab.smetonis.net…", which tells a crawler in as many words that the
+  canonical source is somewhere else
 
 ## Mobile
 

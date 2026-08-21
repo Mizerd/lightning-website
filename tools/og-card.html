@@ -1,0 +1,59 @@
+<!-- Source for public/assets/og-card.png -- the 1200x630 image every link
+     preview shows (og:image / twitter:card).
+
+     It used to be screenshot-rooms-and-gifs.png: 3839x2043 and 545 KB, which
+     is 7.8 megapixels for a card rendered about 500 px wide, and past the
+     size some scrapers will fetch at all.
+
+     Re-render it after a redesign or a new screenshot:
+
+       cd public && python3 -m http.server 8731 &
+       cp ../tools/og-card.html .
+       firefox --headless --window-size 1200,630 \
+               --screenshot /tmp/card.png http://127.0.0.1:8731/og-card.html
+       magick /tmp/card.png -strip -define png:compression-level=9 \
+              assets/og-card.png
+       rm og-card.html
+
+     It is screenshotted rather than drawn in ImageMagick so the type is the
+     site's own webfonts, laid out by the same engine as the site.
+
+     Do NOT leave this file in public/ -- it is a build input, not a page. -->
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Space Grotesk';src:url("/fonts/space-grotesk-latin.woff2") format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'Space Grotesk';src:url("/fonts/space-grotesk-latin.woff2") format('woff2');font-weight:500;font-display:block}
+@font-face{font-family:'Manrope';src:url("/fonts/manrope-latin.woff2") format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'JetBrains Mono';src:url("/fonts/jetbrains-mono-latin.woff2") format('woff2');font-weight:700;font-display:block}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1200px;height:630px;overflow:hidden}
+body{background:#0a0d12;color:#e9eef6;font-family:'Manrope',sans-serif;position:relative}
+.glow{position:absolute;inset:0;background:
+  radial-gradient(900px 520px at 12% -10%, rgba(29,87,255,0.28), transparent 62%),
+  radial-gradient(700px 420px at 96% 108%, rgba(255,212,71,0.10), transparent 60%);}
+.wrap{position:relative;height:100%;display:flex;align-items:center;padding:0 0 0 72px;gap:44px}
+.left{width:520px;flex:none}
+.lock{display:flex;align-items:center;gap:20px}
+.lock img{display:block;width:92px;height:92px}
+.name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:72px;letter-spacing:-0.035em;line-height:1}
+.sub{margin-top:24px;font-size:25px;line-height:1.34;color:#c2cedd;font-weight:400}
+.sub b{color:#fff;font-weight:600}
+.meta{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap}
+.chip{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:0.04em;
+  padding:9px 14px;border-radius:8px;border:1px solid #24314a;background:rgba(16,22,30,0.8);color:#9dbdf5}
+.shot{position:absolute;right:-200px;top:50%;transform:translateY(-50%) rotate(-5deg);
+  width:820px;border-radius:18px;overflow:hidden;border:1px solid #24303f;
+  box-shadow:0 40px 110px rgba(0,0,0,0.75)}
+.shot img{display:block;width:100%}
+.fade{position:absolute;right:0;top:0;bottom:0;width:420px;
+  background:linear-gradient(90deg,transparent,rgba(10,13,18,0.72))}
+</style></head><body>
+<div class="glow"></div>
+<div class="shot"><img src="/assets/screenshot-rooms-and-gifs.png"></div>
+<div class="fade"></div>
+<div class="wrap"><div class="left">
+  <div class="lock"><img src="/assets/lightning-mark.svg"><div class="name">Lightning</div></div>
+  <div class="sub">A <b>native</b> Matrix client for Linux&nbsp;and&nbsp;Windows. Qt&nbsp;6 on the official Rust Matrix SDK.</div>
+  <div class="meta"><span class="chip">GIF search</span><span class="chip">Voice messages</span><span class="chip">Real threads</span></div>
+</div></div>
+</body></html>

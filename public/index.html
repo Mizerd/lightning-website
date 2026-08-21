@@ -523,9 +523,13 @@
 <meta name="theme-color" content="#0c0f14">
 <meta property="og:url" content="https://www.lightning-matrix.org/">
 <meta property="og:site_name" content="Lightning">
-<meta property="og:image" content="https://www.lightning-matrix.org/assets/screenshot-rooms-and-gifs.png">
+<meta property="og:image" content="https://www.lightning-matrix.org/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:alt" content="Lightning's room timeline with the GIF picker open over the composer">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lightning","url":"https://www.lightning-matrix.org/","applicationCategory":"CommunicationApplication","applicationSubCategory":"Matrix client","operatingSystem":"Linux, Windows","softwareVersion":"0.7.4","softwareRequirements":"Qt 6.5 or later","license":"https://www.gnu.org/licenses/gpl-3.0.html","isAccessibleForFree":true,"description":"A native Matrix desktop client written in Qt 6 on top of the official Rust Matrix SDK, with GIF search, voice messages, threads and several accounts signed in at once.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"sameAs":["https://github.com/Mizerd/lightning"],"codeRepository":"https://github.com/Mizerd/lightning","screenshot":["https://www.lightning-matrix.org/assets/screenshot-emoji.png","https://www.lightning-matrix.org/assets/screenshot-polls.png","https://www.lightning-matrix.org/assets/screenshot-rooms-and-gifs.png","https://www.lightning-matrix.org/assets/screenshot-threads.png"],"author":{"@type":"Person","name":"Rokas Smetonis"}}</script>
 <style>
 /* The `hidden` attribute gets its display:none from the UA stylesheet, which
    an inline style="display: inline-block" outranks -- and every element on
@@ -560,10 +564,104 @@
                     border-color: #35455a; }
 .lg-copybtn:active { transform: translateY(1px); }
 
+/* ---- screenshots open full screen ---------------------------------------
+   The trigger is a <button> wrapping the <img> (see correction 12), so it
+   already focuses and activates on Enter and Space. All that is left is to
+   look like it. */
+.lg-zoom:focus-visible { outline: 2px solid #5590f5; outline-offset: 3px; }
+.lg-zoom:hover .lg-zoomhint,
+.lg-zoom:focus-visible .lg-zoomhint { opacity: 1; }
+
+/* The overlay. z-index 2000 against the sticky header's 60, which is the
+   only other stacking context the page creates. */
+.lg-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 30px;
+  background: rgba(4, 7, 12, 0.94);
+  /* Stops a flick at the top or bottom of the overlay from scrolling the
+     page behind it once the overlay itself has nowhere left to go. */
+  overscroll-behavior: contain;
+  /* Not decoration: iOS only dispatches click for a plain <div> when it
+     looks interactive, and a cursor is what makes it look interactive.
+     Without this the backdrop swallows the tap and nothing closes. */
+  cursor: zoom-out;
+}
+/* 100dvh, not 100vh: on a phone the browser chrome is counted in vh, so vh
+   would size the image to a viewport taller than the one you can see and
+   crop the bottom of it behind the address bar. */
+.lg-lightbox img {
+  max-width: 100%;
+  max-height: calc(100dvh - 150px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #1e2631;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+.lg-lightbox figcaption {
+  max-width: 640px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #93a0b0;
+  cursor: default;
+}
+.lg-lbclose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid #24303f;
+  background: #10161e;
+  color: #cfe0ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.lg-lbclose:hover { background: #1a2432; border-color: #3a4a61; }
+.lg-lbclose:focus-visible { outline: 2px solid #5590f5; outline-offset: 2px; }
+/* Held while the overlay is open, so the page behind it cannot be scrolled
+   away underneath. Both elements, because which one scrolls is not the same
+   on every browser. */
+html.lg-lbopen, body.lg-lbopen { overflow: hidden !important; }
+
+/* A theme swatch is a miniature of the client: rail, two received bubbles,
+   one sent bubble in the accent. Nothing here sets a colour -- every one is
+   inline, per theme, from the palette table in unbundle.py. */
+.lg-swatch { transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
+figure:hover > .lg-swatch { transform: translateY(-3px); }
+
 /* Two wordings of the alpha warning, one visible at a time. The brief one is
    for phones, where the full sentence wrapped to four lines in a bar that is
    sticky -- so it cost a sixth of the screen on every scroll. */
 .lg-alpha-brief { display: none; }
+
+/* Eleven across needs about 1,080px of window. Below that they go two
+   rows deep (6 + 5) rather than orphaning the last two, which is what
+   auto-fit did: nine in a row and a stranded pair underneath. */
+@media (max-width: 1080px) {
+  /* !important, because the grid is an inline style on the element and
+     an inline style beats any stylesheet rule without it. Same reason
+     as every override in the phone block below. */
+  .lg-swatches { grid-template-columns: repeat(6, minmax(0, 1fr))
+                 !important; }
+}
 
 @media (max-width: 760px) {
   /* The nav's seven links in a nowrap row were the widest element on the
@@ -633,6 +731,21 @@
   /* "#lightning:matrix.smetonis.net" has no spaces, so it cannot wrap and it
      ran 15px past its card. Let it break rather than spill. */
   .lg-room { overflow-wrap: anywhere !important; }
+
+  /* Four to a row on a phone: 4 + 4 + 3. At 320px that is a 62px column,
+     so the longer names ("Lightning Light") wrap -- reserving both lines
+     everywhere keeps the strip a grid instead of a ragged edge, and costs
+     one line of nothing on the short names. */
+  .lg-swatches { grid-template-columns: repeat(4, minmax(0, 1fr))
+                 !important; gap: 14px 10px !important; }
+  .lg-swatches figcaption { min-height: 2.8em !important; }
+  .lg-swatch { height: 46px !important; padding: 5px !important; }
+
+  /* Edge to edge, and less furniture around the picture: a phone screen is
+     mostly the picture or it is not worth opening. */
+  .lg-lightbox { padding: 14px !important; gap: 12px !important; }
+  .lg-lightbox img { max-height: calc(100dvh - 130px) !important; }
+  .lg-lightbox figcaption { font-size: 12.5px !important; }
 
   /* A 7ch hanging indent is a fair slice of a 30-character line, so the
      architecture diagram gets a shallower one and slightly tighter type. */
@@ -865,28 +978,47 @@ html, body { overflow-x: clip; }
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 26px; margin-top: 44px;" class="lg-grid">
         <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
           <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-16">
-            <img src="/assets/screenshot-rooms-and-gifs.png" alt="A room timeline with replies, reactions, an image and the GIF picker open over the composer" loading="lazy" style="display: block; width: 100%; height: auto;">
+            <button type="button" class="lg-zoom" data-lg-zoom aria-label="Open this screenshot full screen" style="display: block; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; position: relative; cursor: zoom-in; -webkit-appearance: none;"><img src="/assets/screenshot-rooms-and-gifs.png" alt="A room timeline with replies, reactions, an image and the GIF picker open over the composer" loading="lazy" width="3839" height="2043" style="display: block; width: 100%; height: auto;"><span class="lg-zoomhint" data-lg-zoomhint hidden style="position: absolute; right: 10px; bottom: 10px; padding: 5px 9px; border-radius: 6px; border: 1px solid rgba(157,189,245,0.30); background: rgba(8,12,18,0.82); color: #cfe0ff; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; opacity: 0.72; transition: opacity 0.25s ease; pointer-events: none;">Expand</span></button>
           </div>
           <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Rooms and GIFs.</strong> The timeline, with the GIF picker open above the composer.</figcaption>
         </figure>
         <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
           <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-17">
-            <img src="/assets/screenshot-threads.png" alt="A thread panel open beside the main timeline" loading="lazy" style="display: block; width: 100%; height: auto;">
+            <button type="button" class="lg-zoom" data-lg-zoom aria-label="Open this screenshot full screen" style="display: block; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; position: relative; cursor: zoom-in; -webkit-appearance: none;"><img src="/assets/screenshot-threads.png" alt="A thread panel open beside the main timeline" loading="lazy" width="3838" height="2037" style="display: block; width: 100%; height: auto;"><span class="lg-zoomhint" data-lg-zoomhint hidden style="position: absolute; right: 10px; bottom: 10px; padding: 5px 9px; border-radius: 6px; border: 1px solid rgba(157,189,245,0.30); background: rgba(8,12,18,0.82); color: #cfe0ff; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; opacity: 0.72; transition: opacity 0.25s ease; pointer-events: none;">Expand</span></button>
           </div>
           <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Threads.</strong> Their own panel next to the room, with summary cards in the timeline.</figcaption>
         </figure>
         <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
           <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-18">
-            <img src="/assets/screenshot-emoji.png" alt="An encrypted direct message with the emoji picker open over the composer" loading="lazy" style="display: block; width: 100%; height: auto;">
+            <button type="button" class="lg-zoom" data-lg-zoom aria-label="Open this screenshot full screen" style="display: block; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; position: relative; cursor: zoom-in; -webkit-appearance: none;"><img src="/assets/screenshot-emoji.png" alt="An encrypted direct message with the emoji picker open over the composer" loading="lazy" width="3839" height="2041" style="display: block; width: 100%; height: auto;"><span class="lg-zoomhint" data-lg-zoomhint hidden style="position: absolute; right: 10px; bottom: 10px; padding: 5px 9px; border-radius: 6px; border: 1px solid rgba(157,189,245,0.30); background: rgba(8,12,18,0.82); color: #cfe0ff; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; opacity: 0.72; transition: opacity 0.25s ease; pointer-events: none;">Expand</span></button>
           </div>
           <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Emoji.</strong> Categories, search and a preview, here in an encrypted DM.</figcaption>
         </figure>
         <figure style="margin: 0; animation: lgRise 0.8s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 25%;">
           <div style="border: 1px solid #1e2631; border-radius: 12px; overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s ease, box-shadow 0.45s ease;" class="hv-19">
-            <img src="/assets/screenshot-polls.png" alt="A poll with four options and live vote counts in a room timeline" loading="lazy" style="display: block; width: 100%; height: auto;">
+            <button type="button" class="lg-zoom" data-lg-zoom aria-label="Open this screenshot full screen" style="display: block; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; position: relative; cursor: zoom-in; -webkit-appearance: none;"><img src="/assets/screenshot-polls.png" alt="A poll with four options and live vote counts in a room timeline" loading="lazy" width="3838" height="2037" style="display: block; width: 100%; height: auto;"><span class="lg-zoomhint" data-lg-zoomhint hidden style="position: absolute; right: 10px; bottom: 10px; padding: 5px 9px; border-radius: 6px; border: 1px solid rgba(157,189,245,0.30); background: rgba(8,12,18,0.82); color: #cfe0ff; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; opacity: 0.72; transition: opacity 0.25s ease; pointer-events: none;">Expand</span></button>
           </div>
           <figcaption style="margin-top: 14px; font-size: 14.5px; line-height: 1.55; color: #8d99a8;"><strong style="color: #dde5f0; font-weight: 600;">Polls.</strong> Make one and vote in the timeline, with counts updating live.</figcaption>
         </figure>
+      </div>
+      <div style="margin-top: 56px; padding-top: 34px; border-top: 1px solid #1b222c;" class="lg-themes">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 20px; justify-content: space-between;">
+          <h3 style="font-size: 21px; font-weight: 600; letter-spacing: -0.01em;">Eleven themes, and a twelfth that follows your desktop</h3>
+          <p style="max-width: 430px; font-size: 13.5px; line-height: 1.6; color: #7d8b9c;">Set per account, so a work login and a personal one do not have to look the same. Every one is checked for WCAG-AA contrast on every surface.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 18px 12px; margin-top: 26px;" class="lg-swatches">
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #EBF0F7; border: 1px solid #C4D2E7;"><span style="flex: 0 0 12px; border-radius: 4px; background: #FFFFFF;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #FFFFFF; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #FFFFFF; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #1D57FF; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Lightning Light</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #0D1117; border: 1px solid #212A39;"><span style="flex: 0 0 12px; border-radius: 4px; background: #161C26;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #161C26; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #161C26; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #1D57FF; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Lightning Dark</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #1A1A1D; border: 1px solid #37373E;"><span style="flex: 0 0 12px; border-radius: 4px; background: #26262B;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #26262B; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #26262B; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #2E6EEB; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Graphite</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #0F172A; border: 1px solid #334155;"><span style="flex: 0 0 12px; border-radius: 4px; background: #192332;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #192332; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #192332; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #1D57FF; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Midnight</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #2E3440; border: 1px solid #434C5E;"><span style="flex: 0 0 12px; border-radius: 4px; background: #3B4252;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #3B4252; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #3B4252; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #4D6D95; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Nordic</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #1E1B2E; border: 1px solid #3A3255;"><span style="flex: 0 0 12px; border-radius: 4px; background: #2A2440;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #2A2440; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #2A2440; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #7C5CD6; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Purple Dusk</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #F6F1E7; border: 1px solid #DCD0B8;"><span style="flex: 0 0 12px; border-radius: 4px; background: #FFFDF8;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #FFFDF8; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #FFFDF8; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #C2410C; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Warm</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #F1F9F3; border: 1px solid #DEE8E0;"><span style="flex: 0 0 12px; border-radius: 4px; background: #FFFFFF;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #FFFFFF; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #FFFFFF; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #12A67F; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Moss Light</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #101016; border: 1px solid #23232D;"><span style="flex: 0 0 12px; border-radius: 4px; background: #1B1B24;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #1B1B24; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #1B1B24; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #4A4EED; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Indigo Night</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #031919; border: 1px solid #193535;"><span style="flex: 0 0 12px; border-radius: 4px; background: #0C2526;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #0C2526; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #0C2526; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #27C2AD; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Deep Teal</figcaption></figure>
+          <figure style="margin: 0;"><span class="lg-swatch" aria-hidden="true" style="display: flex; gap: 5px; height: 58px; padding: 7px; border-radius: 9px; background: #02051D; border: 1px solid #303C80;"><span style="flex: 0 0 12px; border-radius: 4px; background: #202473;"></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;"><span style="display: block; height: 7px; border-radius: 4px; background: #202473; width: 82%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #202473; width: 60%;"></span><span style="display: block; height: 7px; border-radius: 4px; background: #FFD447; width: 58%; align-self: flex-end;"></span></span></span><figcaption style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.4; color: #7d8b9c;">Storm</figcaption></figure>
+        </div>
       </div>
     </div>
   </section>

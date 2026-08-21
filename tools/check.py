@@ -23,6 +23,7 @@ see the jsdom recipe in the README's "Checking a change" section.
 import json
 import os
 import re
+import struct
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -100,6 +101,80 @@ check("every copy button ships hidden",
       html.count("data-lg-copybtn hidden") == html.count("data-lg-copybtn"),
       "%d of %d" % (html.count("data-lg-copybtn hidden"),
                     html.count("data-lg-copybtn")))
+
+# ---- screenshots: sized, and openable --------------------------------------
+# Every screenshot carries its own width/height. Without them the box is zero
+# pixels tall until the (lazy) image arrives, so the caption sits under
+# nothing and the grid jumps as they land. The numbers must be the file's
+# real ones, or the reserved box is the wrong shape -- which is worse than
+# reserving none at all.
+shots = re.findall(r'<img src="/assets/(screenshot-[a-z-]+\.png)"[^>]*?'
+                   r'width="(\d+)" height="(\d+)"', html)
+check("every screenshot declares its size", len(shots) == 4,
+      "%d of 4" % len(shots))
+
+wrong = []
+for name, w, h in shots:
+    with open(os.path.join(PUB, "assets", name), "rb") as fh:
+        head = fh.read(24)
+    rw, rh = struct.unpack(">II", head[16:24])
+    if (rw, rh) != (int(w), int(h)):
+        wrong.append("%s says %sx%s, is %dx%d" % (name, w, h, rw, rh))
+check("declared sizes match the files", not wrong, "; ".join(wrong))
+
+# The zoom trigger is a <button> so it is keyboard-reachable; a click handler
+# on the <img> would not be. One per screenshot, no more.
+n_zoom = html.count("data-lg-zoom ")
+check("a zoom trigger per screenshot", n_zoom == 4, "%d triggers" % n_zoom)
+check("every Expand badge ships hidden",
+      html.count("data-lg-zoomhint hidden") == html.count("data-lg-zoomhint"),
+      "%d of %d" % (html.count("data-lg-zoomhint hidden"),
+                    html.count("data-lg-zoomhint")))
+
+# ---- the theme strip is the app's real palette ------------------------------
+# The swatches are copied from qml/AppTheme.qml in the client repo, which this
+# repo cannot see. Nothing here can prove they are current -- but it can prove
+# nobody quietly dropped one, which is the failure that would leave the page
+# saying "Eleven themes" above ten swatches.
+n_sw = html.count('class="lg-swatch"')
+claimed = re.search(r">Eleven themes", html)
+check("eleven theme swatches", n_sw == 11, "%d swatches" % n_sw)
+check("the page still claims eleven", bool(claimed), "heading reworded?")
+
+# ---- structured data --------------------------------------------------------
+# Google picked the GitHub repository as this page's canonical while the
+# domain still redirected there. The self-referencing canonical says this URL
+# is the original; sameAs says the repository is the same project rather than
+# a competing copy. Both have to be present and agree with the rest of the
+# page, or the signal is noise.
+ld_m = re.search(r'<script type="application/ld\+json">(.*?)</script>',
+                 html, re.S)
+check("a JSON-LD block is present", bool(ld_m))
+if ld_m:
+    ld = json.loads(ld_m.group(1))
+    check("JSON-LD version matches the feed",
+          ld.get("softwareVersion") == feed["version"],
+          "%s vs %s" % (ld.get("softwareVersion"), feed["version"]))
+    check("JSON-LD points back at GitHub",
+          any("github.com" in u for u in ld.get("sameAs", [])),
+          str(ld.get("sameAs")))
+    check("JSON-LD url is the canonical one",
+          ld.get("url") == "https://www.lightning-matrix.org/",
+          str(ld.get("url")))
+
+canon = re.search(r'<link rel="canonical" href="([^"]*)"', html)
+check("a self-referencing canonical",
+      bool(canon) and canon.group(1) == "https://www.lightning-matrix.org/",
+      canon.group(1) if canon else "absent")
+
+# og:image is referenced by content=, not src=/href=, so the resolver above
+# never sees it. A social card that 404s is invisible until someone shares a
+# link and gets a blank box.
+for prop in ("og:image",):
+    m = re.search(r'<meta property="%s" content="([^"]*)"' % prop, html)
+    path = m.group(1).split("lightning-matrix.org", 1)[-1] if m else ""
+    check("%s resolves" % prop, bool(m) and os.path.exists(PUB + path),
+          m.group(1) if m else "absent")
 
 # ---- GitHub only ----------------------------------------------------------
 # The site must not link to GitLab or name it. unbundle.py asserts this while

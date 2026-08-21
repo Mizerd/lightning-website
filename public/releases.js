@@ -26,6 +26,21 @@
     });
   }
 
+  // The version also appears in the SoftwareApplication data block in <head>,
+  // which is JSON rather than DOM, so data-lg-bind cannot reach it. Kept in
+  // step here for the same reason as everything else on the page: the site
+  // must never quote a version GitHub has moved past.
+  function ldVersion(value) {
+    var el = document.querySelector('script[type="application/ld+json"]');
+    if (!el || !value) return;
+    try {
+      var d = JSON.parse(el.textContent);
+      if (d.softwareVersion === value) return;
+      d.softwareVersion = value;
+      el.textContent = JSON.stringify(d);
+    } catch (err) { /* leave the built-in block alone */ }
+  }
+
   function link(key, url) {
     document.querySelectorAll('[data-lg-href="' + key + '"]').forEach(function (el) {
       if (url) {
@@ -99,6 +114,7 @@
     if (!d || !d.version) return;
 
     text("version", d.version);
+    ldVersion(d.version);
     if (d.released) text("released", d.released);
     if (d.releases_url) link("releasesUrl", d.releases_url);
     link("donateUrl", d.donate_url);
@@ -128,6 +144,7 @@
     if (!d || !d.version || !Array.isArray(d.assets) || !d.assets.length) return;
 
     text("version", d.version);
+    ldVersion(d.version);
     if (d.released) text("released", d.released);
 
     function assetFor(format) {
@@ -222,6 +239,109 @@
       function () { flash(btn, "Copied"); },
       function () { flash(btn, "Press Ctrl+C"); }
     );
+  });
+
+  /* ---- full-screen screenshots ------------------------------------------
+   *
+   * Each screenshot is wrapped in a <button data-lg-zoom> by the generator
+   * (correction 12 in tools/unbundle.py). Pressing one opens the same image
+   * over the page; clicking anywhere that is not the image closes it again,
+   * as does Escape and the close button.
+   *
+   * Set up immediately rather than in the release-feed chain below, because
+   * this has nothing to do with releases: if GitHub is unreachable and every
+   * fetch fails, the screenshots must still open.
+   */
+  var lb = null;        // the overlay, built once on first use
+  var lbImg = null;
+  var lbCap = null;
+  var lbReturn = null;  // what to hand focus back to when we close
+
+  function buildLightbox() {
+    lb = document.createElement("div");
+    lb.className = "lg-lightbox";
+    lb.hidden = true;
+    // A dialog rather than a bare div, so a screen reader announces the
+    // image as having taken over rather than reading it in place.
+    lb.setAttribute("role", "dialog");
+    lb.setAttribute("aria-modal", "true");
+    lb.setAttribute("aria-label", "Screenshot");
+
+    var close = document.createElement("button");
+    close.type = "button";
+    close.className = "lg-lbclose";
+    close.setAttribute("aria-label", "Close");
+    close.textContent = "✕";
+
+    lbImg = document.createElement("img");
+    lbImg.alt = "";
+
+    lbCap = document.createElement("figcaption");
+
+    lb.appendChild(close);
+    lb.appendChild(lbImg);
+    lb.appendChild(lbCap);
+    document.body.appendChild(lb);
+
+    // One listener on the overlay covers the backdrop, the caption and the
+    // close button. The image is the only thing that does NOT close, so it
+    // can be pinched and panned without the first tap dismissing it.
+    lb.addEventListener("click", function (ev) {
+      if (ev.target !== lbImg) closeLightbox();
+    });
+  }
+
+  function openLightbox(btn) {
+    var img = btn.querySelector("img");
+    if (!img) return;
+    if (!lb) buildLightbox();
+
+    lbReturn = btn;
+    // Same src, so the browser serves it from cache and the full-size image
+    // appears immediately rather than downloading a second time.
+    lbImg.src = img.currentSrc || img.src;
+    lbImg.alt = img.alt || "";
+
+    // The caption belongs to the <figure> two levels up. Without one the
+    // element would still take its margin, so it is emptied and hidden.
+    var fig = btn.closest ? btn.closest("figure") : null;
+    var cap = fig ? fig.querySelector("figcaption") : null;
+    lbCap.textContent = cap ? cap.textContent : "";
+    lbCap.hidden = !lbCap.textContent;
+
+    lb.hidden = false;
+    document.documentElement.classList.add("lg-lbopen");
+    document.body.classList.add("lg-lbopen");
+    var closeBtn = lb.querySelector(".lg-lbclose");
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function closeLightbox() {
+    if (!lb || lb.hidden) return;
+    lb.hidden = true;
+    // Drop the source so a 3,839px image is not held decoded for a page the
+    // reader has gone back to scrolling.
+    lbImg.removeAttribute("src");
+    document.documentElement.classList.remove("lg-lbopen");
+    document.body.classList.remove("lg-lbopen");
+    if (lbReturn && lbReturn.focus) lbReturn.focus();
+    lbReturn = null;
+  }
+
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target && ev.target.closest
+      ? ev.target.closest("[data-lg-zoom]") : null;
+    if (btn) openLightbox(btn);
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" || ev.key === "Esc") closeLightbox();
+  });
+
+  // The "Expand" badge ships hidden, so a reader without JavaScript is never
+  // told an image opens when nothing is there to open it.
+  document.querySelectorAll("[data-lg-zoomhint]").forEach(function (el) {
+    el.hidden = false;
   });
 
   function load(url, apply, opts) {

@@ -36,6 +36,7 @@ artifact/
 tools/
   unbundle.py        <- converts that artifact into public/
   check.py           <- invariant checks; run after editing public/
+  check-assets.py    <- the download cards against a REAL release's assets
   og-card.html       <- source for assets/og-card.png; NOT deployed
   lightbox-test.js   <- jsdom test for the screenshot overlay (needs jsdom)
 ```
@@ -186,7 +187,23 @@ The lesson generalises: **any script that rewrites the generated DOM must not
 outlive that DOM in a cache.** `releases.js` is now `no-cache`, like
 `releases.json`.
 
-`check.py` cannot test the JavaScript paths — those need a DOM. For those:
+`tools/check-assets.py` covers the one JavaScript behaviour that depends on
+something outside this repository: `/api/latest` picks a card's asset by
+**suffix**, so whether it lands on the right file depends on what the release
+actually published. It reimplements `assetFor()` exactly and runs it against
+the live GitHub release:
+
+```sh
+python3 tools/check-assets.py            # newest release
+python3 tools/check-assets.py v0.7.5     # a specific tag
+python3 tools/check-assets.py --feed     # offline, names from releases.json
+```
+
+Run it **after** a release publishes. Without the `data-lg-match` tokens it
+reports the real failure — the macOS card resolving to the Windows portable
+zip — which is what it was written against.
+
+`check.py` cannot test the rest of the JavaScript — that needs a DOM. For it:
 
 ```sh
 npm install jsdom          # not a repo dependency; install where convenient

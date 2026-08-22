@@ -1,7 +1,7 @@
 # lightning-website
 
 The official website for [Lightning](https://github.com/Mizerd/lightning),
-a native Matrix desktop client for Linux and Windows.
+a native Matrix desktop client for Linux, Windows and macOS.
 
 Live at **https://www.lightning-matrix.org**, hosted on Cloudflare Workers.
 
@@ -242,25 +242,44 @@ them check.
 
 ## macOS
 
-There is no macOS release. The download section carries a "Coming soon" block
-with the full Gatekeeper walkthrough for an unsigned app, written as static
-copy in `unbundle.py` (correction 6): no package card, no entry in
-`releases.json`, so neither `releases.js` nor `/api/latest` touches it.
+There **is** a macOS release, from 0.7.5. The block is a real package card
+(`"os": "macos"` in `releases.json`, rebuilt by `packages("macos", …)`)
+wrapped in the Gatekeeper walkthrough, which stays static copy in
+`unbundle.py` (correction 6) because it is instruction, not release data.
+
+It leads with the two limits, because neither is a choice and both rule out a
+lot of people: **Apple Silicon only**, and **macOS 26 or newer**. Both come
+from the Qt build the app links.
 
 The walkthrough is the **Open Anyway** route: try to open it and let macOS
 refuse, then System Settings → Privacy & Security → Security → *Open Anyway*,
 then confirm once. Step 1 is not filler — the button only appears after macOS
 has blocked the app at least once. Control-click → Open is mentioned only as
-the macOS 14-and-earlier shortcut, since macOS 15 removed it.
+the macOS 14-and-earlier shortcut, since macOS 15 removed it and this build
+needs macOS 26 anyway.
 
-When there is a build, it becomes ordinary packages with `"os": "macos"` in
-`releases.json` — which also needs a third column in the download grid, since
-`packages()` in `releases.js` only rebuilds the `linux` and `windows` lists.
-
-The block promises the app will be unsigned and tells people how to get past
+The block promises the app is unsigned and tells people how to get past
 Gatekeeper. That is a real security instruction, so it leads with where to get
 the file: someone clicking *Open Anyway* is vouching for the download
-themselves.
+themselves. It also says the two things the client cannot say for itself —
+that the macOS build does not update itself, and that nobody has clicked
+through it on a Mac.
+
+### Two cards, one file extension
+
+`/api/latest` matches a card to a GitHub asset **by suffix**, and 0.7.5 was
+the release that broke the "exactly one asset per format" assumption: the
+Windows portable and the macOS bundle are both `.zip`. Both cards would have
+taken whichever `.zip` GitHub listed first — and the page would have looked
+perfect while doing it, because the hrefs baked into the HTML are all correct
+and only the JavaScript pass goes wrong. Exactly the shape of the bug that
+once served the `.deb` from every Linux button.
+
+So a card may carry **`data-lg-match`**, a longer unambiguous suffix
+(`-portable.zip`, `-macos-arm64.zip`), which pass 2 prefers over the format
+badge a reader sees. It comes from a `"match"` field in `releases.json`.
+`check.py` enforces both halves: no two cards may share a match token, and a
+match token must actually be a suffix of the file its own card names.
 
 ## The brand
 
@@ -275,6 +294,16 @@ that now means something.
 
 The four screenshots are the only photographs on an 8,800 px page, and they
 had two problems.
+
+> **Replacing one:** drop the new PNG over the file in `public/assets/` and
+> run `unbundle.py`. It **keeps** an existing `assets/screenshot-*.png` rather
+> than restoring the artifact's copy — the same rule `releases.json` gets, for
+> the same reason: these are pictures of a client that keeps changing, and a
+> rebuild that restored them would quietly put the old interface back on the
+> page. The declared `width`/`height` are read from the file on disk, so a
+> replacement is measured as it actually is. If the new picture is of
+> something else, its `alt` and caption live in the artifact and need a
+> correction in `unbundle.py` (correction 15 is one).
 
 They carried **no `width`/`height`** and are `loading="lazy"`, so until each
 file arrived its box was zero pixels tall: the caption sat under nothing and

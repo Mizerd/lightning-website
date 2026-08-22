@@ -89,6 +89,12 @@
       // it pointing at the wrong file.
       setDownload(card, pkg.download_url, pkg.file);
       card.setAttribute("data-lg-format", pkg.format || "");
+      // The suffix pass 2 matches on, when the displayed format is ambiguous.
+      // Two cards ship a ".zip" -- the Windows portable and the macOS bundle --
+      // and matching on the badge text alone would hand both of them whichever
+      // .zip GitHub happened to list first.
+      if (pkg.match) card.setAttribute("data-lg-match", pkg.match);
+      else card.removeAttribute("data-lg-match");
       card.setAttribute("data-lg-file", pkg.file || "");
       return card;
     });
@@ -126,6 +132,7 @@
       });
       packages("linux", d.packages.filter(function (p) { return p.os === "linux"; }));
       packages("windows", d.packages.filter(function (p) { return p.os === "windows"; }));
+      packages("macos", d.packages.filter(function (p) { return p.os === "macos"; }));
     }
 
     var sha = document.querySelector("[data-lg-dl-sha]");
@@ -137,9 +144,11 @@
 
   // ---- pass 2: whatever GitHub actually published --------------------------
   // This is what makes a new release appear without touching this repo. Each
-  // card knows its format (".deb", "AppImage", ...) and every release publishes
-  // exactly one asset per format, so the card's format is enough to find its
-  // asset -- no version or filename is assumed anywhere.
+  // card knows the suffix its asset ends with -- data-lg-match where the
+  // displayed format is ambiguous, the format itself otherwise -- so no
+  // version or filename is assumed anywhere. Since 0.7.5 two cards publish a
+  // ".zip" (Windows portable, macOS), which is exactly why the match attribute
+  // exists: without it whichever .zip GitHub listed first would win both.
   function applyLatest(d) {
     if (!d || !d.version || !Array.isArray(d.assets) || !d.assets.length) return;
 
@@ -157,7 +166,11 @@
     }
 
     document.querySelectorAll("[data-lg-format]").forEach(function (card) {
-      var asset = assetFor(card.getAttribute("data-lg-format"));
+      // data-lg-match wins where it exists: the format badge is what a reader
+      // sees (".zip"), which is not always enough to pick one asset out of a
+      // release that publishes two of them.
+      var asset = assetFor(card.getAttribute("data-lg-match")
+                           || card.getAttribute("data-lg-format"));
       if (!asset || !asset.url) return;
 
       setDownload(card, asset.url, asset.name);

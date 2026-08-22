@@ -130,8 +130,18 @@ for uuid, rel in names.items():
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     # releases.json is maintained by hand for every release -- extracting it
     # over the top of a newer edit would silently roll the site back.
-    if rel == "releases.json" and os.path.exists(dest):
-        print("  keep   %-52s %8s     (existing, not overwritten)" % (rel, ""))
+    #
+    # The screenshots are the same case for the same reason. They are pictures
+    # of a client that keeps changing, and the ones frozen in the artifact are
+    # a snapshot of whatever it looked like the day the artifact was made. A
+    # rebuild that restored them would quietly put the old interface back on
+    # the page. The declared width/height are read from the file on disk
+    # further down, so a replaced screenshot is measured as it actually is.
+    keep = rel == "releases.json" or (
+        rel.startswith("assets/screenshot-") and rel.endswith(".png"))
+    if keep and os.path.exists(dest):
+        print("  keep   %-52s %8d B   (existing, not overwritten)"
+              % (rel, os.path.getsize(dest)))
         continue
     with open(dest, "wb") as fh:
         fh.write(payload(uuid))
@@ -225,11 +235,18 @@ def unroll(m):
         # brings a different package set); format and file let the /api/latest
         # pass match this card to a GitHub asset and rewrite the filename
         # inside its install command.
+        # data-lg-match is the suffix the /api/latest pass matches on, for the
+        # cards whose displayed format is ambiguous. Since 0.7.5 two packages
+        # ship a ".zip" -- the Windows portable and the macOS bundle -- and
+        # without this both cards would take whichever .zip GitHub listed
+        # first. Emitted only where the feed asks for it.
+        match = pkg.get("match", "")
         card = card.replace(
             "<div",
-            '<div data-lg-pkg="%s" data-lg-format="%s" data-lg-file="%s"'
+            '<div data-lg-pkg="%s" data-lg-format="%s"%s data-lg-file="%s"'
             % (os_key,
                html.escape(pkg.get("format", ""), quote=True),
+               (' data-lg-match="%s"' % html.escape(match, quote=True)) if match else "",
                html.escape(pkg.get("file", ""), quote=True)),
             1)
         out.append(card)
@@ -396,10 +413,10 @@ doc = doc.replace(
 #    plan -- it ships unsigned when it ships -- so the small card goes and a
 #    real block takes its place, below the Linux and Windows columns.
 #
-#    Nothing here is wired to a release: there is no download button, no
-#    package card and no entry in releases.json, so releases.js and
-#    /api/latest never touch it. It is static copy until there is a build to
-#    point at, at which point it becomes ordinary packages with os "macos".
+#    Since 0.7.5 there IS a build, so the block carries a real package card
+#    with os "macos" from releases.json, and releases.js and /api/latest keep
+#    it current like any other. The Gatekeeper walkthrough around it stays
+#    static copy: it is instruction, not release data.
 _mac_card = (
     '        <div style="padding: 22px; border: 1px solid #1e2631; '
     'border-radius: 11px; background: #10151c;">\n'
@@ -411,6 +428,46 @@ _mac_card = (
 if _mac_card not in doc:
     raise SystemExit("macOS placeholder card not found")
 doc = doc.replace(_mac_card, "", 1)
+
+# The one real package card inside the macOS block. Built from releases.json
+# like every other card, rather than typed out here, so a release only ever
+# edits the feed. Absent from the feed, the block still renders -- with the
+# walkthrough and no download, which is what "no macOS build" should look like.
+def _macos_card():
+    pkg = next((p for p in releases.get("packages", [])
+                if p.get("os") == "macos"), None)
+    if not pkg:
+        return ""
+    e = lambda v: html.escape(str(v), quote=True)
+    match = pkg.get("match", "")
+    return (
+        '        <div data-lg-pkg="macos" data-lg-format="%s"%s '
+        'data-lg-file="%s" style="margin-top: 16px; padding: 18px 20px; '
+        'border: 1px solid #1e2631; border-radius: 11px; background: '
+        '#10151c;" class="lg-card">\n'
+        '          <div style="display: flex; flex-wrap: wrap; align-items: '
+        'center; gap: 10px;">\n'
+        '            <span style="padding: 3px 8px; border-radius: 5px; '
+        "background: #1c2836; font-family: 'JetBrains Mono', monospace; "
+        'font-size: 11.5px; font-weight: 700; color: #9dbdf5;">'
+        '<span data-lg-bind="pkg.format">%s</span></span>\n'
+        '            <span style="font-size: 14px; color: #b6c2d0;">'
+        '<span data-lg-bind="pkg.label">%s</span></span>\n'
+        '            <a class="dlbtn" data-lg-dl href="%s" '
+        'aria-label="Download %s">Download</a></div>\n'
+        '          <div style="margin-top: 13px; padding: 11px 13px; '
+        'border-radius: 7px; background: #070a0e; border: 1px solid #1a212b; '
+        "font-family: 'JetBrains Mono', monospace; font-size: 12px; "
+        'line-height: 1.5; color: #a8d5bd; overflow-x: auto; '
+        'white-space: pre;" class="lg-cmd">'
+        '<span data-lg-bind="pkg.install">%s</span></div>\n'
+        '        </div>\n'
+    ) % (e(pkg.get("format", "")),
+         (' data-lg-match="%s"' % e(match)) if match else "",
+         e(pkg.get("file", "")), e(pkg.get("format", "")),
+         e(pkg.get("label", "")), e(asset_url(pkg)), e(pkg.get("file", "")),
+         e(pkg.get("install", "")))
+
 
 _CARD = ("padding: 22px; border: 1px solid #1e2631; border-radius: 11px; "
          "background: #10151c;")
@@ -427,17 +484,23 @@ _macos = (
     '          <h3 style="font-size: 20px; font-weight: 600;">macOS</h3>\n'
     '          <span style="padding: 3px 9px; border-radius: 5px; background: '
     "#1c2836; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; "
-    'font-weight: 700; letter-spacing: 0.04em; color: #9dbdf5;">Coming soon'
+    'font-weight: 700; letter-spacing: 0.04em; color: #9dbdf5;">Apple Silicon'
     '</span>\n'
     '        </div>\n'
-    '        <p style="max-width: 780px; %s">A macOS build is in progress. '
-    'There is nothing to download yet, and no date -- when there is a release '
-    'it appears on the GitHub releases page with everything else.</p>\n'
+    '        <p style="max-width: 780px; %s">New since 0.7.5. Two limits '
+    'before you download, because neither is a choice -- both come from the '
+    'Qt build the app links: it runs on <strong style="color: #c9d5e4; '
+    'font-weight: 600;">Apple Silicon only</strong> (M1 and later, no Intel '
+    'build exists), and it needs <strong style="color: #c9d5e4; font-weight: '
+    '600;">macOS 26 or newer</strong>. On macOS 15 or earlier it will not '
+    'launch at all.</p>\n'
+    '\n'
+    "%s"
     '\n'
     '        <div style="margin-top: 18px; padding: 18px 20px; border: 1px '
     'solid #4a3814; border-radius: 11px; background: #1c1609;">\n'
     '          <div style="font-size: 14.5px; font-weight: 600; color: '
-    '#f0d6a0;">It will not be signed or notarised</div>\n'
+    '#f0d6a0;">It is not signed or notarised</div>\n'
     '          <p style="margin-top: 9px; font-size: 14px; line-height: 1.6; '
     'color: #c4a874;">Notarising needs a paid Apple Developer account, and '
     'there is no company behind Lightning to hold one. macOS will refuse to '
@@ -489,13 +552,22 @@ _macos = (
     '        </div>\n'
     '\n'
     '        <p style="max-width: 780px; margin-top: 14px; font-size: 13.5px; '
-    'line-height: 1.55; color: #7d8b9c;">On macOS 14 and earlier there is a '
-    'shortcut: Control-click the app, choose '
-    '<em style="font-style: normal; color: #9fadbd;">Open</em>, then '
-    '<em style="font-style: normal; color: #9fadbd;">Open</em> again. macOS 15 '
-    'removed it, so the route above is the one that always works.</p>\n'
+    'line-height: 1.55; color: #7d8b9c;">On macOS 14 and earlier there was a '
+    'shortcut -- Control-click the app, choose '
+    '<em style="font-style: normal; color: #9fadbd;">Open</em> -- but macOS 15 '
+    'removed it and this build needs macOS 26 anyway, so the route above is '
+    'the one that works.</p>\n'
+    '        <p style="max-width: 780px; margin-top: 10px; font-size: 13.5px; '
+    'line-height: 1.55; color: #7d8b9c;">Two more things about the macOS '
+    'build. It <strong style="color: #9fadbd; font-weight: 600;">does not '
+    'update itself</strong>: Lightning will tell you a new version exists, '
+    'but installing it means downloading the next file from this page. And '
+    '<strong style="color: #9fadbd; font-weight: 600;">nobody has clicked '
+    'through it on a Mac</strong> -- the build is checked automatically, not '
+    'used. If something is broken there, the release page is where to say '
+    'so.</p>\n'
     '      </div>\n'
-    '\n') % (_BODY, _CARD, _STEP, _BODY, _CARD, _STEP, _BODY,
+    '\n') % (_BODY, _macos_card(), _CARD, _STEP, _BODY, _CARD, _STEP, _BODY,
              _CARD, _STEP, _BODY)
 
 _after_cols = ('      <div style="display: grid; grid-template-columns: '
@@ -788,6 +860,33 @@ def _zoomable(m):
 doc, _n = _SHOT_RE.subn(_zoomable, doc)
 if _n != 4:
     raise SystemExit("expected 4 screenshots to make zoomable, got %d" % _n)
+
+# 15. One screenshot slot changed subject. The fourth shot was a thread panel;
+#     it is now the theme editor, which is the thing the 0.7.5 round is
+#     actually about. The FILE keeps its name so nothing else has to move --
+#     the artifact only knows it as screenshot-threads.png, and the extraction
+#     pass now preserves a replaced screenshot rather than restoring the
+#     artifact's copy. What has to change is what the page SAYS about it,
+#     because an alt attribute describing a thread panel over a picture of a
+#     colour editor is worse than no alt at all.
+_shot_alt = 'alt="A thread panel open beside the main timeline"'
+if _shot_alt not in doc:
+    raise SystemExit("threads screenshot alt text not found")
+doc = doc.replace(
+    _shot_alt,
+    'alt="The theme editor: a live sample window, the list of colour roles, '
+    'and a colour picker"', 1)
+
+_shot_cap = ('<strong style="color: #dde5f0; font-weight: 600;">Threads.'
+             '</strong> Their own panel next to the room, with summary cards '
+             'in the timeline.')
+if _shot_cap not in doc:
+    raise SystemExit("threads screenshot caption not found")
+doc = doc.replace(
+    _shot_cap,
+    '<strong style="color: #dde5f0; font-weight: 600;">Your own theme.'
+    '</strong> Click any part of the sample window to recolour it, then '
+    'share the result as text.', 1)
 
 # 13. Eleven themes, shown rather than claimed.
 #

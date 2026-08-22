@@ -71,6 +71,35 @@ check("each button points at its own asset", not bad, "; ".join(bad))
 check("every button URL is distinct", len(hrefs) == len(set(hrefs)),
       "%d buttons, %d distinct" % (len(hrefs), len(set(hrefs))))
 
+# ---- every card resolves to exactly one asset -----------------------------
+# /api/latest matches a card to a GitHub asset by SUFFIX. Two cards that share
+# one suffix both take whichever asset GitHub happened to list first -- and the
+# page looks perfect while doing it, because the hrefs baked into the HTML are
+# all correct and only the JavaScript pass goes wrong. That is exactly the
+# shape of the bug that once served the .deb from every Linux button.
+#
+# It stopped being hypothetical in 0.7.5: the Windows portable and the macOS
+# bundle are both ".zip". data-lg-match carries a longer, unambiguous suffix
+# for such a card, and this is what enforces that no two cards can collide.
+tokens = []
+for block in re.findall(r'<div data-lg-pkg="[^"]*"[^>]*>', html):
+    fmt = re.search(r'data-lg-format="([^"]*)"', block)
+    mat = re.search(r'data-lg-match="([^"]*)"', block)
+    tokens.append((mat or fmt).group(1).lower() if (mat or fmt) else "")
+dupes = sorted({t for t in tokens if tokens.count(t) > 1})
+check("no two cards match the same asset suffix", not dupes,
+      "shared: " + ", ".join(dupes))
+# ...and a match token, where present, must actually be a suffix of the file
+# the card names, or it would resolve to nothing at all.
+mismatched = []
+for block in re.findall(r'<div data-lg-pkg="[^"]*"[^>]*>', html):
+    mat = re.search(r'data-lg-match="([^"]*)"', block)
+    fil = re.search(r'data-lg-file="([^"]*)"', block)
+    if mat and fil and not fil.group(1).lower().endswith(mat.group(1).lower()):
+        mismatched.append("%s !~ %s" % (fil.group(1), mat.group(1)))
+check("each match token is a suffix of its own file", not mismatched,
+      "; ".join(mismatched))
+
 # ---- filenames match the feed ---------------------------------------------
 feed_files = [p.get("file", "") for p in pkgs]
 card_files = [f for _, f, _ in cards]

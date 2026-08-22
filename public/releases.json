@@ -1,18 +1,18 @@
 {
-  "version": "0.7.5",
+  "version": "0.7.6",
   "released": "2026-08-22",
   "releases_url": "https://github.com/Mizerd/lightning/releases",
   "donate_url": "",
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
   "packages": [
-    { "os": "linux", "label": "Debian / Ubuntu / Mint / Pop!_OS", "format": ".deb", "file": "lightning_0.7.5_amd64.deb", "install": "sudo apt install ./lightning_0.7.5_amd64.deb", "remove": "sudo apt remove lightning" },
-    { "os": "linux", "label": "Fedora / RHEL / openSUSE", "format": ".rpm", "file": "lightning-0.7.5-1.x86_64.rpm", "install": "sudo dnf install ./lightning-0.7.5-1.x86_64.rpm", "remove": "sudo dnf remove lightning" },
-    { "os": "linux", "label": "Any distribution, nothing installed", "format": "AppImage", "file": "Lightning-0.7.5-x86_64.AppImage", "install": "chmod +x Lightning-0.7.5-x86_64.AppImage && ./Lightning-0.7.5-x86_64.AppImage", "remove": "delete the file" },
-    { "os": "linux", "label": "Flatpak (KDE Platform 6.9 runtime)", "format": ".flatpak", "file": "lightning_0.7.5_amd64.flatpak", "install": "flatpak install --user ./lightning_0.7.5_amd64.flatpak", "remove": "flatpak uninstall --user org.lightning_matrix.Lightning" },
-    { "os": "linux", "label": "Snap, strict confinement, local file", "format": ".snap", "file": "lightning_0.7.5_amd64.snap", "install": "sudo snap install --dangerous ./lightning_0.7.5_amd64.snap", "remove": "sudo snap remove lightning" },
-    { "os": "windows", "label": "MSI installer, per-user", "format": ".msi", "file": "Lightning-0.7.5-848a29e-windows-x86_64.msi", "install": "double-click Lightning-0.7.5-848a29e-windows-x86_64.msi", "remove": "Settings → Apps → Installed apps" },
-    { "os": "windows", "label": "Setup EXE, per-user", "format": ".exe", "file": "Lightning-0.7.5-848a29e-windows-x86_64-setup.exe", "install": "run the installer", "remove": "Uninstall Lightning shortcut" },
-    { "os": "windows", "label": "Portable ZIP, installs nothing", "format": ".zip", "match": "-portable.zip", "file": "Lightning-0.7.5-848a29e-windows-x86_64-portable.zip", "install": "extract anywhere, run Lightning.exe", "remove": "delete the folder" },
-    { "os": "macos", "label": "Apple Silicon, macOS 26 or newer", "format": ".zip", "match": "-macos-arm64.zip", "file": "Lightning-0.7.5-848a29e-macos-arm64.zip", "install": "unzip, drag Lightning.app to Applications", "remove": "drag Lightning.app to the Bin" }
+    { "os": "linux", "label": "Debian / Ubuntu / Mint / Pop!_OS", "format": ".deb", "file": "lightning_0.7.6_amd64.deb", "install": "sudo apt install ./lightning_0.7.6_amd64.deb", "remove": "sudo apt remove lightning" },
+    { "os": "linux", "label": "Fedora / RHEL / openSUSE", "format": ".rpm", "file": "lightning-0.7.6-1.x86_64.rpm", "install": "sudo dnf install ./lightning-0.7.6-1.x86_64.rpm", "remove": "sudo dnf remove lightning" },
+    { "os": "linux", "label": "Any distribution, nothing installed", "format": "AppImage", "file": "Lightning-0.7.6-x86_64.AppImage", "install": "chmod +x Lightning-0.7.6-x86_64.AppImage && ./Lightning-0.7.6-x86_64.AppImage", "remove": "delete the file" },
+    { "os": "linux", "label": "Flatpak (KDE Platform 6.9 runtime)", "format": ".flatpak", "file": "lightning_0.7.6_amd64.flatpak", "install": "flatpak install --user ./lightning_0.7.6_amd64.flatpak", "remove": "flatpak uninstall --user org.lightning_matrix.Lightning" },
+    { "os": "linux", "label": "Snap, strict confinement, local file", "format": ".snap", "file": "lightning_0.7.6_amd64.snap", "install": "sudo snap install --dangerous ./lightning_0.7.6_amd64.snap", "remove": "sudo snap remove lightning" },
+    { "os": "windows", "label": "MSI installer, per-user", "format": ".msi", "file": "Lightning-0.7.6-b13e346-windows-x86_64.msi", "install": "double-click Lightning-0.7.6-b13e346-windows-x86_64.msi", "remove": "Settings → Apps → Installed apps" },
+    { "os": "windows", "label": "Setup EXE, per-user", "format": ".exe", "file": "Lightning-0.7.6-b13e346-windows-x86_64-setup.exe", "install": "run the installer", "remove": "Uninstall Lightning shortcut" },
+    { "os": "windows", "label": "Portable ZIP, installs nothing", "format": ".zip", "match": "-portable.zip", "file": "Lightning-0.7.6-b13e346-windows-x86_64-portable.zip", "install": "extract anywhere, run Lightning.exe", "remove": "delete the folder" },
+    { "os": "macos", "label": "Apple Silicon, macOS 26 or newer", "format": ".zip", "match": "-macos-arm64.zip", "file": "Lightning-0.7.6-b13e346-macos-arm64.zip", "install": "unzip, drag Lightning.app to Applications", "remove": "drag Lightning.app to the Bin" }
   ]
 }

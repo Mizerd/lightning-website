@@ -137,10 +137,17 @@ check("every copy button ships hidden",
 # nothing and the grid jumps as they land. The numbers must be the file's
 # real ones, or the reserved box is the wrong shape -- which is worse than
 # reserving none at all.
+# How MANY there are is deliberately not written down here: the set changes
+# whenever the client does, and a hard-coded count is exactly what goes stale.
+# What has to hold is that EVERY screenshot on the page is sized and openable,
+# so the total is counted off the page and the two subsets are compared to it.
+on_page = re.findall(r'<img src="/assets/(screenshot-[a-z-]+\.png)"', html)
+check("the page shows screenshots", bool(on_page), "none found")
+
 shots = re.findall(r'<img src="/assets/(screenshot-[a-z-]+\.png)"[^>]*?'
                    r'width="(\d+)" height="(\d+)"', html)
-check("every screenshot declares its size", len(shots) == 4,
-      "%d of 4" % len(shots))
+check("every screenshot declares its size", len(shots) == len(on_page),
+      "%d of %d" % (len(shots), len(on_page)))
 
 wrong = []
 for name, w, h in shots:
@@ -151,10 +158,19 @@ for name, w, h in shots:
         wrong.append("%s says %sx%s, is %dx%d" % (name, w, h, rw, rh))
 check("declared sizes match the files", not wrong, "; ".join(wrong))
 
+# A refresh replaces pictures, and the old files are easy to leave behind:
+# they are still served, still cost a deploy, and nothing on the page points
+# at them. This is what says so.
+orphans = sorted(set(f for f in os.listdir(os.path.join(PUB, "assets"))
+                     if f.startswith("screenshot-") and f.endswith(".png"))
+                 - set(on_page))
+check("no unused screenshot in assets/", not orphans, ", ".join(orphans))
+
 # The zoom trigger is a <button> so it is keyboard-reachable; a click handler
 # on the <img> would not be. One per screenshot, no more.
 n_zoom = html.count("data-lg-zoom ")
-check("a zoom trigger per screenshot", n_zoom == 4, "%d triggers" % n_zoom)
+check("a zoom trigger per screenshot", n_zoom == len(on_page),
+      "%d triggers for %d screenshots" % (n_zoom, len(on_page)))
 check("every Expand badge ships hidden",
       html.count("data-lg-zoomhint hidden") == html.count("data-lg-zoomhint"),
       "%d of %d" % (html.count("data-lg-zoomhint hidden"),
@@ -190,6 +206,15 @@ if ld_m:
     check("JSON-LD url is the canonical one",
           ld.get("url") == "https://www.lightning-matrix.org/",
           str(ld.get("url")))
+    # These are absolute URLs inside a JSON data block, so neither the
+    # local-reference resolver above nor a browser ever complains about one
+    # that 404s -- only a crawler does, silently. The list survived a
+    # screenshot refresh naming four files that no longer existed.
+    ld_shots = [u for u in ld.get("screenshot", [])
+                if not os.path.exists(
+                    PUB + u.split("lightning-matrix.org", 1)[-1])]
+    check("every JSON-LD screenshot resolves", not ld_shots,
+          ", ".join(ld_shots))
 
 canon = re.search(r'<link rel="canonical" href="([^"]*)"', html)
 check("a self-referencing canonical",

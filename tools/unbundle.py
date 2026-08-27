@@ -59,17 +59,8 @@ def payload(uuid):
 
 
 # ---------------------------------------------------------------- asset names
-# Screenshots are identified by the alt text they carry in the template, so the
-# filenames survive a re-bundle that shuffles the uuids.
-SHOT_NAMES = {
-    "GIF picker open over the composer": "screenshot-rooms-and-gifs.png",
-    "thread panel open beside": "screenshot-threads.png",
-    "emoji picker open over the composer": "screenshot-emoji.png",
-    "poll with four options": "screenshot-polls.png",
-}
-
 names = {}          # uuid -> path relative to public/
-dropped = set()     # uuids deliberately not written out (the dead JS runtime)
+dropped = set()     # uuids deliberately not written out
 
 # The React UMD builds and the x-dc runtime exist only to render <x-dc>. The
 # static page has no <x-dc>, so none of them ship.
@@ -77,6 +68,15 @@ runtime_uuids = {e["uuid"] for e in ext_resources if e["id"].startswith("https:/
 runtime_uuids |= {u for u, e in manifest.items()
                   if e["mime"] == "text/javascript" and u not in runtime_uuids}
 dropped |= runtime_uuids
+
+# Nor do the artifact's own four screenshots. They are a snapshot of whatever
+# the client looked like the day the artifact was made, and 0.8.0 replaced the
+# last of them: none is on the page any more. The pictures the site does show
+# are maintained as real files under public/assets and listed in _SHOTS
+# (correction 12), which reads each one's true size off disk -- so a
+# replacement is measured as it actually is, and a missing file fails the
+# build rather than reserving the wrong shape for it.
+dropped |= {u for u, e in manifest.items() if e["mime"] == "image/png"}
 
 releases_uuid = next((e["uuid"] for e in ext_resources if e["id"] == "releasesFeed"), None)
 _live = os.path.join(OUT, "releases.json")
@@ -117,11 +117,6 @@ for uuid, entry in manifest.items():
         names[uuid] = "releases.json"
     elif entry["mime"] == "image/svg+xml":
         names[uuid] = "assets/lightning-mark.svg"
-    elif entry["mime"] == "image/png":
-        alt = re.search(r'<img src="%s"[^>]*alt="([^"]*)"' % uuid, template)
-        alt = alt.group(1) if alt else ""
-        names[uuid] = "assets/" + next(
-            (v for k, v in SHOT_NAMES.items() if k in alt), "image-%s.png" % uuid[:8])
     else:
         names[uuid] = "assets/%s.bin" % uuid[:8]
 
@@ -130,15 +125,7 @@ for uuid, rel in names.items():
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     # releases.json is maintained by hand for every release -- extracting it
     # over the top of a newer edit would silently roll the site back.
-    #
-    # The screenshots are the same case for the same reason. They are pictures
-    # of a client that keeps changing, and the ones frozen in the artifact are
-    # a snapshot of whatever it looked like the day the artifact was made. A
-    # rebuild that restored them would quietly put the old interface back on
-    # the page. The declared width/height are read from the file on disk
-    # further down, so a replaced screenshot is measured as it actually is.
-    keep = rel == "releases.json" or (
-        rel.startswith("assets/screenshot-") and rel.endswith(".png"))
+    keep = rel == "releases.json"
     if keep and os.path.exists(dest):
         print("  keep   %-52s %8d B   (existing, not overwritten)"
               % (rel, os.path.getsize(dest)))
@@ -147,7 +134,7 @@ for uuid, rel in names.items():
         fh.write(payload(uuid))
     print("  asset  %-52s %8d B" % (rel, os.path.getsize(dest)))
 for uuid in sorted(dropped):
-    print("  drop   %-52s %8d B  (runtime, not needed by the static page)"
+    print("  drop   %-52s %8d B  (not used by the static page)"
           % (uuid[:8] + " " + manifest[uuid]["mime"], len(payload(uuid))))
 
 # ------------------------------------------------------------ rewrite the doc
@@ -399,13 +386,25 @@ doc = doc.replace(
     "<span style=\"max-width: 780px;\" class=\"lg-alpha-full\">Lightning is in "
     "alpha (" + _ver + "). It works", 1)
 
+#    The third warning was "calls don't work yet". 0.8.0 made that false, and
+#    a sticky bar is the worst place on the page to leave a stale claim -- it
+#    is above the fold on every scroll. The two that are still true stay.
 _bold = "color: #fbeccd; font-weight: 700;"
+_calls_clause = ", and calls don't work yet.</span>"
+if doc.count(_calls_clause) != 1:
+    raise SystemExit("alpha banner calls clause not found")
+# Two items left where there were three, so the serial comma before the
+# packages has to become an "and" or the sentence reads as a splice.
+_serial = "</strong>, the packages <strong"
+if doc.count(_serial) != 1:
+    raise SystemExit("alpha banner serial comma not found")
+doc = doc.replace(_serial, "</strong> and the packages <strong", 1)
 doc = doc.replace(
-    "and calls don't work yet.</span>",
-    "and calls don't work yet.</span>"
+    _calls_clause,
+    ".</span>"
     "<span class=\"lg-alpha-brief\">Alpha " + _ver + " \u2014 "
-    "<strong style=\"%s\">no security audit</strong>, "
-    "<strong style=\"%s\">no code signing</strong>, no calls yet.</span>"
+    "<strong style=\"%s\">no security audit</strong> and "
+    "<strong style=\"%s\">no code signing</strong>.</span>"
     % (_bold, _bold), 1)
 
 # 6. macOS. The artifact had a one-line card saying a macOS build existed but
@@ -487,7 +486,7 @@ _macos = (
     'font-weight: 700; letter-spacing: 0.04em; color: #9dbdf5;">Apple Silicon'
     '</span>\n'
     '        </div>\n'
-    '        <p style="max-width: 780px; %s">New since 0.7.5. Two limits '
+    '        <p style="max-width: 780px; %s">Two limits '
     'before you download, because neither is a choice -- both come from the '
     'Qt build the app links: it runs on <strong style="color: #c9d5e4; '
     'font-weight: 600;">Apple Silicon only</strong> (M1 and later, no Intel '
@@ -558,14 +557,17 @@ _macos = (
     'removed it and this build needs macOS 26 anyway, so the route above is '
     'the one that works.</p>\n'
     '        <p style="max-width: 780px; margin-top: 10px; font-size: 13.5px; '
-    'line-height: 1.55; color: #7d8b9c;">Two more things about the macOS '
+    'line-height: 1.55; color: #7d8b9c;">Three more things about the macOS '
     'build. It <strong style="color: #9fadbd; font-weight: 600;">does not '
     'update itself</strong>: Lightning will tell you a new version exists, '
-    'but installing it means downloading the next file from this page. And '
+    'but installing it means downloading the next file from this page. '
+    '<strong style="color: #9fadbd; font-weight: 600;">Calls on macOS are '
+    'untested</strong> -- the package carries the media engine and reports '
+    'that it loaded, but nobody has placed a call from it. And '
     '<strong style="color: #9fadbd; font-weight: 600;">nobody has clicked '
-    'through it on a Mac</strong> -- the build is checked automatically, not '
-    'used. If something is broken there, the release page is where to say '
-    'so.</p>\n'
+    'through the app on a Mac</strong> at all -- the build is checked '
+    'automatically, not used. If something is broken there, the release page '
+    'is where to say so.</p>\n'
     '      </div>\n'
     '\n') % (_BODY, _macos_card(), _CARD, _STEP, _BODY, _CARD, _STEP, _BODY,
              _CARD, _STEP, _BODY)
@@ -681,7 +683,7 @@ _lockup = (
     '-0.025em; color: #f2f6fb;" class="lg-brandname">Lightning</div>\n'
     '          <div style="margin-top: 10px; font-size: 17px; font-weight: '
     '500; color: #8d99a8;" class="lg-brandsub">A native Matrix client for '
-    'Linux and Windows</div>\n'
+    'Linux, Windows and macOS</div>\n'
     '        </div>\n'
     '      </div>\n')
 doc = doc.replace(_hero, _hero + _lockup, 1)
@@ -792,21 +794,65 @@ if _n != 6:
     raise SystemExit("expected 6 Linux command boxes, wrapped %d" % _n)
 doc = doc[:_lin_i] + _col + doc[_win_i:]
 
-# 12. The screenshots: reserve their space, and let them be opened.
+# 12. The screenshots: the set the page shows, sized and openable.
 #
-#     They carried no width/height and are loading="lazy", so until each file
-#     arrived its box was zero pixels tall -- the caption sat under nothing
-#     and the whole grid jumped as the images landed. The attributes give the
-#     browser the aspect ratio before a byte is fetched, so the space is held
-#     from the first paint. The sizes are read from the files themselves
-#     rather than typed in, because a re-exported screenshot would otherwise
-#     reserve the wrong shape and nothing would say so.
+#     The grid is rebuilt from _SHOTS rather than patched in place. The
+#     artifact's own four pictures are several releases stale and not one of
+#     them is on the page any anymore -- they are not even written out, see
+#     the extraction pass above -- and patching four fixed slots is what
+#     produced the state 0.8.0 inherited: a file called screenshot-threads.png
+#     holding a picture of the theme editor, under a caption for a GIF picker
+#     that was not in the shot. _SHOTS is now the one place a refresh touches:
+#     drop the PNG into public/assets, name it here, write its caption.
 #
-#     They are also the only photographs on an 8,800px page, and they render
-#     about 540px wide from a 3,839px original. Each is wrapped in a button
-#     so releases.js can open it full-screen. A <button> rather than a click
-#     handler on the <img>: that way it is in the tab order and announced as
-#     something you can press, both of which a listener on an image gives up.
+#     width/height are read from each file's IHDR rather than typed in. The
+#     images are loading="lazy", so without them the box is zero pixels tall
+#     until the file arrives -- the caption sits under nothing and the grid
+#     jumps as they land -- and a typed-in number would reserve the WRONG
+#     shape after a re-export, which is worse than reserving none at all.
+#
+#     Each is wrapped in a <button> so releases.js can open it full screen.
+#     A button rather than a click handler on the <img>: that way it is in the
+#     tab order, activates on Enter and Space, and is announced as something
+#     you can press. All three are free with a button and all three have to be
+#     rebuilt by hand without one.
+_SHOTS = [
+    # file, alt, caption lead, caption body
+    ("screenshot-call.png",
+     "A four-person call at the top of a room: participant tiles, the call "
+     "controls, and the room's timeline underneath",
+     "Calls.",
+     "A group call inside the room — camera, screen sharing, raised "
+     "hands and per-person volume, talking to Element Call."),
+    ("screenshot-channels.png",
+     "The Channels layout: a Spaces rail, a Space's own room list, and the "
+     "Space's front page listing the rooms in it",
+     "Channels.",
+     "The other conversation column: a Spaces rail, and one view per Space "
+     "holding its rooms in the order the Space itself sets."),
+    ("screenshot-timeline.png",
+     "A room timeline with replies, reactions, an image and a typing "
+     "indicator, beside the conversation list",
+     "Rooms and messages.",
+     "Replies, reactions, images and typing indicators, next to the "
+     "conversation list."),
+    ("screenshot-thread-panel.png",
+     "A thread panel open beside the main timeline, with a thread summary "
+     "card in the room",
+     "Threads.",
+     "Their own panel next to the room, with summary cards in the timeline."),
+    ("screenshot-emoji-and-polls.png",
+     "The emoji picker open over the composer, above a poll with four "
+     "options and live vote counts",
+     "Emoji and polls.",
+     "Categories, search and a preview, over a poll counting votes live."),
+    ("screenshot-theme-editor.png",
+     "The theme editor: a live sample window, the list of colour roles, and "
+     "a colour picker",
+     "Your own theme.",
+     "Click any part of the sample window to recolour it, then share the "
+     "result as text."),
+]
 
 
 def _png_size(name):
@@ -840,53 +886,71 @@ _ZOOM_HINT = ("position: absolute; right: 10px; bottom: 10px; "
               "text-transform: uppercase; line-height: 1; opacity: 0.72; "
               "transition: opacity 0.25s ease; pointer-events: none;")
 
-_SHOT_RE = re.compile(
-    r'<img src="/assets/(screenshot-[a-z-]+\.png)" alt="([^"]*)" '
-    r'loading="lazy" style="([^"]*)">')
+# The frame and figure styles are the artifact's own, kept verbatim so the
+# hover pass and the responsive pass treat a rebuilt figure exactly like the
+# ones they were written against. style-hover is rewritten into a real :hover
+# rule further down; leaving it here is what keeps that automatic.
+_SHOT_FIG = (
+    '<figure style="margin: 0; animation: lgRise 0.8s '
+    'cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); '
+    'animation-range: entry 0%% cover 25%%;">\n'
+    '          <div style="border: 1px solid #1e2631; border-radius: 12px; '
+    'overflow: hidden; background: #0e1319; box-shadow: 0 20px 50px '
+    'rgba(0,0,0,0.45); transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), '
+    'border-color 0.45s ease, box-shadow 0.45s ease;" style-hover="transform: '
+    'translateY(-6px); border-color: #35496a; box-shadow: 0 30px 64px '
+    'rgba(0,0,0,0.6), 0 0 0 1px rgba(59,127,240,0.18);">\n'
+    '            <button type="button" class="lg-zoom" data-lg-zoom '
+    'aria-label="Open this screenshot full screen" style="%s">'
+    '<img src="/assets/%s" alt="%s" loading="lazy" width="%d" height="%d" '
+    'style="display: block; width: 100%%; height: auto;">'
+    '<span class="lg-zoomhint" data-lg-zoomhint hidden style="%s">Expand'
+    '</span></button>\n'
+    '          </div>\n'
+    '          <figcaption style="margin-top: 14px; font-size: 14.5px; '
+    'line-height: 1.55; color: #8d99a8;">'
+    '<strong style="color: #dde5f0; font-weight: 600;">%s</strong> %s'
+    '</figcaption>\n'
+    '        </figure>')
 
 
-def _zoomable(m):
-    name, alt, style = m.group(1), m.group(2), m.group(3)
+def _figure(shot):
+    name, alt, lead, body = shot
     w, h = _png_size(name)
-    img = ('<img src="/assets/%s" alt="%s" loading="lazy" '
-           'width="%d" height="%d" style="%s">' % (name, alt, w, h, style))
-    return ('<button type="button" class="lg-zoom" data-lg-zoom '
-            'aria-label="Open this screenshot full screen" style="%s">%s'
-            '<span class="lg-zoomhint" data-lg-zoomhint hidden '
-            'style="%s">Expand</span></button>'
-            % (_ZOOM_BTN, img, _ZOOM_HINT))
+    return _SHOT_FIG % (_ZOOM_BTN, name, html.escape(alt, quote=True), w, h,
+                        _ZOOM_HINT, html.escape(lead), body)
 
 
-doc, _n = _SHOT_RE.subn(_zoomable, doc)
-if _n != 4:
-    raise SystemExit("expected 4 screenshots to make zoomable, got %d" % _n)
+# gap: 26px is what tells the screenshot grid apart from the privacy grid
+# (gap: 1px) and the status grid (gap: 20px), which share its column rule.
+_grid_open = ('<div style="display: grid; grid-template-columns: '
+              'repeat(auto-fit, minmax(420px, 1fr)); gap: 26px; '
+              'margin-top: 44px;">')
+if doc.count(_grid_open) != 1:
+    raise SystemExit("screenshot grid not found, or not unique")
+_gi = doc.index(_grid_open)
+_depth, _gend = 0, None
+for _m in re.finditer(r"<div\b|</div>", doc[_gi:]):
+    _depth += 1 if _m.group(0) == "<div" else -1
+    if _depth == 0:
+        _gend = _gi + _m.end()
+        break
+if _gend is None:
+    raise SystemExit("screenshot grid is unbalanced")
 
-# 15. One screenshot slot changed subject. The fourth shot was a thread panel;
-#     it is now the theme editor, which is the thing the 0.7.5 round is
-#     actually about. The FILE keeps its name so nothing else has to move --
-#     the artifact only knows it as screenshot-threads.png, and the extraction
-#     pass now preserves a replaced screenshot rather than restoring the
-#     artifact's copy. What has to change is what the page SAYS about it,
-#     because an alt attribute describing a thread panel over a picture of a
-#     colour editor is worse than no alt at all.
-_shot_alt = 'alt="A thread panel open beside the main timeline"'
-if _shot_alt not in doc:
-    raise SystemExit("threads screenshot alt text not found")
-doc = doc.replace(
-    _shot_alt,
-    'alt="The theme editor: a live sample window, the list of colour roles, '
-    'and a colour picker"', 1)
+_grid = (_grid_open + "\n        "
+         + "\n        ".join(_figure(s) for s in _SHOTS)
+         + "\n      </div>")
+doc = doc[:_gi] + _grid + doc[_gend:]
 
-_shot_cap = ('<strong style="color: #dde5f0; font-weight: 600;">Threads.'
-             '</strong> Their own panel next to the room, with summary cards '
-             'in the timeline.')
-if _shot_cap not in doc:
-    raise SystemExit("threads screenshot caption not found")
-doc = doc.replace(
-    _shot_cap,
-    '<strong style="color: #dde5f0; font-weight: 600;">Your own theme.'
-    '</strong> Click any part of the sample window to recolour it, then '
-    'share the result as text.', 1)
+# Nothing may still point at an artifact screenshot: those payloads are not
+# written out, so a surviving reference would be a dead <img> that no
+# resolve-every-local-reference check could see through a bare uuid.
+_orphan = [u[:8] for u in dropped
+           if manifest[u]["mime"] == "image/png" and u in doc]
+if _orphan:
+    raise SystemExit("artifact screenshot still referenced: %s"
+                     % ", ".join(_orphan))
 
 # 13. Eleven themes, shown rather than claimed.
 #
@@ -964,10 +1028,10 @@ _strip = (
     + '\n        </div>\n      </div>\n')
 
 # Inside the screenshots section, after the picture grid closes. Anchored on
-# the last caption so a reordered grid fails here instead of dropping the
-# strip into the wrong section.
-_last = ('with counts updating live.</figcaption>\n        </figure>\n'
-         '      </div>\n')
+# the last figure correction 12 emitted, so a reordered or resized _SHOTS
+# carries this with it rather than dropping the strip into the wrong section
+# -- or hunting for a caption that no longer exists.
+_last = ('%s</figcaption>\n        </figure>\n      </div>\n' % _SHOTS[-1][3])
 if doc.count(_last) != 1:
     raise SystemExit("end of the screenshot grid not found")
 doc = doc.replace(_last, _last.rstrip("\n") + _strip, 1)
@@ -1076,6 +1140,258 @@ for _i in range(11):
         'cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); '
         'animation-range: entry 0%% cover %d%%;"><span class="lg-swatch"'
         % (14 + _i * 2), 1)
+
+
+# 16. What 0.8.0 made true, and what it made false.
+#
+#     The artifact was written for a client that could not place a call and
+#     had one conversation list. Both of those changed, and the page said
+#     otherwise in nine places. Everything in this block is either a claim a
+#     release has since falsified, or one the page had no way of making.
+#
+#     Each edit asserts its own needle, so a reworded artifact fails the
+#     build rather than quietly leaving the old sentence up.
+
+
+def _swap(before, after, label, count=1):
+    """Replace exact text, or fail the build saying which claim went missing."""
+    global doc
+    n = doc.count(before)
+    if n != count:
+        raise SystemExit("0.8.0 pass: %s -- expected %d match(es), found %d"
+                         % (label, count, n))
+    doc = doc.replace(before, after, count)
+
+
+# ---- the platform list ----------------------------------------------------
+# macOS has shipped since 0.7.5. The title, the meta description, the Open
+# Graph description, the hero button and the licence line all still said
+# "Linux and Windows"; so did the JSON-LD, which was corrected by hand for
+# 0.7.6 and which this generator then put straight back. That is the reason
+# these live here and not in public/index.html.
+_swap("<title>Lightning — a native Matrix desktop client for Linux and "
+      "Windows</title>",
+      "<title>Lightning — a native Matrix desktop client for Linux, Windows "
+      "and macOS</title>", "the title")
+_swap('content="Lightning is a native Qt 6 Matrix desktop client built on the '
+      'official Rust Matrix SDK. Real GIF browsing, voice messages, working '
+      'threads, multi-account, eleven WCAG-AA themes. GPL-3.0-or-later."',
+      'content="Lightning is a native Qt 6 Matrix desktop client built on the '
+      'official Rust Matrix SDK. Group calls that work with Element Call, GIF '
+      'browsing, voice messages, real threads, eleven WCAG-AA themes. '
+      'GPL-3.0-or-later."', "the meta description")
+_swap('content="Everything other Matrix clients fake. Native Qt 6, official '
+      'Rust Matrix SDK, real E2EE. Linux and Windows."',
+      'content="Everything other Matrix clients fake. Native Qt 6, official '
+      'Rust Matrix SDK, real E2EE, group calls. Linux, Windows and macOS."',
+      "the Open Graph description")
+_swap(">Download for Linux or Windows<", ">Download for Linux, Windows or macOS<",
+      "the hero download button")
+# A fourth item in the licence row rather than a longer third one: the row is
+# flex-wrap, so it costs nothing, and "Linux + Windows x86-64 + macOS arm64"
+# in one span is a line nobody reads.
+_swap("<span>Linux + Windows x86-64</span>",
+      "<span>Linux + Windows x86-64</span>\n        "
+      "<span>macOS Apple Silicon</span>", "the licence line")
+
+# ---- the hero pitch -------------------------------------------------------
+_swap("GIF search, voice messages, threads that work properly, and several "
+      "accounts signed in at the same time.",
+      "Group calls, GIF search, voice messages, threads that work properly, "
+      "and several accounts signed in at the same time.", "the hero paragraph")
+
+# ---- a fifth "why" row, for calls -----------------------------------------
+# Calls are the headline of 0.8.0 and this is the section the page uses to
+# say what other clients do not do, so they belong in it rather than in a
+# bullet halfway down the feature grid.
+_swap("All four of these work today.", "All five of these work today.",
+      "the why-section intro")
+
+_ROW = ("display: grid; grid-template-columns: 88px minmax(0, 1fr) "
+        "minmax(0, 1.15fr); align-items: start; gap: 28px 40px; "
+        "padding: 34px 12px 34px 0; border-bottom: 1px solid #1c232d; "
+        "transition: background 0.4s ease; animation: lgRise 0.7s "
+        "cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); "
+        "animation-range: entry 0% cover 22%;")
+_calls_row = (
+    '        <div style="%s" style-hover="background: linear-gradient(90deg, '
+    'rgba(59,127,240,0.07), rgba(59,127,240,0));">\n'
+    "          <div style=\"font-family: 'JetBrains Mono', monospace; "
+    'font-size: 34px; font-weight: 700; line-height: 1; color: #1f2b3d; '
+    'letter-spacing: -0.03em;">05</div>\n'
+    '          <h3 style="font-size: 27px; line-height: 1.16; font-weight: '
+    '600; letter-spacing: -0.02em;">Calls that reach<br>Element Call</h3>\n'
+    '          <div>\n'
+    '            <p style="font-size: 15.5px; line-height: 1.65; color: '
+    '#97a4b4;">Join the call in a room and you get audio, camera and screen '
+    'sharing, with per-person volume and a raised hand the other side can '
+    'see. The media is <strong style="color: #cfd9e6; font-weight: 600;">'
+    'encrypted per participant</strong> before it leaves your machine, so '
+    'the server forwarding it cannot read it.</p>\n'
+    '            <p style="margin-top: 14px; padding-left: 15px; border-left: '
+    '2px solid #2b3a52; font-size: 14.5px; line-height: 1.6; color: '
+    '#7d8b9c;">On Windows you can share one window instead of a whole '
+    'screen. Lightning asks that window to draw itself rather than cropping '
+    'the screen, so nothing stacked on top of it is shared by accident.</p>\n'
+    '          </div>\n'
+    '        </div>\n'
+    '\n') % _ROW
+
+# Straight after row 04, which is the last thing before the rows container
+# closes and the marquee begins.
+_row4_end = ("It can't name a command to run.</p>\n          </div>\n"
+             "        </div>\n\n      </div>\n")
+_swap(_row4_end,
+      _row4_end.replace("        </div>\n\n      </div>\n",
+                        "        </div>\n\n" + _calls_row + "      </div>\n"),
+      "the end of why-row 04")
+
+# ---- the marquee ----------------------------------------------------------
+# Both copies, or the -50% translate stops looping seamlessly: the second one
+# exists only to be identical to the first.
+_swap("<span>Threads</span><span style=\"color: #2b3a52;\">✦</span>"
+      "<span>Polls</span>",
+      "<span>Group calls</span><span style=\"color: #2b3a52;\">✦</span>"
+      "<span>Screen sharing</span><span style=\"color: #2b3a52;\">✦</span>"
+      "<span>Channels layout</span><span style=\"color: #2b3a52;\">✦</span>"
+      "<span>Threads</span><span style=\"color: #2b3a52;\">✦</span>"
+      "<span>Polls</span>", "the marquee", count=2)
+
+# ---- the feature grid -----------------------------------------------------
+# Six columns, and they have to stay six: the grid is auto-fit minmax(300px)
+# in a 1116px shell, so it lays out three across and a seventh column would
+# strand one item on a row of its own. Calls therefore take the slot Media
+# was borrowing, and Media joins Messaging, which is where it reads better
+# anyway.
+_H3 = ("padding-bottom: 12px; border-bottom: 1px solid #232b35; "
+       "font-size: 17px; font-weight: 600; color: #e8edf5;")
+_H3_STACKED = ("padding-bottom: 12px; border-bottom: 1px solid #232b35; "
+               "margin-top: 36px; font-size: 17px; font-weight: 600; "
+               "color: #e8edf5;")
+_UL = ("display: flex; flex-direction: column; gap: 13px; margin-top: 18px; "
+       "font-size: 14.5px; line-height: 1.55; color: #94a1b1;")
+_B = 'color: #cfd9e6; font-weight: 600;'
+
+_media_head = '\n\n          <h3 style="%s">Media</h3>' % _H3_STACKED
+if doc.count(_media_head) != 1:
+    raise SystemExit("0.8.0 pass: the Media heading is not where it was")
+_mi = doc.index(_media_head)
+_me = doc.index("</ul>", _mi) + len("</ul>")
+_media_block = doc[_mi:_me]
+doc = doc[:_mi] + doc[_me:]
+
+_msg_end = ("it assumes it is.</li>\n          </ul>")
+_swap(_msg_end, _msg_end + _media_block, "the end of the Messaging column")
+
+_calls_col = (
+    '<h3 style="%s">Calls</h3>\n'
+    '          <ul style="%s">\n'
+    '            <li><strong style="%s">Group calls</strong> in a room, over '
+    'MatrixRTC: audio, camera and screen sharing, all of it interoperating '
+    'with Element Call.</li>\n'
+    '            <li>Media is <strong style="%s">encrypted per participant'
+    '</strong> in the same format Element Call uses, so the server that '
+    'forwards it cannot read it. In an encrypted room a call that cannot '
+    'encrypt its media is refused, not quietly downgraded.</li>\n'
+    '            <li>The call server is <strong style="%s">discovered, never '
+    'assumed</strong> — from your homeserver, or from the people already in '
+    'the call. Lightning ships no address of its own.</li>\n'
+    '            <li>A spotlight or grid stage, per-person volume, a member '
+    'list grouped by power level, raised hands that Element sees, and a '
+    'marker in the conversation list where a call is already running.</li>\n'
+    '            <li>On Windows, share a single window rather than a whole '
+    'screen, picked from a grid of live previews that names the application '
+    'each one belongs to.</li>\n'
+    '          </ul>\n'
+    '\n          <h3 style="%s">Threads</h3>'
+) % (_H3, _UL, _B, _B, _B, _H3_STACKED)
+_swap('<h3 style="%s">Threads</h3>' % _H3, _calls_col, "the Threads heading")
+
+# Channels: the second conversation column, and the rail that drives it.
+_spaces_li = ("<li>Spaces, including <strong style=\"%s\">subspaces inside "
+              "them</strong>, indented in the rail and browsable from a "
+              "Space's front page.</li>" % _B)
+_swap(_spaces_li,
+      _spaces_li + '\n            '
+      '<li><strong style="%s">Two conversation layouts</strong>, one per '
+      'account: the classic activity-ordered list, or <strong style="%s">'
+      'Channels</strong> — a Spaces rail with Home, Direct Messages and a '
+      'view for each Space, holding that Space\'s rooms in the order the '
+      'Space sets rather than by activity.</li>\n            '
+      '<li>Drag the Spaces in the rail into the order you want; drop one on '
+      'another and it becomes a folder. That grouping is <strong style="%s">'
+      'local to your device</strong> and writes nothing to Matrix.</li>'
+      % (_B, _B, _B), "the Spaces bullet")
+
+_swap("<li>Pickers you can resize, which stay the size you left them, "
+      "layouts that hold up from narrow to wide, and keyboard navigation "
+      "everywhere.</li>",
+      '<li><strong style="%s">Rebindable keyboard shortcuts</strong>, '
+      'including the awkward case: Ctrl+B is Bold inside the message box and '
+      'toggles the conversation list everywhere else.</li>\n            '
+      "<li>Pickers you can resize, which stay the size you left them, "
+      "layouts that hold up from narrow to wide, and keyboard navigation "
+      "everywhere.</li>" % _B, "the Desktop experience list")
+
+# ---- privacy --------------------------------------------------------------
+# "the only outside services ... are the GIF providers" stopped being true
+# twice over: link previews are fetched by Lightning itself (the page already
+# says so two cards down), and a call reaches an SFU.
+_swap("Apart from the homeserver you signed in to, the only outside services "
+      "Lightning talks to are the GIF providers, and only while the GIF "
+      "picker is open.",
+      "Apart from the homeserver you signed in to, Lightning only reaches "
+      "outside for things you ask for: a GIF search while the picker is "
+      "open, a link preview you have switched on, and the call server when "
+      "you join a call.", "the privacy lead")
+
+# Four cards laid out two across; six keeps that a rectangle. Both additions
+# are facts the page was already relying on elsewhere without stating.
+_PCARD = ('<div style="padding: 26px; background: #10151c;">\n'
+          '          <h3 style="font-size: 16px; font-weight: 600;">%s</h3>\n'
+          '          <p style="margin-top: 10px; font-size: 14px; '
+          'line-height: 1.6; color: #8d99a8;">%s</p>\n'
+          '        </div>')
+_upd_card = _PCARD % (
+    "Update checks send a version",
+    "Just <code style=\"color: #9dbdf5;\">Lightning/&lt;version&gt;</code>. "
+    "No Matrix ID, homeserver, device ID, token or room data, and there's no "
+    "tracking ID to send in the first place. It's on by default and you can "
+    "switch it off.")
+if doc.count(_upd_card) != 1:
+    raise SystemExit("0.8.0 pass: the update-check privacy card moved")
+_swap(_upd_card, _upd_card + "\n        " + (_PCARD % (
+    "Call media is encrypted",
+    "A call's audio and video are encrypted for the other people in it "
+    "before they leave your machine, so the server forwarding them cannot "
+    "read them. That server is not one we chose: it comes from your "
+    "homeserver, or from whoever is already in the call.")) + "\n        "
+    + (_PCARD % (
+        "GIF search sends the search box",
+        "Only the words you typed, and only to the provider you picked. Not "
+        "your Matrix ID, not the room, not a message.")),
+    "the privacy card grid")
+
+# ---- project status -------------------------------------------------------
+# The card that has to change every time this claim does. Calls are no longer
+# switched off; what is still true is which platforms anyone has made one on.
+_swap('<h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">'
+      "Calls don't work yet</h3>\n"
+      '          <p style="margin-top: 11px; font-size: 14.5px; line-height: '
+      '1.6; color: #b9a476;">There\'s a 1:1 voice stack in the code, with '
+      'MSC2746 signalling and a WebRTC engine, but it\'s switched off on '
+      'purpose. Nobody has confirmed an answered call over a real network '
+      'yet, so the button says "coming soon" instead of pretending '
+      'otherwise.</p>',
+      '<h3 style="font-size: 16.5px; font-weight: 600; color: #f0d6a0;">'
+      "Calls are new</h3>\n"
+      '          <p style="margin-top: 11px; font-size: 14.5px; line-height: '
+      '1.6; color: #b9a476;">Audio, camera and screen sharing work against '
+      'Element Call — used by hand on Linux and on a packaged Windows build. '
+      '<strong style="color: #f0d6a0; font-weight: 600;">Nobody has made a '
+      'call on macOS.</strong> The Windows camera runs at about ten frames a '
+      'second, and on Linux a distribution without GStreamer gets an honest '
+      'refusal rather than a call.</p>', "the calls status card")
 
 
 # ------------------------------------------------------------- style-hover CSS
@@ -1219,21 +1535,26 @@ _ld = {
     "url": SITE_URL + "/",
     "applicationCategory": "CommunicationApplication",
     "applicationSubCategory": "Matrix client",
-    "operatingSystem": "Linux, Windows",
+    # macOS has been a published download since 0.7.5 and the page says so in
+    # seven other places; this was the one surface still contradicting it.
+    "operatingSystem": "Linux, Windows, macOS",
     "softwareVersion": str(releases.get("version", "")),
     "softwareRequirements": "Qt 6.5 or later",
     "license": "https://www.gnu.org/licenses/gpl-3.0.html",
     "isAccessibleForFree": True,
     "description": (
         "A native Matrix desktop client written in Qt 6 on top of the "
-        "official Rust Matrix SDK, with GIF search, voice messages, "
-        "threads and several accounts signed in at once."),
+        "official Rust Matrix SDK, with group calls, GIF search, voice "
+        "messages, threads and several accounts signed in at once."),
     "offers": {"@type": "Offer", "price": "0",
                "priceCurrency": "USD"},
     "sameAs": [REPO_URL],
     "codeRepository": REPO_URL,
-    "screenshot": [SITE_URL + "/assets/" + n
-                   for n in sorted(set(SHOT_NAMES.values()))],
+    # From _SHOTS, so a screenshot that is renamed or dropped cannot leave a
+    # 404 behind in the structured data. Nothing else looks at these URLs:
+    # they are in content=, which the resolve-every-local-reference check in
+    # check.py does not see.
+    "screenshot": [SITE_URL + "/assets/" + s[0] for s in _SHOTS],
     "author": {"@type": "Person", "name": "Rokas Smetonis"},
 }
 
@@ -1246,7 +1567,7 @@ extra_head = """
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/png">
-<meta property="og:image:alt" content="Lightning's room timeline with the GIF picker open over the composer">
+<meta property="og:image:alt" content="The Lightning lockup beside a screenshot of a group call running at the top of a room">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{ld}</script>
 <style>

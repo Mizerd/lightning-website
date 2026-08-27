@@ -50,29 +50,35 @@ version, release date, and every package card on the page come from that file.
 
 ```jsonc
 {
-  "version":  "0.7.5",
+  "version":  "0.8.0",
   "released": "2026-09-01",          // ISO date, shown as "Released ..."
   "releases_url": "https://github.com/Mizerd/lightning/releases",
   "donate_url":   "",                // empty hides the Donate button
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
   "packages": [
     { "os": "linux", "label": "...", "format": ".deb",
-      "file": "lightning_0.7.5_amd64.deb",
-      "install": "sudo apt install ./lightning_0.7.5_amd64.deb",
+      "file": "lightning_0.8.0_amd64.deb",
+      "install": "sudo apt install ./lightning_0.8.0_amd64.deb",
       "remove": "sudo apt remove lightning" }
   ]
 }
 ```
 
-`os` must be `linux` or `windows`; those two lists become the two download
-columns. The Windows filenames embed the build's short commit sha, so they
-change every release — copy them from the GitHub release page rather than
-editing by hand:
+`os` must be `linux`, `windows` or `macos`. The first two become the two
+download columns; the `macos` entry is the package card inside the Gatekeeper
+block below them. The Windows **and macOS** filenames embed the build's short
+commit sha, so they change every release — copy them from the GitHub release
+page rather than editing by hand:
 
 ```sh
-gh release view v0.7.5 --repo Mizerd/lightning --json assets \
+gh release view v0.8.0 --repo Mizerd/lightning --json assets \
   --jq '.assets[].name'
 ```
+
+Which means the feed cannot be filled in before the release exists: the sha
+is the release commit's. Cut the release first, then bring the site to it,
+which is also what stops the buttons pointing at assets GitHub has not
+published yet.
 
 The alpha bar at the top of the page names the version too. It used to read
 "0.7.x", which nothing kept current; it is now bound like every other version
@@ -166,10 +172,15 @@ python3 tools/check.py
 Verifies the things that have actually broken: every local reference resolves,
 every package card has its own button pointing at its own asset, the baked-in
 version agrees with `releases.json`, every screenshot declares the size the
-file actually is, the theme strip still has eleven swatches, the canonical and
-the JSON-LD agree with the page, nothing served mentions GitLab, and
-`releases.js` is not cacheable for longer than the HTML it rewrites. Exits
-non-zero, so it works in a pre-push hook.
+file actually is and is openable, no orphaned screenshot is left in
+`public/assets/`, every screenshot URL in the JSON-LD resolves, the theme strip
+still has eleven swatches, the canonical and the JSON-LD agree with the page,
+nothing served mentions GitLab, and `releases.js` is not cacheable for longer
+than the HTML it rewrites. Exits non-zero, so it works in a pre-push hook.
+
+Nothing here counts screenshots against a fixed number. It used to say four,
+and four is what a check goes stale as: the total is taken off the page and
+the sized set, the zoom triggers and the files on disk are compared to it.
 
 A check that cannot fail is decoration. When adding one, inject the defect it
 is meant to catch, watch it fail, then restore — all of the above have been
@@ -195,7 +206,7 @@ the live GitHub release:
 
 ```sh
 python3 tools/check-assets.py            # newest release
-python3 tools/check-assets.py v0.7.5     # a specific tag
+python3 tools/check-assets.py v0.8.0     # a specific tag
 python3 tools/check-assets.py --feed     # offline, names from releases.json
 ```
 
@@ -211,10 +222,15 @@ npm install jsdom          # not a repo dependency; install where convenient
 
 Load `index.html` in jsdom, stub `window.fetch` to return `releases.json` and
 `/api/latest`, eval `releases.js`, dispatch `DOMContentLoaded`, then assert
-that the eight `[data-lg-pkg]` cards still have eight distinct `href`s. Test
-both passes *and* the feed-only path with `/api/latest` failing, since the two
-mask each other: the GitHub pass sets every href by format and will paper over
-a broken rebuild in the feed pass.
+that every `[data-lg-pkg]` card still has its own distinct `href` — count the
+cards, do not write the number down. Test both passes *and* the feed-only path
+with `/api/latest` failing, since the two mask each other: the GitHub pass sets
+every href by format and will paper over a broken rebuild in the feed pass.
+
+Feed the `/api/latest` stub a *different* version and build sha from the one in
+`releases.json`. That is the pass's whole job — it is what makes a deployed
+page follow a release nobody has edited this repository for — and a stub that
+echoes the feed back proves nothing about it.
 
 The lightbox is worth testing the same way, and the useful assertions are the
 ones about what must *not* happen: clicking the image does not close it, the
@@ -309,18 +325,25 @@ that now means something.
 
 ## Screenshots
 
-The four screenshots are the only photographs on an 8,800 px page, and they
-had two problems.
+The six screenshots are the only photographs on a 9,000 px page.
 
-> **Replacing one:** drop the new PNG over the file in `public/assets/` and
-> run `unbundle.py`. It **keeps** an existing `assets/screenshot-*.png` rather
-> than restoring the artifact's copy — the same rule `releases.json` gets, for
-> the same reason: these are pictures of a client that keeps changing, and a
-> rebuild that restored them would quietly put the old interface back on the
-> page. The declared `width`/`height` are read from the file on disk, so a
-> replacement is measured as it actually is. If the new picture is of
-> something else, its `alt` and caption live in the artifact and need a
-> correction in `unbundle.py` (correction 15 is one).
+> **Refreshing them:** the set is the `_SHOTS` table in `unbundle.py` —
+> filename, `alt`, and the two halves of the caption — and nothing else names
+> a screenshot. Drop the PNGs into `public/assets/`, list them there, run
+> `unbundle.py`.
+>
+> Two rules worth keeping. **Give a replaced picture a new filename.**
+> Screenshots are not content-hashed and `_headers` caches `/assets/*` for a
+> day, so overwriting one shows a returning visitor yesterday's picture under
+> today's caption. And **delete what you replaced** — `check.py` fails on a
+> `screenshot-*.png` in `public/assets/` that nothing points at, which is how
+> an orphan is caught rather than quietly deployed.
+>
+> The artifact's own four pictures are **not** written out any more. They were
+> a snapshot of the client the day the artifact was made, and keeping them on
+> the same filenames is what produced the 0.7.x state: a file called
+> `screenshot-threads.png` holding a picture of the theme editor, under a
+> caption describing a GIF picker that was not in the shot.
 
 They carried **no `width`/`height`** and are `loading="lazy"`, so until each
 file arrived its box was zero pixels tall: the caption sat under nothing and
@@ -331,8 +354,10 @@ the files rather than typed in because a re-exported screenshot would
 otherwise reserve the *wrong* shape, which is worse than reserving none —
 `check.py` compares the two.
 
-They also render about 540 px wide from a 3,839 px original, so each is now
-wrapped in a `<button data-lg-zoom>` and `releases.js` opens it full screen.
+They render about 540 px wide and are shipped at 2,400 px, which is a full
+screen of lightbox on any ordinary display at roughly a third of the bytes a
+raw grab costs. Each is wrapped in a `<button data-lg-zoom>` and `releases.js`
+opens it full screen.
 
 A **button** rather than a click handler on the `<img>`: that way it is in the
 tab order, activates on Enter and Space, and is announced as something you can
@@ -353,7 +378,7 @@ Three things about the overlay are load-bearing:
   than the one you can see and crops the bottom of it behind the address bar.
 
 The overlay is built once on first use and reused; closing it drops the `src`
-so a 3,839 px image is not held decoded for a page you have gone back to
+so a 2,400 px image is not held decoded for a page you have gone back to
 scrolling. Focus moves to the close button on open and returns to the
 screenshot on close.
 
@@ -397,7 +422,7 @@ is never executed, so `script-src 'self'` does not have to be loosened to
 carry it. `releases.js` keeps its `softwareVersion` in step with the rest of
 the page, because `data-lg-bind` reaches DOM and this is JSON.
 
-`og:image` was `screenshot-rooms-and-gifs.png`: 3839x2043 and 545 KB, which is
+`og:image` was a raw screenshot: 3839x2043 and 545 KB, which is
 7.8 megapixels for a card rendered about 500 px wide, and past the size some
 scrapers will fetch at all. It is now `assets/og-card.png`, 1200x630 and
 154 KB. Its source is `tools/og-card.html` — screenshotted in Firefox rather
@@ -585,10 +610,12 @@ bundle rather than the Worker being broken:
 Cloudflare **Workers** (static assets), connected to this GitHub repository.
 Every push to `main` deploys.
 
-`wrangler.jsonc` is the whole configuration: it points Cloudflare at `public/`
-and asks for `404.html` on unknown paths. There is no `main` script and no
-assets binding, because the site is static — Cloudflare serves the directory
-directly.
+`wrangler.jsonc` is the whole configuration: it points Cloudflare at `public/`,
+asks for `404.html` on unknown paths, and names `src/worker.js` as the script
+behind the one route that is not a file. `run_worker_first` is deliberately not
+set, so assets are served straight from the asset layer and a normal page load
+never enters the Worker; only an unmatched path reaches it, which is why it
+ends by deferring back to the `ASSETS` binding.
 
 **One-time setup** — Cloudflare dashboard → Workers & Pages → Create →
 Import a repository → `lightning-website`:

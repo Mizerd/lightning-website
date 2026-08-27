@@ -64,19 +64,25 @@ async function run(apiUp) {
   console.log("\n" + tag);
 
   // --- the triggers ---------------------------------------------------
+  // How many screenshots there are is counted off the page and never written
+  // down here: the set changes whenever the client does, and a hard-coded
+  // number is what a test goes stale as. What has to hold is that there is at
+  // least one, and that every one of them has a trigger and a badge.
+  const imgs = [...doc.querySelectorAll('img[src^="/assets/screenshot-"]')];
+  ok(tag + " the page has screenshots", imgs.length > 0, "none found");
   const btns = doc.querySelectorAll("[data-lg-zoom]");
-  ok(tag + " four zoom triggers", btns.length === 4, btns.length + " found");
+  ok(tag + " a zoom trigger per screenshot", btns.length === imgs.length,
+     btns.length + " triggers for " + imgs.length + " screenshots");
   const hints = [...doc.querySelectorAll("[data-lg-zoomhint]")];
   ok(tag + " every Expand badge revealed",
-     hints.length === 4 && hints.every((h) => !h.hidden),
-     hints.filter((h) => h.hidden).length + " still hidden");
+     hints.length === imgs.length && hints.every((h) => !h.hidden),
+     hints.filter((h) => h.hidden).length + " hidden of " + hints.length);
 
   // Every screenshot must carry its own dimensions, or the box is 0px tall
   // until the image lands.
-  const imgs = [...doc.querySelectorAll('img[src^="/assets/screenshot-"]')];
   ok(tag + " every screenshot has width and height",
-     imgs.length === 4 && imgs.every((i) => +i.getAttribute("width") > 0 &&
-                                            +i.getAttribute("height") > 0),
+     imgs.every((i) => +i.getAttribute("width") > 0 &&
+                       +i.getAttribute("height") > 0),
      imgs.map((i) => i.getAttribute("width") + "x" + i.getAttribute("height")).join(" "));
 
   // --- opening ---------------------------------------------------------
@@ -91,8 +97,13 @@ async function run(apiUp) {
   ok(tag + " it shows the image that was clicked",
      lbImg && lbImg.getAttribute("src") === btns[0].querySelector("img").getAttribute("src"),
      lbImg ? lbImg.getAttribute("src") : "no img");
+  // Against the clicked figure's OWN caption, not a phrase typed in here.
+  // The phrase version passed for a year over a caption that described a GIF
+  // picker the picture did not contain -- it only ever proved the string was
+  // somewhere in the file, not that the overlay copied the right one.
+  const cap0 = btns[0].closest("figure").querySelector("figcaption").textContent;
   ok(tag + " it carries the figure's caption",
-     lb.querySelector("figcaption").textContent.indexOf("GIF picker") !== -1,
+     lb.querySelector("figcaption").textContent === cap0,
      lb.querySelector("figcaption").textContent);
   ok(tag + " the page behind it is locked",
      doc.documentElement.classList.contains("lg-lbopen") &&

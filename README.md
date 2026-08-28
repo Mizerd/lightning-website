@@ -50,15 +50,15 @@ version, release date, and every package card on the page come from that file.
 
 ```jsonc
 {
-  "version":  "0.8.0",
+  "version":  "0.8.1",
   "released": "2026-09-01",          // ISO date, shown as "Released ..."
   "releases_url": "https://github.com/Mizerd/lightning/releases",
   "donate_url":   "",                // empty hides the Donate button
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
   "packages": [
     { "os": "linux", "label": "...", "format": ".deb",
-      "file": "lightning_0.8.0_amd64.deb",
-      "install": "sudo apt install ./lightning_0.8.0_amd64.deb",
+      "file": "lightning_0.8.1_amd64.deb",
+      "install": "sudo apt install ./lightning_0.8.1_amd64.deb",
       "remove": "sudo apt remove lightning" }
   ]
 }
@@ -71,7 +71,7 @@ commit sha, so they change every release — copy them from the GitHub release
 page rather than editing by hand:
 
 ```sh
-gh release view v0.8.0 --repo Mizerd/lightning --json assets \
+gh release view v0.8.1 --repo Mizerd/lightning --json assets \
   --jq '.assets[].name'
 ```
 
@@ -206,7 +206,7 @@ the live GitHub release:
 
 ```sh
 python3 tools/check-assets.py            # newest release
-python3 tools/check-assets.py v0.8.0     # a specific tag
+python3 tools/check-assets.py v0.8.1     # a specific tag
 python3 tools/check-assets.py --feed     # offline, names from releases.json
 ```
 

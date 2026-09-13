@@ -494,6 +494,32 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 }
 .lg-copy:hover { border-color: var(--text-3); color: var(--text); }
 
+/* ---- the room --------------------------------------------------------------
+   One card, not a section: it is an invitation, not a chapter. It renders only
+   when releases.json carries a `support` block -- an address is not something
+   this generator may invent, and a dead matrix.to link is worse than no card. */
+.lg-room {
+  margin-top: 40px; padding: 24px 26px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--raised);
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+}
+.lg-room-body { flex: 1 1 320px; min-width: 0; }
+.lg-room h3 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.lg-room p { margin: 7px 0 0; color: var(--text-2); font-size: 15px; }
+.lg-room .alias {
+  display: inline-block; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-3);
+}
+.lg-room-join {
+  flex: none; padding: 11px 20px; border-radius: var(--r-pill);
+  background: var(--bolt); color: var(--bolt-ink);
+  font-weight: 700; font-size: 14.5px; text-decoration: none;
+  transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1), filter 160ms ease;
+}
+.lg-room-join:hover { transform: translateY(-2px); filter: brightness(1.06); }
+@media (max-width: 860px) { .lg-room { gap: 16px; } }
+
 /* ---- limits and privacy --------------------------------------------------- */
 .lg-list { margin: 26px 0 0; padding: 0; list-style: none; }
 .lg-list li { padding-left: 20px; position: relative; margin-top: 14px; color: var(--text-2); }
@@ -593,6 +619,29 @@ def sky_svg():
     parts.append('</svg>')
     return "".join(parts)
 
+def room_card():
+    """The support room, or nothing.
+
+    Driven by a `support` block in releases.json -- alias plus url -- and
+    ABSENT when that block is. The generator has no business inventing a room
+    address, and a Join button that leads nowhere is worse than a page that
+    does not mention a room at all.
+    """
+    sup = feed.get("support") or {}
+    alias, url = sup.get("alias", ""), sup.get("url", "")
+    if not (alias and url):
+        return ""
+    blurb = sup.get("blurb") or ("A chill space. Ask questions, report what broke, "
+                                 "or watch the thing get built.")
+    return f'''    <div class="lg-room">
+      <div class="lg-room-body">
+        <h3>{html.escape(sup.get("title", "The Lightning room"))}</h3>
+        <p>{html.escape(blurb)}</p>
+        <span class="alias">{html.escape(alias)}</span>
+      </div>
+      <a class="lg-room-join" href="{html.escape(url)}">Join</a>
+    </div>'''
+
 def build():
     nl = "\n"
     swatches = nl.join(
@@ -604,6 +653,7 @@ def build():
         for n, c in THEMES)
 
     SKY = sky_svg()
+    ROOM_CARD = room_card()
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -759,6 +809,7 @@ def build():
 {MACOS_BLOCK}
 
     <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
+{ROOM_CARD}
   </div>
 </section>
 

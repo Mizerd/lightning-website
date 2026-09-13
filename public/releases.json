@@ -7,22 +7,6 @@
   "packages": [
     {
       "os": "linux",
-      "label": "Debian / Ubuntu / Mint / Pop!_OS",
-      "format": ".deb",
-      "file": "lightning_0.9.4_amd64.deb",
-      "install": "sudo apt install ./lightning_0.9.4_amd64.deb",
-      "remove": "sudo apt remove lightning"
-    },
-    {
-      "os": "linux",
-      "label": "Fedora / RHEL / openSUSE",
-      "format": ".rpm",
-      "file": "lightning-0.9.4-1.x86_64.rpm",
-      "install": "sudo dnf install ./lightning-0.9.4-1.x86_64.rpm",
-      "remove": "sudo dnf remove lightning"
-    },
-    {
-      "os": "linux",
       "label": "Any distribution, nothing installed",
       "format": "AppImage",
       "file": "Lightning-0.9.4-x86_64.AppImage",
@@ -39,6 +23,22 @@
     },
     {
       "os": "linux",
+      "label": "Debian / Ubuntu / Mint / Pop!_OS",
+      "format": ".deb",
+      "file": "lightning_0.9.4_amd64.deb",
+      "install": "sudo apt install ./lightning_0.9.4_amd64.deb",
+      "remove": "sudo apt remove lightning"
+    },
+    {
+      "os": "linux",
+      "label": "Fedora / RHEL / openSUSE",
+      "format": ".rpm",
+      "file": "lightning-0.9.4-1.x86_64.rpm",
+      "install": "sudo dnf install ./lightning-0.9.4-1.x86_64.rpm",
+      "remove": "sudo dnf remove lightning"
+    },
+    {
+      "os": "linux",
       "label": "Snap, strict confinement, local file",
       "format": ".snap",
       "file": "lightning_0.9.4_amd64.snap",
@@ -51,7 +51,7 @@
       "format": ".msi",
       "file": "Lightning-0.9.4-bcea599-windows-x86_64.msi",
       "install": "double-click Lightning-0.9.4-bcea599-windows-x86_64.msi",
-      "remove": "Settings \u2192 Apps \u2192 Installed apps"
+      "remove": "Settings → Apps → Installed apps"
     },
     {
       "os": "windows",

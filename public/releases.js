@@ -324,11 +324,16 @@
     lbImg.src = img.currentSrc || img.src;
     lbImg.alt = img.alt || "";
 
-    // The caption belongs to the <figure> two levels up. Without one the
-    // element would still take its margin, so it is emptied and hidden.
+    // The caption belongs to the <figure> two levels up. The 2026-09-13
+    // redesign dropped figcaptions -- each screenshot now sits beside the
+    // paragraph that describes it, so a caption under it repeated the copy
+    // a few pixels away. Full screen there is no such paragraph, so the
+    // alt text stands in: it is the same short description, and it is
+    // required to exist anyway. Without either, the element would still take
+    // its margin, so it is emptied and hidden.
     var fig = btn.closest ? btn.closest("figure") : null;
     var cap = fig ? fig.querySelector("figcaption") : null;
-    lbCap.textContent = cap ? cap.textContent : "";
+    lbCap.textContent = cap ? cap.textContent : (img.alt || "");
     lbCap.hidden = !lbCap.textContent;
 
     lb.hidden = false;

@@ -4,8 +4,12 @@
 /*
   # The page is entirely self-hosted: one same-origin script, same-origin
   # fonts and images, no third-party anything. The only loosening is
-  # style-src 'unsafe-inline', which the artifact's 347 inline style="..."
-  # attributes require -- removing it would mean rewriting every one of them.
+  # style-src 'unsafe-inline'. The artifact needed it for 347 inline
+  # style="..." attributes; the generated page is down to one <style> block
+  # and twelve attributes (the theme swatch colours and the two hero rules),
+  # but an inline <style> element needs 'unsafe-inline' just as much as an
+  # attribute does. Tightening it means a nonce, which needs the request to
+  # enter the Worker -- and run_worker_first is deliberately off.
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
@@ -46,11 +50,4 @@
 # that reads the DOM the generator emits must never be cacheable for longer
 # than that DOM.
 /releases.js
-  Cache-Control: no-cache
-
-# Same rule, same reason. motion.js reads the DOM the generator emits --
-# [data-lg-top], .lg-navlink, .lg-card -- so a cached copy outliving a
-# redesign would be looking for elements that are no longer there. It is
-# 4 KB and a revalidation is a 304.
-/motion.js
   Cache-Control: no-cache

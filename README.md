@@ -34,11 +34,14 @@ src/
 artifact/
   Lightning.html     <- the original Claude artifact this site was built from
 tools/
-  unbundle.py        <- converts that artifact into public/
+  build-site.py      <- GENERATES public/index.html; edit this, not the HTML
+  fontfaces.css      <- the self-hosted @font-face block build-site.py inlines
+  unbundle.py        <- converted that artifact into public/; history, do not run
   check.py           <- invariant checks; run after editing public/
   check-assets.py    <- the download cards against a REAL release's assets
   og-card.html       <- source for assets/og-card.png; NOT deployed
   lightbox-test.js   <- jsdom test for the screenshot overlay (needs jsdom)
+  cards-test.js      <- jsdom test for the package-card rebuild (needs jsdom)
 ```
 
 Nothing outside `public/` is deployed.
@@ -142,26 +145,43 @@ itself — no HTML edit. Leaving it empty keeps it hidden and unclickable.
 
 ## Editing the page
 
-Edit `public/index.html` directly. It is plain HTML with inline styles.
-
-`tools/unbundle.py` exists only to regenerate the site from a **fresh Claude
-artifact**, and it overwrites `public/index.html`:
+`public/index.html` is **generated**. Edit `tools/build-site.py` and rebuild:
 
 ```sh
-python3 tools/unbundle.py                 # reads artifact/Lightning.html
-python3 tools/unbundle.py path/to/New.html
+python3 tools/build-site.py     # rewrites public/index.html
+python3 tools/check.py
 ```
 
-It will not overwrite `public/releases.json` if one already exists, so a
-rebuild never rolls the published version backwards.
+The generator is the reason the page and the feed cannot disagree: every
+download card, every filename and every install command is built from
+`public/releases.json`, and the screenshot dimensions are read out of the PNG
+headers rather than restated. Nothing about a release is typed into the HTML.
 
-The original artifact was a 2.7 MB self-extracting bundle: a base64 manifest
-that JavaScript unpacked into `blob:` URLs at runtime, rendered through React
-18 and a proprietary `x-dc` runtime. That is ~280 KB of JavaScript to perform
-12 string substitutions, and it rendered *nothing at all* without JavaScript.
-The script does that work ahead of time instead — unpacking the assets to real
-files, expanding the loops, and rewriting `style-hover` attributes into real
-CSS `:hover` rules. The published page needs no framework.
+Its design brief is in its own docstring, and the short version is **same
+build**: the page is made from the application's own tokens (Indigo Night
+surfaces, the Storm bolt as the single accent, Manrope and JetBrains Mono —
+the faces the client bundles) and shows nothing but the application. If an
+element does not exist in the app, it does not go on the site. That is why
+there are no gradients, no glows, no scroll reveals and no animation of any
+kind: the client has none, and a page that claims the client is restrained
+should be the first evidence for it.
+
+`tools/fontfaces.css` is the self-hosted `@font-face` block the generator
+inlines. It is also the **authority on which weights exist** — JetBrains Mono
+at 400/500/700, Manrope at 400/500/600/700. Asking for a weight with no face
+does not fall back to a near one: with `font-display: swap` there is nothing
+to swap in and the text paints as *nothing*. `check.py` compares the two.
+
+`tools/unbundle.py` is **history, and must not be run.** It converted the
+original Claude artifact into the first version of this site and would
+overwrite the generated page with it. It is kept because the corrections it
+documents — the GitLab→GitHub rewrite, the JSON-LD, the asset unpacking — are
+the record of how the site got here. The original artifact was a 2.7 MB
+self-extracting bundle: a base64 manifest that JavaScript unpacked into
+`blob:` URLs at runtime, rendered through React 18 and a proprietary `x-dc`
+runtime — ~280 KB of JavaScript to perform 12 string substitutions, rendering
+*nothing at all* without JavaScript. The published page needs no framework and
+never has since.
 
 ## Checking a change
 
@@ -220,24 +240,44 @@ zip — which is what it was written against.
 npm install jsdom          # not a repo dependency; install where convenient
 ```
 
-Load `index.html` in jsdom, stub `window.fetch` to return `releases.json` and
-`/api/latest`, eval `releases.js`, dispatch `DOMContentLoaded`, then assert
-that every `[data-lg-pkg]` card still has its own distinct `href` — count the
-cards, do not write the number down. Test both passes *and* the feed-only path
-with `/api/latest` failing, since the two mask each other: the GitHub pass sets
-every href by format and will paper over a broken rebuild in the feed pass.
+`tools/cards-test.js` is that test, and it is the one to run after any change
+to the download section or to `releases.js`:
 
-Feed the `/api/latest` stub a *different* version and build sha from the one in
+```sh
+node tools/cards-test.js
+```
+
+It loads the real `index.html`, stubs `window.fetch` for `releases.json` and
+`/api/latest`, evals the real `releases.js`, and asserts that every
+`[data-lg-pkg]` card ends up with **its own** install command, format, label
+and download URL — counted off the page, never written down. It runs both
+passes *and* the feed-only path with `/api/latest` failing, because the two
+mask each other: the GitHub pass sets every href by suffix and papers over a
+broken rebuild in the feed pass.
+
+Its `/api/latest` stub reports a *different* version and build sha from
 `releases.json`. That is the pass's whole job — it is what makes a deployed
 page follow a release nobody has edited this repository for — and a stub that
 echoes the feed back proves nothing about it.
+
+What it exists for: `releases.js` rebuilds the cards by **cloning card zero**,
+so a card missing one of the `[data-lg-bind]` slots silently keeps card zero's
+value, and the baked HTML looks perfect while it happens. It has shipped twice
+— first every Linux button serving the `.deb`, then, in the 2026-09-13
+redesign, every Linux card showing the AppImage's `chmod` line.
 
 The lightbox is worth testing the same way, and the useful assertions are the
 ones about what must *not* happen: clicking the image does not close it, the
 overlay is reused rather than rebuilt on the second open, the scroll lock is
 released, and focus returns to the screenshot that was clicked.
 
-Anything about **layout** needs a real browser instead — jsdom has none.
+Anything about **layout**, and anything about whether text is actually
+*painted*, needs a real browser instead — jsdom has none. The Copy buttons
+shipped as empty rounded rectangles because `.lg-copy` asked JetBrains Mono for
+`font-weight: 600` and the self-hosted subset carries 400/500/700 only: with
+`font-display: swap` there was no face to swap in and the run painted as
+nothing, while the DOM said `Copy` throughout. `check.py` now compares every
+declared weight against the `@font-face` rules, but only a render found it.
 Headless Firefox works, with one trap: `--screenshot` fires at the load event,
 so a probe on a timer renders nothing. Measure synchronously in an iframe's
 `onload` and write the numbers into the page, one page load per viewport
@@ -250,12 +290,13 @@ fold.
 ## GitHub only
 
 The site links to GitHub and names no other host. The project was on a
-self-hosted GitLab when the artifact was written, so `unbundle.py` rewrites
-every link, button and sentence that referred to it (correction 1), and fails
-the build if any survive. `check.py` repeats the check against what is on disk.
+self-hosted GitLab when the artifact was written, so `unbundle.py` rewrote
+every link, button and sentence that referred to it (correction 1) and failed
+the build if any survived. `build-site.py` names GitHub and nothing else, and
+`check.py` repeats the check against what is on disk.
 
-If the repository ever moves again, change it in `unbundle.py` — editing
-`public/index.html` alone means the next rebuild reinstates the old wording.
+If the repository ever moves again, change it in `build-site.py` — editing
+`public/index.html` alone means the next rebuild reinstates the old URL.
 
 ## No terminal for Windows or macOS
 
@@ -278,7 +319,7 @@ them check.
 There **is** a macOS release, from 0.7.5. The block is a real package card
 (`"os": "macos"` in `releases.json`, rebuilt by `packages("macos", …)`)
 wrapped in the Gatekeeper walkthrough, which stays static copy in
-`unbundle.py` (correction 6) because it is instruction, not release data.
+`build-site.py` because it is instruction, not release data.
 
 It leads with the two limits, because neither is a choice and both rule out a
 lot of people: **Apple Silicon only**, and **macOS 26 or newer**. Both come
@@ -327,10 +368,10 @@ that now means something.
 
 The six screenshots are the only photographs on a 9,000 px page.
 
-> **Refreshing them:** the set is the `_SHOTS` table in `unbundle.py` —
-> filename, `alt`, and the two halves of the caption — and nothing else names
-> a screenshot. Drop the PNGs into `public/assets/`, list them there, run
-> `unbundle.py`.
+> **Refreshing them:** the set is the `SHOTS` table in `build-site.py` —
+> filenames only; the `alt` text lives with the row that shows the picture,
+> and the dimensions are read out of the PNG headers. Drop the PNGs into
+> `public/assets/`, list them there, run `build-site.py`.
 >
 > Two rules worth keeping. **Give a replaced picture a new filename.**
 > Screenshots are not content-hashed and `_headers` caches `/assets/*` for a
@@ -390,8 +431,8 @@ palette and a single blue accent. Correction 13 puts eleven swatches under the
 screenshots, each a miniature of the client: rail, two received bubbles, one
 sent bubble in the accent.
 
-**The colours are not decorative.** Every value in the `_THEMES` table in
-`unbundle.py` is copied from `qml/AppTheme.qml` in the client repo — the
+**The colours are not decorative.** Every value in the `THEMES` table in
+`build-site.py` is copied from `qml/AppTheme.qml` in the client repo — the
 `_light`, `_dark`, `_graphite` … palette objects, resolved through their
 colour literals, in `SettingsManager::Theme` enum order. This repository
 cannot see that one at build time, so **if a palette changes there it has to

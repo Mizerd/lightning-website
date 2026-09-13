@@ -8,6 +8,9 @@ These are the things that have actually broken, not a general test suite:
   * every local reference resolves to a file on disk
   * every package card has its own download button, pointing at its own asset
     (the "every Linux button serves the .deb" bug)
+  * every card carries the [data-lg-bind] slots releases.js rewrites, and each
+    says what the feed says (the "every Linux card shows the AppImage command"
+    bug: releases.js clones card zero, so a missing slot keeps card zero's text)
   * the page's baked-in version agrees with releases.json
   * nothing served mentions GitLab -- the site points at GitHub only
   * the Linux commands have copy buttons, and they ship hidden
@@ -20,6 +23,7 @@ The JavaScript paths cannot be checked here -- they need a DOM. To test those,
 see the jsdom recipe in the README's "Checking a change" section.
 """
 
+import html as html_mod
 import json
 import os
 import re
@@ -106,17 +110,75 @@ card_files = [f for _, f, _ in cards]
 check("card filenames match releases.json", card_files == feed_files,
       "%s != %s" % (card_files, feed_files))
 
+# ---- every per-card slot releases.js overwrites exists on every card ------
+# releases.js rebuilds the cards at runtime by CLONING CARD ZERO and then
+# writing each package's own values into the [data-lg-bind] slots it finds.
+# A card missing one of those slots therefore keeps CARD ZERO'S value -- and
+# the baked HTML looks perfect, because the miss only shows once the script
+# runs. It has happened twice now: first the download button (fixed with the
+# unconditional setDownload), then the install command, where a rewrite of
+# this page dropped data-lg-bind="pkg.install" from the Linux <code> and every
+# Linux card served the AppImage's chmod line.
+#
+# The text is compared against the feed as well as being present, because a
+# slot that exists and says the wrong thing fails in exactly the same way to
+# a reader.
+slot_missing, slot_wrong = [], []
+for (fmt, fil, body), pkg in zip(cards, pkgs):
+    for field in ("format", "label", "install"):
+        m = re.search(r'data-lg-bind="pkg\.' + field + r'"[^>]*>([^<]*)<', body)
+        if not m:
+            slot_missing.append("%s has no pkg.%s slot" % (fmt, field))
+            continue
+        want = html_mod.escape(str(pkg.get(field, "")))
+        if m.group(1) != want:
+            slot_wrong.append("%s pkg.%s is %r, feed says %r"
+                              % (fmt, field, m.group(1), want))
+check("every card carries the slots releases.js rewrites", not slot_missing,
+      "; ".join(slot_missing))
+check("every card slot agrees with the feed", not slot_wrong,
+      "; ".join(slot_wrong))
+
 # ---- version agreement ----------------------------------------------------
 baked = set(re.findall(r'data-lg-bind="version">([^<]*)<', html))
 check("baked version matches feed", baked == {feed["version"]},
       "%s vs %s" % (baked, feed["version"]))
+
+# THE BAKED DATE, not just the baked version.
+#
+# index.html carries hard-coded values so the page is correct with JavaScript
+# OFF -- and that is exactly the reader for whom a stale value is never
+# corrected. The version was asserted here; the DATE was not, and on
+# 2026-09-13 it was found reading 2026-08-27 against a feed saying 2026-09-10.
+# Two weeks wrong, for the only visitor the baked copy exists to serve.
+#
+# It lives HERE, beside the version it belongs with, and not in the block that
+# used to hold it: that block was about motion.js, and deleting the motion
+# layer in the same session took this check out with it. A check filed under
+# an unrelated heading leaves with that heading.
+baked_date = re.search(r'data-lg-bind="released"[^>]*>([^<]+)<', html)
+check("the baked release date matches the feed",
+      baked_date is not None and baked_date.group(1).strip() == feed["released"],
+      "baked %r vs feed %r"
+      % (baked_date.group(1).strip() if baked_date else "MISSING",
+         feed["released"]))
 
 # ---- copy buttons -----------------------------------------------------------
 # Linux install commands get a copy button; Windows and macOS get none,
 # because their boxes hold GUI actions rather than commands. Every button
 # ships hidden, so a reader without JavaScript is never shown one that cannot
 # work -- releases.js reveals them.
-lin_i, win_i = html.index(">Linux</h3>"), html.index(">Windows</h3>")
+# Located by the heading TEXT, not by an exact closing tag: the heading now
+# carries a trailing hint span ("AppImage and Flatpak carry their own Qt"),
+# and pinning `>Linux</h3>` made this file fail on a page that was correct.
+def _col(name):
+    m = re.search(r"<h3[^>]*>" + name + r"\b", html)
+    if not m:
+        raise SystemExit("check.py: no <h3> for " + name)
+    return m.start()
+
+
+lin_i, win_i = _col("Linux"), _col("Windows")
 linux_col, rest = html[lin_i:win_i], html[win_i:]
 # The responsive pass appends class="lg-cmd" after the attribute, so match the
 # attribute name rather than assuming it closes the tag.
@@ -186,6 +248,39 @@ claimed = re.search(r">Eleven themes", html)
 check("eleven theme swatches", n_sw == 11, "%d swatches" % n_sw)
 check("the page still claims eleven", bool(claimed), "heading reworded?")
 
+# ---- every weight asked for has a face to answer with ----------------------
+# The fonts are self-hosted, and the subset that shipped carries only SOME
+# weights: JetBrains Mono at 400/500/700, Manrope at 400/500/600/700. A rule
+# asking for a weight with no @font-face does not fall back to a near one --
+# with font-display: swap the browser has nothing to swap in and paints the
+# run as NOTHING. That is not hypothetical: `.lg-copy` asked JetBrains Mono
+# for 600 and every Copy button on the download page was an empty rounded
+# rectangle, while the DOM said "Copy" the whole time -- so neither this file
+# nor a jsdom test could see it. Only a render could, and only by looking.
+faces = {}
+for m in re.finditer(r"@font-face\s*\{(.*?)\}", html, re.S):
+    body = m.group(1)
+    fam = re.search(r"font-family:\s*'([^']+)'", body)
+    w = re.search(r"font-weight:\s*(\d+)", body)
+    if fam and w:
+        faces.setdefault(fam.group(1), set()).add(int(w.group(1)))
+check("the page declares its own font faces", bool(faces), "none found")
+
+unanswerable = []
+for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", html):
+    sel, body = m.group(1).strip(), m.group(2)
+    w = re.search(r"font-weight:\s*(\d+)", body)
+    fam = re.search(r"font-family:\s*([^;]+);", body)
+    if not (w and fam):
+        continue
+    for name, weights in faces.items():
+        if name in fam.group(1) and int(w.group(1)) not in weights:
+            unanswerable.append("%s asks %s for %s (have %s)"
+                                % (sel.splitlines()[-1].strip(), name, w.group(1),
+                                   ",".join(str(x) for x in sorted(weights))))
+check("every font-weight has a face to answer it", not unanswerable,
+      "; ".join(unanswerable))
+
 # ---- structured data --------------------------------------------------------
 # Google picked the GitHub repository as this page's canonical while the
 # domain still redirected there. The self-referencing canonical says this URL
@@ -244,57 +339,25 @@ gitlab = sorted(
 check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
 
 # ---- motion ---------------------------------------------------------------
-# The progress bar, the sticky-header state and the nav marker are all driven
-# from motion.js. The bar ships at scaleX(0) so that a reader whose browser
-# never runs the script sees no bar at all, rather than one stuck full or
-# stuck empty.
-check("motion.js is served", os.path.exists(os.path.join(PUB, "motion.js")))
-check("the page loads motion.js", '<script src="/motion.js"' in html)
-# THE BAKED DATE, not just the baked version.
+# THE MOTION LAYER IS GONE, and so are the five invariants that tested it.
 #
-# index.html carries hard-coded values so the page is correct with JavaScript
-# OFF -- and that is exactly the reader for whom a stale value is never
-# corrected. The version was asserted here; the DATE was not, and on
-# 2026-09-13 it was found reading 2026-08-27 against a feed saying 2026-09-10.
-# Two weeks wrong, for the only visitor the baked copy exists to serve.
-baked_date = re.search(r'data-lg-bind="released"[^>]*>([^<]+)<', html)
-check("the baked release date matches the feed",
-      baked_date is not None and baked_date.group(1).strip() == feed["released"],
-      f'baked {baked_date.group(1).strip() if baked_date else "MISSING"!r} '
-      f'vs feed {feed["released"]!r}')
+# They asserted that the progress bar shipped empty, that the scroll sentinel
+# existed, that the hero "arrived as a ladder", that the swatches cascaded and
+# that panels were tagged for the spotlight -- every one of them a check on a
+# decoration rather than on the product. The 2026-09-13 redesign deleted the
+# decorations (eight keyframes, 35 scroll reveals, the marquee, the progress
+# bar) because the application has none of them, and a page built from the
+# app's own tokens should not either. releases.js already owns the two
+# behaviours that were worth keeping -- the lightbox and the copy buttons --
+# so motion.js went with them.
 
-check("the progress bar ships empty", "transform: scaleX(0);" in html)
-# Bounded, or a renamed attribute (data-lg-topmost, data-lg-topX) still
-# contains the needle and the check passes over a sentinel motion.js
-# can no longer find.
-check("the scroll sentinel is present",
-      bool(re.search(r"data-lg-top(?![\w-])", html)))
-
-# The hero used to arrive all at once. Every rung of the ladder must be a
-# different delay, or some of it is landing together again.
-rungs = re.findall(r"lgRise 0\.9s cubic-bezier\(0\.16,1,0\.3,1\) ([\d.]+)s both",
-                   html)
-check("the hero arrives as a ladder",
-      len(rungs) == 7 and len(set(rungs)) == 7,
-      "%d rungs, %d distinct: %s" % (len(rungs), len(set(rungs)), rungs))
-
-# A scroll-driven animation ignores animation-delay -- its progress comes from
-# the scroll position -- so the swatch cascade has to live in animation-range.
-# Equal ranges would light all eleven at once.
-ranges = re.findall(r'animation-range: entry 0% cover (\d+)%;"><span class="lg-swatch"',
-                    html)
-check("the swatches cascade", len(ranges) == 11 and len(set(ranges)) == 11,
-      "%d ranges, %d distinct" % (len(ranges), len(set(ranges))))
-
-n_cards = html.count('lg-card"') + html.count('lg-card ')
-check("panels are tagged for the spotlight", n_cards >= 10,
-      "%d tagged" % n_cards)
 
 # ---- no cache skew between the HTML and the scripts that read it ----------
-# Both of these read the DOM the generator emits, so neither may outlive that
+# releases.js reads the DOM the generator emits, so it may not outlive that
 # DOM in a cache. This is the check that would have caught the bug where a
-# new page ran an hour-old script; it covers motion.js for the same reason.
-for script in ("releases.js", "motion.js"):
+# new page ran an hour-old script. It is written as a loop over a tuple
+# because the site has carried two such scripts before and may again.
+for script in ("releases.js",):
     js_rule = re.search(r"^/%s\s*\n\s*Cache-Control:\s*(.+)$"
                         % re.escape(script), headers, re.M)
     policy = (js_rule.group(1).strip() if js_rule else "(no rule)")

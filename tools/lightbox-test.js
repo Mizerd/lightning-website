@@ -28,6 +28,7 @@ const html = fs.readFileSync(ROOT + "/public/index.html", "utf8")
   .replace(/<script src="\/releases\.js" defer><\/script>/, "");
 const js = fs.readFileSync(ROOT + "/public/releases.js", "utf8");
 const feed = fs.readFileSync(ROOT + "/public/releases.json", "utf8");
+const feedObj = JSON.parse(feed);
 
 // Closing is two-phase now: the class comes off and the page is released
 // at once, and `hidden` follows once the fade has run. FADE must stay
@@ -101,7 +102,16 @@ async function run(apiUp) {
   // The phrase version passed for a year over a caption that described a GIF
   // picker the picture did not contain -- it only ever proved the string was
   // somewhere in the file, not that the overlay copied the right one.
-  const cap0 = btns[0].closest("figure").querySelector("figcaption").textContent;
+  //
+  // Since the 2026-09-13 redesign the figures carry no <figcaption>: each
+  // screenshot sits beside the paragraph that describes it. Full screen there
+  // is no such paragraph, so the overlay falls back to the image's alt. Read
+  // the expected value off the clicked figure either way -- writing the
+  // fallback rule down twice is how a test stops testing it.
+  const figcap0 = btns[0].closest("figure").querySelector("figcaption");
+  const cap0 = figcap0 ? figcap0.textContent
+                       : btns[0].querySelector("img").getAttribute("alt");
+  ok(tag + " the caption source is not empty", !!cap0, "no caption and no alt");
   ok(tag + " it carries the figure's caption",
      lb.querySelector("figcaption").textContent === cap0,
      lb.querySelector("figcaption").textContent);
@@ -179,10 +189,17 @@ async function run(apiUp) {
      JSON.stringify(ld.sameAs));
 
   // --- nothing regressed in the copy buttons -----------------------------
+  // Counted off the page against the FEED, never written down here: this line
+  // said `=== 6` while the feed listed five Linux packages, which is a number
+  // that went stale the moment the card set changed and told nobody.
   const copy = [...doc.querySelectorAll("[data-lg-copybtn]")];
+  const nLinux = feedObj.packages.filter((p) => p.os === "linux").length;
+  ok(tag + " a copy button per Linux package",
+     copy.length === nLinux,
+     copy.length + " buttons, " + nLinux + " Linux packages");
   ok(tag + " copy buttons still revealed",
-     copy.length === 6 && copy.every((b) => !b.hidden),
-     copy.length + " buttons, " + copy.filter((b) => b.hidden).length + " hidden");
+     copy.length > 0 && copy.every((b) => !b.hidden),
+     copy.filter((b) => b.hidden).length + " of " + copy.length + " hidden");
 }
 
 (async () => {

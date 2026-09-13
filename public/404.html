@@ -5,9 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found — Lightning</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#0c0f14">
+<meta name="theme-color" content="#0E0E14">
 <link rel="icon" href="/assets/lightning-mark.svg">
 <style>
+  /* Hand-written, not generated: Cloudflare serves this on an unmatched path,
+     so it must stand alone with no script and no shared stylesheet. The tokens
+     are copied from build-site.py's :root — Indigo Night surfaces, and links
+     in their own ink because the Storm accent cannot carry AA at body size.
+     If they move there, move them here.
+
+     Only the weights the self-hosted subsets carry. A weight with no face does
+     not fall back to a near one: with font-display: swap there is nothing to
+     swap in and the run paints as NOTHING, which is exactly how the download
+     page's Copy buttons shipped empty. */
   @font-face {
     font-family: 'Manrope';
     font-style: normal;
@@ -22,6 +32,15 @@
     font-display: swap;
     src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
   }
+  :root {
+    --page:   #0E0E14;
+    --raised: #16161F;
+    --border: #423E4E;
+    --text:   #E8E6F0;
+    --text-2: #B6B3C4;
+    --text-3: #8A8C9E;
+    --link:   #93C5FD;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     min-height: 100vh;
@@ -29,46 +48,50 @@
     align-items: center;
     justify-content: center;
     padding: 32px;
-    background: #0c0f14;
-    color: #e8edf5;
+    background: var(--page);
+    color: var(--text);
     font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 460px; text-align: center; }
-  img { width: 64px; height: 64px; opacity: 0.9; }
+  main { max-width: 470px; }
+  img { width: 40px; height: 40px; }
   .code {
-    margin-top: 28px;
+    margin-top: 22px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11.5px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #5f88cc;
+    font-size: 12px;
+    color: var(--text-3);
   }
-  h1 { margin-top: 14px; font-size: 34px; line-height: 1.15; font-weight: 700; }
-  p { margin-top: 14px; font-size: 15px; line-height: 1.6; color: #97a4b4; }
+  h1 {
+    margin-top: 10px; font-size: 34px; line-height: 1.15;
+    font-weight: 600; letter-spacing: -0.015em;
+  }
+  p { margin-top: 14px; font-size: 15.5px; line-height: 1.65; color: var(--text-2); }
   a.home {
     display: inline-block;
     margin-top: 26px;
-    padding: 13px 22px;
+    padding: 11px 18px;
     border-radius: 9px;
-    background: #3b7ff0;
-    color: #fff;
-    font-size: 14.5px;
+    border: 1px solid var(--border);
+    background: var(--raised);
+    color: var(--text);
+    font-size: 14px;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.3s ease;
+    transition: border-color 120ms ease;
   }
-  a.home:hover { background: #5590f5; }
+  a.home:hover { border-color: var(--text-3); }
+  .alt { margin-top: 18px; font-size: 14px; color: var(--text-3); }
+  .alt a { color: var(--link); }
 </style>
 </head>
 <body>
 <main>
   <img src="/assets/lightning-mark.svg" alt="">
-  <div class="code">Error 404</div>
-  <h1>That page isn't here</h1>
-  <p>The link may be out of date, or the page may have moved. Everything about Lightning lives on the front page.</p>
-  <a class="home" href="/">Back to lightning-matrix.org</a>
+  <div class="code">404</div>
+  <h1>That page isn’t here.</h1>
+  <p>The link may be out of date, or the page may have moved. This site is one page — everything about Lightning is on it.</p>
+  <a class="home" href="/">Back to the front page</a>
+  <p class="alt">Looking for a download? <a href="/#download">Downloads</a> · <a href="https://github.com/Mizerd/lightning">Source</a></p>
 </main>
 </body>
 </html>

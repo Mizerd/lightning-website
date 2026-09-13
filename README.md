@@ -35,6 +35,7 @@ artifact/
   Lightning.html     <- the original Claude artifact this site was built from
 tools/
   build-site.py      <- GENERATES public/index.html; edit this, not the HTML
+  bump-feed.py       <- points releases.json at what GitHub actually published
   fontfaces.css      <- the self-hosted @font-face block build-site.py inlines
   unbundle.py        <- converted that artifact into public/; history, do not run
   check.py           <- invariant checks; run after editing public/
@@ -48,8 +49,32 @@ Nothing outside `public/` is deployed.
 
 ## Cutting a release
 
-Edit **`public/releases.json`** and push. That is the whole procedure — the
-version, release date, and every package card on the page come from that file.
+Point the feed at what GitHub published, rebuild, check, push:
+
+```sh
+python3 tools/bump-feed.py            # newest release (or: bump-feed.py v0.9.5)
+python3 tools/build-site.py
+python3 tools/check.py
+python3 tools/check-assets.py
+```
+
+`public/releases.json` is still the single source — the version, release date
+and every package card come from it — but **do not retype the filenames.** The
+Windows and macOS assets embed the release commit's short SHA, so a
+find-and-replace of the version number leaves three cards naming files that do
+not exist, and the page keeps looking perfect because the JavaScript pass
+quietly repairs it for anyone running JavaScript. The reader without it gets a
+404. `bump-feed.py` takes every name from the GitHub API, never invents one,
+and keeps the editorial parts (label, badge, the install command's shape,
+`match`) exactly as they were.
+
+It also **drops a package GitHub does not have**. macOS is `allow_failure` in
+the release pipeline, deliberately, so one sleeping Mac cannot block a release
+— and at 0.9.5 it was absent for an unrelated reason. A card for an asset that
+was never uploaded is a dead download button, so the package leaves the feed
+and `build-site.py` omits that platform's block entirely.
+
+Run it **after** the release publishes. Before that there is nothing to read.
 
 ```jsonc
 {

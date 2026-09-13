@@ -14,7 +14,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://www.lightning-matrix.org/">
 <link rel="icon" href="/assets/lightning-mark.svg">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lightning","url":"https://www.lightning-matrix.org/","applicationCategory":"CommunicationApplication","applicationSubCategory":"Matrix client","operatingSystem":"Linux, Windows, macOS","softwareVersion":"0.9.5","softwareRequirements":"Qt 6.8 or later","license":"https://www.gnu.org/licenses/gpl-3.0.html","isAccessibleForFree":true,"description":"A native Matrix desktop client written in Qt 6 on top of the official Rust Matrix SDK, with group calls, threads, Spaces and search inside encrypted rooms.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"sameAs":["https://github.com/Mizerd/lightning"],"codeRepository":"https://github.com/Mizerd/lightning","screenshot":["https://www.lightning-matrix.org/assets/screenshot-thread-panel.png","https://www.lightning-matrix.org/assets/screenshot-call.png","https://www.lightning-matrix.org/assets/screenshot-channels.png","https://www.lightning-matrix.org/assets/screenshot-timeline.png","https://www.lightning-matrix.org/assets/screenshot-emoji-and-polls.png","https://www.lightning-matrix.org/assets/screenshot-theme-editor.png"],"author":{"@type":"Person","name":"Rokas Smetonis"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lightning","url":"https://www.lightning-matrix.org/","applicationCategory":"CommunicationApplication","applicationSubCategory":"Matrix client","operatingSystem":"Linux, Windows, macOS","softwareVersion":"0.9.5","softwareRequirements":"Qt 6.8 or later","license":"https://www.gnu.org/licenses/gpl-3.0.html","isAccessibleForFree":true,"description":"A native Matrix desktop client written in Qt 6 on top of the official Rust Matrix SDK, with group calls, threads, Spaces and search inside encrypted rooms.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"sameAs":["https://github.com/Mizerd/lightning"],"codeRepository":"https://github.com/Mizerd/lightning","screenshot":["https://www.lightning-matrix.org/assets/shots/home-overview--indigo-night.png","https://www.lightning-matrix.org/assets/shots/call-grid--indigo-night.png","https://www.lightning-matrix.org/assets/shots/thread-view--indigo-night.png","https://www.lightning-matrix.org/assets/shots/media-gallery--indigo-night.png","https://www.lightning-matrix.org/assets/shots/find-in-room--indigo-night.png","https://www.lightning-matrix.org/assets/shots/settings-themes--indigo-night.png","https://www.lightning-matrix.org/assets/shots/community-overview--indigo-night.png"],"author":{"@type":"Person","name":"Rokas Smetonis"}}</script>
 <style>
 @font-face {
   font-family: 'JetBrains Mono';
@@ -705,8 +705,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
       <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; six&nbsp;Linux&nbsp;formats</p>
     </div>
     <figure class="lg-shot">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open Lightning showing a room timeline with a thread panel open full size">
-    <img src="/assets/screenshot-thread-panel.png" alt="Lightning showing a room timeline with a thread panel open" width="2400" height="1267" loading="lazy" decoding="async">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open Lightning showing a room timeline, direct messages and an invite full size">
+    <img src="/assets/shots/home-overview--indigo-night.png" data-lg-shot="home-overview"
+         alt="Lightning showing a room timeline, direct messages and an invite" width="2400" height="1281" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>
@@ -742,7 +743,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 
 <section id="features">
   <div class="wrap">
-    <h2>Five things that are unusual</h2>
+    <h2>Six things that are unusual</h2>
     <p class="lg-lede">It does the ordinary things too. These are the ones worth a paragraph.</p>
 
     <div class="lg-row">
@@ -751,8 +752,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
         <p>MatrixRTC, interoperable with Element Call. Share a screen or one window, scaled on the GPU. Per-participant volume, raised hands, and a call that survives you reading another room.</p>
       </div>
       <figure class="lg-shot">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open A group call in Lightning full size">
-    <img src="/assets/screenshot-call.png" alt="A group call in Lightning" width="2400" height="1278" loading="lazy" decoding="async">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open A four-person call in Lightning full size">
+    <img src="/assets/shots/call-grid--indigo-night.png" data-lg-shot="call-grid"
+         alt="A four-person call in Lightning" width="2400" height="1281" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>
@@ -764,8 +766,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
         <p>A server cannot search what it cannot read, so Lightning keeps a local index. It is the one place decrypted text is stored on purpose, and it is documented rather than glossed over.</p>
       </div>
       <figure class="lg-shot">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open A room timeline in Lightning full size">
-    <img src="/assets/screenshot-timeline.png" alt="A room timeline in Lightning" width="2400" height="1267" loading="lazy" decoding="async">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open Searching inside a room in Lightning full size">
+    <img src="/assets/shots/find-in-room--indigo-night.png" data-lg-shot="find-in-room"
+         alt="Searching inside a room in Lightning" width="2400" height="1281" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>
@@ -777,8 +780,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
         <p>Drag Spaces in the rail, drop one on another to make a folder, edit every setting down to the power-level matrix. Or switch to the Channels layout instead.</p>
       </div>
       <figure class="lg-shot">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open The Channels layout in Lightning full size">
-    <img src="/assets/screenshot-channels.png" alt="The Channels layout in Lightning" width="2400" height="1278" loading="lazy" decoding="async">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open A Space and its rooms in Lightning full size">
+    <img src="/assets/shots/community-overview--indigo-night.png" data-lg-shot="community-overview"
+         alt="A Space and its rooms in Lightning" width="2400" height="1281" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>
@@ -790,8 +794,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
         <p>Real <code>m.thread</code> relations on the SDK's own thread timelines, with summary cards and per-thread unread state. Replies never leak into the main timeline — the part most clients get wrong.</p>
       </div>
       <figure class="lg-shot">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open Reactions and a poll in Lightning full size">
-    <img src="/assets/screenshot-emoji-and-polls.png" alt="Reactions and a poll in Lightning" width="2400" height="1267" loading="lazy" decoding="async">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open A thread panel open beside a room timeline in Lightning full size">
+    <img src="/assets/shots/thread-view--indigo-night.png" data-lg-shot="thread-view"
+         alt="A thread panel open beside a room timeline in Lightning" width="2400" height="1281" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>
@@ -803,8 +808,23 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
         <p>Pick a colour for any part of the window and watch a sample room repaint as you go. Eleven themes ship, all WCAG-AA checked, each one per-account.</p>
       </div>
       <figure class="lg-shot">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open The theme editor in Lightning full size">
-    <img src="/assets/screenshot-theme-editor.png" alt="The theme editor in Lightning" width="2400" height="1274" loading="lazy" decoding="async">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open The appearance settings in Lightning full size">
+    <img src="/assets/shots/settings-themes--indigo-night.png" data-lg-shot="settings-themes"
+         alt="The appearance settings in Lightning" width="2400" height="1281" loading="lazy" decoding="async">
+    <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
+  </button>
+</figure>
+    </div>
+
+    <div class="lg-row">
+      <div class="lg-row-copy">
+        <h3>Pictures, video, audio and files</h3>
+        <p>Inline images, video with a real poster frame, playable voice messages, and attachments that keep their captions. Encrypted rooms included — decrypted through the media bridge, never a bare URL.</p>
+      </div>
+      <figure class="lg-shot">
+  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open Images, video and files in a Lightning room full size">
+    <img src="/assets/shots/media-gallery--indigo-night.png" data-lg-shot="media-gallery"
+         alt="Images, video and files in a Lightning room" width="2400" height="1281" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>
@@ -954,7 +974,14 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
     </div>
 
     <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
-
+    <div class="lg-room">
+      <div class="lg-room-body">
+        <h3>Say hello</h3>
+        <p>A chill space for anyone using Lightning or curious about it. Bugs and questions both welcome — here or in the issue tracker.</p>
+        <span class="alias">#lightning:matrix.smetonis.net</span>
+      </div>
+      <a class="lg-room-join" href="https://matrix.to/#/%23lightning%3Amatrix.smetonis.net">Join</a>
+    </div>
   </div>
 </section>
 

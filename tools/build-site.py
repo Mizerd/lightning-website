@@ -41,19 +41,20 @@ RELEASES_URL = feed["releases_url"]
 # Read from the PNG headers, never written down: check.py asserts that the
 # width/height the page declares are the file's real ones, and a hand-kept
 # table here would be a second copy of that truth waiting to drift from it.
-def _png_size(name):
-    with open(PUB / "assets" / name, "rb") as fh:
+DEFAULT_THEME = "indigo-night"
+
+
+def _png_size(rel):
+    with open(PUB / "assets" / rel, "rb") as fh:
         return struct.unpack(">II", fh.read(24)[16:24])
 
 
-SHOTS = {name: _png_size(name) for name in (
-    "screenshot-thread-panel.png",
-    "screenshot-call.png",
-    "screenshot-channels.png",
-    "screenshot-timeline.png",
-    "screenshot-emoji-and-polls.png",
-    "screenshot-theme-editor.png",
-)}
+# One entry per SCENARIO. Every scenario exists once per theme under
+# assets/shots/<scenario>--<theme>.png, captured from the client's own
+# screenshot-demo mode, so picking a theme changes the pictures too.
+SCENARIOS = ("home-overview", "call-grid", "thread-view", "media-gallery",
+             "find-in-room", "settings-themes", "community-overview")
+SHOTS = {sc: _png_size(f"shots/{sc}--{DEFAULT_THEME}.png") for sc in SCENARIOS}
 
 # The eleven themes, named as the app names them. The swatch colours are each
 # theme's own accent from qml/AppTheme.qml. check.py cannot verify they are
@@ -96,11 +97,19 @@ def _tok(name, token):
 
 
 def shot(name, alt, cls=""):
+    """One screenshot figure.
+
+    `data-lg-shot` carries the scenario; releases.js rewrites the src when the
+    theme changes, so the pictures follow the palette the reader picked. The
+    baked src is the default theme, so a page without JavaScript still shows
+    real screenshots rather than empty boxes.
+    """
     w, h = SHOTS[name]
     extra = f" {cls}" if cls else ""
     return f'''<figure class="lg-shot{extra}">
   <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open {alt} full size">
-    <img src="/assets/{name}" alt="{alt}" width="{w}" height="{h}" loading="lazy" decoding="async">
+    <img src="/assets/shots/{name}--{DEFAULT_THEME}.png" data-lg-shot="{name}"
+         alt="{alt}" width="{w}" height="{h}" loading="lazy" decoding="async">
     <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
   </button>
 </figure>'''
@@ -245,7 +254,8 @@ LD = {
     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
     "sameAs": ["https://github.com/Mizerd/lightning"],
     "codeRepository": "https://github.com/Mizerd/lightning",
-    "screenshot": [f"https://www.lightning-matrix.org/assets/{n}" for n in SHOTS],
+    "screenshot": [f"https://www.lightning-matrix.org/assets/shots/{n}--{DEFAULT_THEME}.png"
+                   for n in SHOTS],
     "author": {"@type": "Person", "name": "Rokas Smetonis"},
 }
 
@@ -705,7 +715,7 @@ def build():
       </div>
       <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats</p>
     </div>
-    {shot("screenshot-thread-panel.png", "Lightning showing a room timeline with a thread panel open")}
+    {shot("home-overview", "Lightning showing a room timeline, direct messages and an invite")}
   </div>
 </section>
 
@@ -738,7 +748,7 @@ def build():
 
 <section id="features">
   <div class="wrap">
-    <h2>Five things that are unusual</h2>
+    <h2>Six things that are unusual</h2>
     <p class="lg-lede">It does the ordinary things too. These are the ones worth a paragraph.</p>
 
     <div class="lg-row">
@@ -746,7 +756,7 @@ def build():
         <h3>Group calls, with screen sharing</h3>
         <p>MatrixRTC, interoperable with Element Call. Share a screen or one window, scaled on the GPU. Per-participant volume, raised hands, and a call that survives you reading another room.</p>
       </div>
-      {shot("screenshot-call.png", "A group call in Lightning")}
+      {shot("call-grid", "A four-person call in Lightning")}
     </div>
 
     <div class="lg-row">
@@ -754,7 +764,7 @@ def build():
         <h3>Search inside encrypted rooms</h3>
         <p>A server cannot search what it cannot read, so Lightning keeps a local index. It is the one place decrypted text is stored on purpose, and it is documented rather than glossed over.</p>
       </div>
-      {shot("screenshot-timeline.png", "A room timeline in Lightning")}
+      {shot("find-in-room", "Searching inside a room in Lightning")}
     </div>
 
     <div class="lg-row">
@@ -762,7 +772,7 @@ def build():
         <h3>Spaces, and a Channels layout</h3>
         <p>Drag Spaces in the rail, drop one on another to make a folder, edit every setting down to the power-level matrix. Or switch to the Channels layout instead.</p>
       </div>
-      {shot("screenshot-channels.png", "The Channels layout in Lightning")}
+      {shot("community-overview", "A Space and its rooms in Lightning")}
     </div>
 
     <div class="lg-row">
@@ -770,7 +780,7 @@ def build():
         <h3>Threads that are actually threads</h3>
         <p>Real <code>m.thread</code> relations on the SDK's own thread timelines, with summary cards and per-thread unread state. Replies never leak into the main timeline — the part most clients get wrong.</p>
       </div>
-      {shot("screenshot-emoji-and-polls.png", "Reactions and a poll in Lightning")}
+      {shot("thread-view", "A thread panel open beside a room timeline in Lightning")}
     </div>
 
     <div class="lg-row">
@@ -778,7 +788,15 @@ def build():
         <h3>A theme editor, not a theme setting</h3>
         <p>Pick a colour for any part of the window and watch a sample room repaint as you go. Eleven themes ship, all WCAG-AA checked, each one per-account.</p>
       </div>
-      {shot("screenshot-theme-editor.png", "The theme editor in Lightning")}
+      {shot("settings-themes", "The appearance settings in Lightning")}
+    </div>
+
+    <div class="lg-row">
+      <div class="lg-row-copy">
+        <h3>Pictures, video, audio and files</h3>
+        <p>Inline images, video with a real poster frame, playable voice messages, and attachments that keep their captions. Encrypted rooms included — decrypted through the media bridge, never a bare URL.</p>
+      </div>
+      {shot("media-gallery", "Images, video and files in a Lightning room")}
     </div>
   </div>
 </section>

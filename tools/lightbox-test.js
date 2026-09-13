@@ -69,7 +69,10 @@ async function run(apiUp) {
   // down here: the set changes whenever the client does, and a hard-coded
   // number is what a test goes stale as. What has to hold is that there is at
   // least one, and that every one of them has a trigger and a badge.
-  const imgs = [...doc.querySelectorAll('img[src^="/assets/screenshot-"]')];
+  // Every screenshot carries data-lg-shot (the scenario); the src is that
+  // scenario in the CURRENT theme and changes when the reader picks another,
+  // so matching on the path would break the moment a theme is switched.
+  const imgs = [...doc.querySelectorAll("img[data-lg-shot]")];
   ok(tag + " the page has screenshots", imgs.length > 0, "none found");
   const btns = doc.querySelectorAll("[data-lg-zoom]");
   ok(tag + " a zoom trigger per screenshot", btns.length === imgs.length,

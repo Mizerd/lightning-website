@@ -308,6 +308,14 @@
   function applyTheme(slug, remember) {
     if (!slug) return;
     document.documentElement.setAttribute("data-theme", slug);
+    // The pictures follow the palette. Every scenario was captured in every
+    // theme from the client's own demo mode, so the screenshots show the
+    // application in the theme the reader just picked rather than in a
+    // different one from the page around them.
+    document.querySelectorAll("[data-lg-shot]").forEach(function (img) {
+      img.src = "/assets/shots/" + img.getAttribute("data-lg-shot")
+                + "--" + slug + ".png";
+    });
     document.querySelectorAll("[data-lg-theme]").forEach(function (b) {
       b.setAttribute("aria-pressed",
                      b.getAttribute("data-lg-theme") === slug ? "true" : "false");

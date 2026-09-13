@@ -203,30 +203,56 @@ check("every copy button ships hidden",
 # whenever the client does, and a hard-coded count is exactly what goes stale.
 # What has to hold is that EVERY screenshot on the page is sized and openable,
 # so the total is counted off the page and the two subsets are compared to it.
-on_page = re.findall(r'<img src="/assets/(screenshot-[a-z-]+\.png)"', html)
+# Every screenshot exists in EVERY theme, because picking a theme rewrites the
+# src to that theme's copy -- a gap shows as a broken image on a page that
+# looked fine in the default theme, which is the only one the markup names.
+themes = [t["name"].lower().replace(" ", "-")
+          for t in json.load(open(os.path.join(PUB, "themes.json"),
+                                  encoding="utf-8"))["themes"]]
+on_page = re.findall(r'data-lg-shot="([a-z-]+)"', html)
 check("the page shows screenshots", bool(on_page), "none found")
 
-shots = re.findall(r'<img src="/assets/(screenshot-[a-z-]+\.png)"[^>]*?'
-                   r'width="(\d+)" height="(\d+)"', html)
+shot_dir = os.path.join(PUB, "assets", "shots")
+want = set()
+for sc in on_page:
+    for th in themes:
+        want.add("%s--%s.png" % (sc, th))
+have = set(f for f in os.listdir(shot_dir) if f.endswith(".png")) \
+    if os.path.isdir(shot_dir) else set()
+check("every scenario exists in every theme", not (want - have),
+      "missing: " + ", ".join(sorted(want - have)[:6]))
+# And nothing else is in there. A refresh replaces pictures, and the old files
+# are still served and still cost a deploy while nothing points at them.
+check("no unused screenshot in assets/shots/", not (have - want),
+      "orphans: " + ", ".join(sorted(have - want)[:6]))
+
+shots = re.findall(r'<img src="/assets/shots/([a-z-]+--[a-z-]+\.png)"[^>]*?'
+                   r'width="(\d+)" height="(\d+)"', html, re.S)
 check("every screenshot declares its size", len(shots) == len(on_page),
       "%d of %d" % (len(shots), len(on_page)))
 
 wrong = []
 for name, w, h in shots:
-    with open(os.path.join(PUB, "assets", name), "rb") as fh:
+    with open(os.path.join(shot_dir, name), "rb") as fh:
         head = fh.read(24)
     rw, rh = struct.unpack(">II", head[16:24])
     if (rw, rh) != (int(w), int(h)):
         wrong.append("%s says %sx%s, is %dx%d" % (name, w, h, rw, rh))
 check("declared sizes match the files", not wrong, "; ".join(wrong))
 
-# A refresh replaces pictures, and the old files are easy to leave behind:
-# they are still served, still cost a deploy, and nothing on the page points
-# at them. This is what says so.
-orphans = sorted(set(f for f in os.listdir(os.path.join(PUB, "assets"))
-                     if f.startswith("screenshot-") and f.endswith(".png"))
-                 - set(on_page))
-check("no unused screenshot in assets/", not orphans, ", ".join(orphans))
+# Every theme's copy must be the SAME shape as the one the markup sizes, or
+# swapping themes reflows the page under the reader.
+odd = []
+for sc in set(on_page):
+    sizes = set()
+    for th in themes:
+        f = os.path.join(shot_dir, "%s--%s.png" % (sc, th))
+        if os.path.exists(f):
+            with open(f, "rb") as fh:
+                sizes.add(struct.unpack(">II", fh.read(24)[16:24]))
+    if len(sizes) > 1:
+        odd.append("%s: %s" % (sc, sorted(sizes)))
+check("a scenario is the same size in every theme", not odd, "; ".join(odd))
 
 # The zoom trigger is a <button> so it is keyboard-reachable; a click handler
 # on the <img> would not be. One per screenshot, no more.

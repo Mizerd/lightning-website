@@ -92,5 +92,11 @@
       "remove": "move Lightning.app to the Bin"
     }
   ],
-  "macos_note": "Not available for 0.9.5. Returns in 0.9.6. The most recent macOS build is 0.9.4."
+  "macos_note": "Not available for 0.9.5. Returns in 0.9.6. The most recent macOS build is 0.9.4.",
+  "support": {
+    "title": "Say hello",
+    "blurb": "A chill space for anyone using Lightning or curious about it. Bugs and questions both welcome — here or in the issue tracker.",
+    "alias": "#lightning:matrix.smetonis.net",
+    "url": "https://matrix.to/#/%23lightning%3Amatrix.smetonis.net"
+  }
 }

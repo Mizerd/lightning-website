@@ -234,6 +234,7 @@ CSS = """
 [hidden] { display: none !important; }
 
 html { -webkit-text-size-adjust: 100%; }
+html, body { overflow-x: clip; }
 body {
   margin: 0;
   background: var(--page);

@@ -501,151 +501,70 @@ generic "local references resolve" check never sees it. It has its own check —
 a social card that 404s is invisible until someone shares a link and gets a
 blank box.
 
-**Two things outside this repository still point the wrong way**, and neither
-can be fixed from here:
-
-- the GitHub repository has **no homepage URL set**, so the page Google
-  currently treats as canonical does not link back to the site
-- its description still reads "Mirror of the canonical source at
-  gitlab.smetonis.net…", which tells a crawler in as many words that the
-  canonical source is somewhere else
+**Those two external pointers are FIXED** (checked 2026-09-13 against the
+GitHub API): the repository's homepage is `https://www.lightning-matrix.org`
+and its description now leads with the site before mentioning the mirror. They
+were the reason Google treated the GitHub page as canonical. Nothing here can
+verify them on an ongoing basis — `curl -s https://api.github.com/repos/Mizerd/lightning`
+is the check, and it is worth repeating if search results ever drift back.
 
 ## Motion
 
-The artifact arrived with a motion vocabulary already — `lgRise` reveals,
-drifting hero glows, a marquee, a light strike across the header — so what is
-here extends it rather than introducing a second style of movement.
+**There is none, and that is the design.** The 2026-09-13 rebuild deleted the
+whole motion layer — eight keyframe animations, 35 scroll reveals, a marquee, a
+drifting hero glow, a light strike across the header and a scroll progress bar
+— along with `motion.js`, the 70-line script that drove the parts CSS could not
+work out for itself.
 
-**Almost all of it is CSS.** `motion.js` supplies only the things a stylesheet
-cannot work out for itself: whether the page has left the top, which section
-is on screen, and where the pointer is inside a panel. That split is the point
-— the artifact's own reset already carries
+They went because **the application has none of them.** The page's argument is
+that Lightning is a restrained native client; a page that arrives in a cascade
+of reveals is arguing the opposite in the only language a visitor can check
+before downloading anything. `releases.js` kept the two behaviours that were
+doing work rather than decoration — the screenshot lightbox and the copy
+buttons — and everything else is static.
 
-```css
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
-```
+Five `check.py` invariants went with it: the progress bar shipping empty, the
+scroll sentinel existing, the hero "arriving as a ladder", the swatch cascade,
+and panels being tagged for a spotlight. Every one of them tested a decoration.
+If motion ever comes back, it needs a reason that survives the same question:
+does the client do this?
 
-so a reader who has asked for less movement gets none of the new work either,
-without a second switch that could be forgotten. Verified with Firefox's
-`ui.prefersReducedMotion` pref: nothing animating, nothing transitioning,
-`scroll-behavior: auto`, no content stuck invisible, the overlay still opening
-and closing.
-
-If `motion.js` never loads, the page is what it was: the header keeps its
-resting colour, no nav link is marked, and panels do not light up.
-
-### Firefox has no scroll timelines, and that matters here
-
-Sixteen elements in the artifact animate with
-
-```css
-animation: lgRise ... both;
-animation-timeline: view();
-animation-range: entry 0% cover 20%;
-```
-
-Chrome and Safari tie those to the element's passage through the viewport.
-**Firefox does not support scroll-driven animations at all** — it drops
-`animation-timeline` as unrecognised and the animation falls back to the
-document timeline, so it runs to completion during page load. Every reveal on
-the page had therefore already happened before you scrolled to it, and Firefox
-users saw a page with no reveals. Nothing looked broken, because `both` leaves
-each element at its finished state, which is exactly why it went unnoticed.
-
-`motion.js` now drives them where the browser has no scroll timelines: each
-one is paused (`both` holds it at `from`, opacity 0) and released by an
-IntersectionObserver. Two details keep that safe:
-
-- an element is **paused and observed in the same breath**, so it can never be
-  left at opacity 0 with nothing to start it
-- it is the **last thing the file does**, so a throw earlier on cannot leave
-  the page half-hidden
-
-The scroll progress bar has the same cause. `animation-timeline: scroll(root
-block)` is the right answer and runs off the main thread — and does nothing in
-Firefox, which is not a rounding error for a Linux Matrix client. It is a
-passive scroll listener coalesced onto a frame instead: the listener sets a
-flag and nothing else, so all reading and writing happens once per frame
-inside the rAF callback rather than turning a scroll into a layout thrash.
-
-### Traps in this pass
-
-- **A style attribute is re-serialised from its parsed form.** Setting any
-  property through `el.style` rewrites the whole attribute — and Firefox has
-  already dropped the `animation-timeline` it could not parse. So
-  `[style*="animation-timeline"]` finds those elements before `motion.js`
-  touches them and finds nothing afterwards. Measure them by
-  `animationPlayState`, not by the attribute.
-- **`requestAnimationFrame` is throttled for content the browser is not
-  painting.** The overlay's fade-in was a nested pair of rAF calls, the usual
-  way to get a "before" frame for a transition. In a background tab or an
-  offscreen frame the callback never runs, and the overlay sits open at
-  opacity 0 swallowing every click. Reading `offsetWidth` forces the same
-  style-and-layout flush with no such condition.
-- **`IntersectionObserver` with a null root uses the *top-level* viewport.**
-  An offscreen iframe therefore intersects nothing, which makes a working page
-  measure as broken. Probe frames have to be on screen.
-- **Closing the overlay is two-phase.** The scroll lock and focus come back at
-  once — making a reader wait out a fade before the page scrolls again is
-  worse than the fade is worth — and `hidden` follows on a timer. A timer, not
-  `transitionend`: under reduced motion every transition is `none`, so
-  `transitionend` would never fire and the overlay would stay on top of the
-  page forever.
-
-### Scrollbars
-
-The install boxes scroll horizontally (`white-space: pre`) and the AppImage
-command is long enough to always show a bar. `:root { color-scheme: dark }`
-does most of the work — it darkens the page's own scrollbar and any form
-control too — and the code boxes additionally get `scrollbar-width: thin` with
-explicit colours, plus the `::-webkit-scrollbar` equivalents, so the bar
-inside a `#070a0e` box is quieter than the page's.
 
 ## Mobile
 
-The artifact was laid out for desktop only: at a 390 px viewport the document
-measured **719 px wide**, so the page sat squeezed against the left edge behind
-a horizontal scroll. The generator now emits a `@media (max-width: 760px)`
-block. The measured causes were, worst first:
+The generated page is one column below **860 px**, and the breakpoint does four
+things: the hero and the alternating feature rows collapse to a single column;
+**the screenshot moves ABOVE the headline** in the hero, so the product arrives
+before the words; the in-page nav links are hidden (the wordmark stays, and the
+hero's own Download button is the affordance); and the vertical rhythm tightens.
 
-1. the nav's seven links in a nowrap flex row — the widest element on the page,
-   and the reason the viewport blew out at all. Below the breakpoint the five
-   in-page links are hidden; the brand and Download button stay.
-2. `repeat(auto-fit, minmax(420px, 1fr))` grids — a 420 px column inside a
-   326 px container. Collapsed to one column.
-3. the "why" rows' `88px 1fr 1.15fr` grid, which kept all three columns and
-   wrapped the prose to about one word per line. Stacked.
-4. the install-command boxes' `white-space: pre`, whose ~624 px max-content
-   width propagated up through every ancestor, because grid and flex children
-   default to `min-width: auto`. They wrap on mobile instead.
-5. desktop type sizes (68 px hero, 42 px section heads) at phone width.
+The install-command boxes are the one element that cannot wrap — a shell command
+broken across lines is a shell command you cannot paste — so they scroll
+horizontally inside their own box, with `scrollbar-width: thin` plus the
+`::-webkit-scrollbar` equivalents. Without those the bar renders in the default
+light theme: a **pure-white** rectangle across a dark card, which is the
+loudest thing on the page at 390 px. That regressed once in the rebuild and was
+caught by rendering rather than by any check.
 
-The sticky alpha bar was a sixth item, fixed later: it ran to four lines and,
-being sticky, cost that on every scroll. Two things were wrong. The `ALPHA`
-pill is a `<span>`, and `_mark()` can only tag `nav|section|div|figure|a|h1-h3`
-— so a predicate written for it silently matched an unrelated amber label in
-the status section instead, and the pill is now tagged by hand in correction 3.
-And the bar is a flex container, which **blockifies its children**: `display:
-inline` on the warning computed to `block`, so the 126 px "what's missing" link
-was pushed onto a row of its own. On mobile the bar becomes a plain block of
-running text, and a shorter second wording (`.lg-alpha-brief`) replaces the
-full sentence — both are in the markup, so the warning is right with JavaScript
-off. Measured 94 px → 52 px at 390 px.
+**Measure, do not eyeball.** `document.documentElement.scrollWidth` must equal
+`clientWidth` at 320 px, and *nothing* should be wider than the viewport — the
+glow and the marquee that used to be the two deliberate exceptions are both
+gone. Measured 2026-09-13 in an iframe at 320 px: `scrollWidth=308
+clientWidth=308`.
 
-Because every style in the page is inline, these overrides need `!important` —
-an inline style beats any stylesheet rule without it. The elements are tagged
-with `lg-*` classes during the build rather than targeted by attribute
-selectors, so the CSS stays greppable.
+The artifact-derived page needed a much longer version of this section, and its
+causes are worth keeping as a list of what to check when a new element is
+added: a nowrap flex row of nav links (the widest element on the page, and the
+reason the viewport blew out at all); `repeat(auto-fit, minmax(420px, 1fr))`
+grids inside a 326 px container; a three-column row grid that wrapped prose to
+about one word per line; `white-space: pre` propagating its max-content width
+up through every ancestor, because grid and flex children default to
+`min-width: auto`; and desktop type sizes at phone width.
 
-`html, body { overflow-x: clip }` is a deliberate backstop, not the fix: all
-five causes above are fixed at source. It is there so a future edit degrades
-into one clipped element instead of shoving the whole layout sideways again.
+`html, body { overflow-x: clip }` is a deliberate backstop, not the fix. It is
+there so a future edit degrades into one clipped element instead of shoving the
+whole layout sideways.
 
-To check a change, measure rather than eyeball — `document.documentElement.scrollWidth`
-must equal `clientWidth` at 320 px, and the only elements wider than the
-viewport should be the hero glow and the marquee, both clipped by design.
 
 ## Local preview
 

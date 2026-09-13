@@ -312,6 +312,24 @@ if ld_m:
           ", ".join(ld_shots))
 
 canon = re.search(r'<link rel="canonical" href="([^"]*)"', html)
+# ---- the tags that tell a crawler this page is the original ---------------
+# Google had already picked the GitHub repository as canonical for this
+# content -- the domain used to redirect there, and a redirect is the
+# strongest duplicate signal there is. Undoing that is the ONLY job of this
+# set of tags, and three of them (og:url, og:site_name, twitter:card) went
+# missing in the 2026-09-13 rebuild without anything noticing, because a
+# missing meta tag has no observable effect on the page at all.
+for tag, pattern in (
+        ("og:url", r'property="og:url" content="https://www\.lightning-matrix\.org/"'),
+        ("og:site_name", r'property="og:site_name"'),
+        ("og:title", r'property="og:title"'),
+        ("og:description", r'property="og:description"'),
+        ("og:type", r'property="og:type"'),
+        ("og:image", r'property="og:image"'),
+        ("twitter:card", r'name="twitter:card" content="summary_large_image"'),
+        ("description", r'name="description"')):
+    check("%s is present" % tag, re.search(pattern, html) is not None)
+
 check("a self-referencing canonical",
       bool(canon) and canon.group(1) == "https://www.lightning-matrix.org/",
       canon.group(1) if canon else "absent")

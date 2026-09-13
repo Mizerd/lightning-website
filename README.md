@@ -382,16 +382,26 @@ match token must actually be a suffix of the file its own card names.
 
 ## The brand
 
-The page pitched "Everything other Matrix clients fake." before it had said
-what it was. The name appeared once, at 18 px in the nav; the mark existed as
-a 26 px nav icon and a 14 px chip. The hero now opens on a lockup — mark,
-wordmark, and the one-line description that was already in `<title>` but
-nowhere on the page — and the `<h1>` keeps its job as the pitch, under a name
-that now means something.
+The original page pitched "Everything other Matrix clients fake." before it had
+said what it was — a swipe at competitors standing where the product's own
+description belonged. The name appeared once, at 18 px in the nav.
+
+The `<h1>` is now the thing itself: **"Lightning writes the interface. The Rust
+SDK writes the Matrix."** It is a claim about how the client is BUILT, it is
+checkable (the architecture section under it names the four layers and who owns
+what), and it is the one sentence that separates this project from every other
+Matrix client — none of which can say it. The second half is set in the muted
+text colour, so the two clauses read as a pair rather than as one long line.
+
+The mark and wordmark sit in the header at 20 px, the size they are in the
+application's own title bar. The eyebrow above the `<h1>` carries the three
+facts a reader needs before anything else and nothing more: version, `alpha`,
+licence.
 
 ## Screenshots
 
-The six screenshots are the only photographs on a 9,000 px page.
+The six screenshots are the only photographs on the page, and every section
+that makes a claim about the interface sits beside one.
 
 > **Refreshing them:** the set is the `SHOTS` table in `build-site.py` —
 > filenames only; the `alt` text lives with the row that shows the picture,

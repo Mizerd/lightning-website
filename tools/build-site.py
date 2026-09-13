@@ -441,7 +441,10 @@ def build():
 <meta property="og:title" content="Lightning — a native Matrix client for the desktop">
 <meta property="og:description" content="Lightning writes the interface. The Rust SDK writes the Matrix. Qt 6, C++20, real end-to-end encryption, group calls that reach Element Call. Linux and NixOS first.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://www.lightning-matrix.org/">
+<meta property="og:site_name" content="Lightning">
 <meta property="og:image" content="https://www.lightning-matrix.org/assets/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://www.lightning-matrix.org/">
 <link rel="icon" href="/assets/lightning-mark.svg">
 <script type="application/ld+json">{json.dumps(LD, separators=(",", ":"))}</script>

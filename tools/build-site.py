@@ -178,7 +178,7 @@ LD = {
     "applicationCategory": "CommunicationApplication",
     "applicationSubCategory": "Matrix client",
     "operatingSystem": "Linux, Windows, macOS",
-    "softwareVersion": VERSION, "softwareRequirements": "Qt 6.5 or later",
+    "softwareVersion": VERSION, "softwareRequirements": "Qt 6.8 or later",
     "license": "https://www.gnu.org/licenses/gpl-3.0.html",
     "isAccessibleForFree": True,
     "description": ("A native Matrix desktop client written in Qt 6 on top of "

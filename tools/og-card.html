@@ -18,42 +18,49 @@
      It is screenshotted rather than drawn in ImageMagick so the type is the
      site's own webfonts, laid out by the same engine as the site.
 
+     Same tokens as build-site.py's :root, and the same rule: no glow, no
+     gradient, no perspective. The card is the first thing anyone sees of this
+     project, and the 2026-09-13 redesign's whole argument is that the page
+     shows the application rather than decorating it. It used to open on two
+     radial gradients and a rotated screenshot in Space Grotesk -- a typeface
+     that appears nowhere on the site and contradicted the colophon's "set in
+     Manrope and JetBrains Mono, the same faces the application bundles".
+
      Do NOT leave this file in public/ -- it is a build input, not a page. -->
 <!doctype html><html><head><meta charset="utf-8">
 <style>
-@font-face{font-family:'Space Grotesk';src:url("/fonts/space-grotesk-latin.woff2") format('woff2');font-weight:700;font-display:block}
-@font-face{font-family:'Space Grotesk';src:url("/fonts/space-grotesk-latin.woff2") format('woff2');font-weight:500;font-display:block}
 @font-face{font-family:'Manrope';src:url("/fonts/manrope-latin.woff2") format('woff2');font-weight:400;font-display:block}
-@font-face{font-family:'JetBrains Mono';src:url("/fonts/jetbrains-mono-latin.woff2") format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'Manrope';src:url("/fonts/manrope-latin.woff2") format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:'JetBrains Mono';src:url("/fonts/jetbrains-mono-latin.woff2") format('woff2');font-weight:400;font-display:block}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:1200px;height:630px;overflow:hidden}
-body{background:#0a0d12;color:#e9eef6;font-family:'Manrope',sans-serif;position:relative}
-.glow{position:absolute;inset:0;background:
-  radial-gradient(900px 520px at 12% -10%, rgba(29,87,255,0.28), transparent 62%),
-  radial-gradient(700px 420px at 96% 108%, rgba(255,212,71,0.10), transparent 60%);}
-.wrap{position:relative;height:100%;display:flex;align-items:center;padding:0 0 0 72px;gap:44px}
-.left{width:520px;flex:none}
-.lock{display:flex;align-items:center;gap:20px}
-.lock img{display:block;width:92px;height:92px}
-.name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:72px;letter-spacing:-0.035em;line-height:1}
-.sub{margin-top:24px;font-size:25px;line-height:1.34;color:#c2cedd;font-weight:400}
-.sub b{color:#fff;font-weight:600}
-.meta{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap}
-.chip{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:0.04em;
-  padding:9px 14px;border-radius:8px;border:1px solid #24314a;background:rgba(16,22,30,0.8);color:#9dbdf5}
-.shot{position:absolute;right:-200px;top:50%;transform:translateY(-50%) rotate(-5deg);
-  width:820px;border-radius:18px;overflow:hidden;border:1px solid #24303f;
-  box-shadow:0 40px 110px rgba(0,0,0,0.75)}
-.shot img{display:block;width:100%}
-.fade{position:absolute;right:0;top:0;bottom:0;width:420px;
-  background:linear-gradient(90deg,transparent,rgba(10,13,18,0.72))}
+body{background:#0E0E14;color:#E8E6F0;font-family:'Manrope',sans-serif;position:relative}
+.wrap{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;
+  padding:0 0 0 72px;width:650px}
+.lock{display:flex;align-items:center;gap:16px}
+.lock img{display:block;width:44px;height:44px}
+.name{font-weight:600;font-size:30px;letter-spacing:-0.01em;line-height:1}
+.head{margin-top:28px;font-size:37px;line-height:1.16;font-weight:600;letter-spacing:-0.02em}
+.head span{color:#B6B3C4}
+.sub{margin-top:20px;font-size:21px;line-height:1.45;color:#B6B3C4;font-weight:400}
+.meta{margin-top:30px;font-family:'JetBrains Mono',monospace;font-size:15px;color:#8A8C9E}
+.meta b{color:#FFD447;font-weight:400}
+/* Full-bleed on the right rather than a floating framed panel: at 1200x630 a
+   2400x1278 screenshot inside a bordered box leaves 80px of empty card above
+   and below it, and a link preview is too small to spend that. */
+.shot{position:absolute;right:0;top:0;height:630px;width:500px;overflow:hidden}
+.shot img{display:block;height:100%;width:auto;max-width:none;margin-left:-500px}
+/* Short, and it only has to soften the seam: the picture sits entirely to the
+   right of the text now, so nothing legible is being rescued by opacity. */
+.fade{position:absolute;right:0;top:0;bottom:0;width:640px;
+  background:linear-gradient(90deg,#0E0E14 0%,#0E0E14 20%,rgba(14,14,20,0.55) 34%,rgba(14,14,20,0.10) 60%,transparent 100%)}
 </style></head><body>
-<div class="glow"></div>
 <div class="shot"><img src="/assets/screenshot-call.png"></div>
 <div class="fade"></div>
-<div class="wrap"><div class="left">
+<div class="wrap">
   <div class="lock"><img src="/assets/lightning-mark.svg"><div class="name">Lightning</div></div>
-  <div class="sub">A <b>native</b> Matrix client for Linux, Windows and&nbsp;macOS. Qt&nbsp;6 on the official Rust Matrix SDK.</div>
-  <div class="meta"><span class="chip">Group calls</span><span class="chip">GIF search</span><span class="chip">Real threads</span></div>
-</div></div>
+  <div class="head">Lightning writes the interface.<br><span>The Rust SDK writes the Matrix.</span></div>
+  <div class="sub">A native desktop Matrix client in Qt&nbsp;6 and C++20. Group calls, real threads, and search inside encrypted rooms.</div>
+  <div class="meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; <b>GPL-3.0-or-later</b></div>
+</div>
 </body></html>

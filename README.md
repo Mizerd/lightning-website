@@ -26,7 +26,7 @@ public/              <- everything Cloudflare serves (the assets directory)
     lightning-mark.svg
     screenshot-*.png
     og-card.png        <- 1200x630 link preview; source in tools/og-card.html
-  fonts/*.woff2      <- Manrope, JetBrains Mono, Space Grotesk (self-hosted)
+  fonts/*.woff2      <- Manrope and JetBrains Mono (self-hosted subsets)
 
 wrangler.jsonc       <- Cloudflare config: serve public/, 404.html on miss
 src/

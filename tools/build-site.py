@@ -85,6 +85,7 @@ def theme_css():
             ("page", "raised", "elevated", "hairline", "border",
              "text", "text-2", "text-3", "accent", "link"))
         decls += f" color-scheme: {'dark' if k['dark'] else 'light'};"
+        decls += f" --sky-opacity: {0.16 if k["dark"] else 0.46};"
         out.append(f'[data-theme="{_slug(t["name"])}"] {{ {decls} }}')
     return "\n".join(out)
 
@@ -324,9 +325,16 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
    so it inverts with the theme instead of being pale dust on the light three.
    Low enough that you notice it only once you look for it. */
 .lg-sky {
-  position: fixed; inset: 0; width: 100%; height: 100%;
+  /* Taller than the viewport and hung above it, so the parallax drift never
+     runs out of sky at either end. */
+  position: fixed; left: 0; top: -20%; width: 100%; height: 140%;
   z-index: 0; pointer-events: none;
-  color: var(--text); opacity: 0.16;
+  color: var(--text);
+  /* Per theme: the light palettes need roughly double. A dark dot at 16% on a
+     cream ground is a smudge -- the stars were being swallowed exactly where
+     the ground is brightest. */
+  opacity: var(--sky-opacity, 0.16);
+  will-change: transform;
 }
 .lg-sky circle { fill: currentColor; }
 .lg-sky line { stroke: currentColor; stroke-width: 0.5; opacity: 0.45; }
@@ -418,9 +426,14 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-shot { margin: 0; }
 .lg-shot-btn {
   display: block; width: 100%; padding: 0; cursor: zoom-in;
-  background: var(--raised); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--raised); border: 3px solid var(--border); border-radius: var(--r-lg);
   overflow: hidden; position: relative;
-  transition: border-color 120ms ease;
+  /* A screenshot of a dark UI on a dark page has no edge of its own, and on
+     the light palettes the pale chrome dissolves into the ground. The frame
+     is the edge. 3px reads as a deliberate mount rather than a hairline that
+     lost an argument with the background. */
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent) inset;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .lg-shot-btn:hover { border-color: var(--text-3); }
 .lg-zoomhint {
@@ -570,6 +583,7 @@ def indigo_tokens():
              ("page", "raised", "elevated", "hairline", "border",
               "text", "text-2", "text-3", "accent", "link")]
     lines.append(f"{pad}color-scheme: {'dark' if k['dark'] else 'light'};")
+    lines.append(f"{pad}--sky-opacity: {0.16 if k["dark"] else 0.46};")
     return "\n".join(lines)
 
 

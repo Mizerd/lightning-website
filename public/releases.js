@@ -291,6 +291,41 @@
     );
   });
 
+  /* ---- the sky drifts ----------------------------------------------------
+   *
+   * The constellations are position:fixed, which makes them a wallpaper: the
+   * page slides past and they do not move at all. Translating them at a
+   * fraction of the scroll gives the parallax that reads as depth -- the sky
+   * sits behind the page rather than being printed on it.
+   *
+   * The layer is 140% tall and hung at -20%, so a 0.12 factor cannot run out
+   * of sky at either end of a long page.
+   *
+   * transform only, on a will-change'd element: one composited property that
+   * never touches layout. rAF-coalesced, because scroll fires far more often
+   * than the screen refreshes and per-event work would mostly be wasted.
+   *
+   * `animation-timeline: scroll()` is the CSS-only version and is deliberately
+   * NOT used -- Firefox does not support it, and this repository has been
+   * bitten by that exact assumption before (see the old motion layer).
+   */
+  var sky = document.querySelector(".lg-sky");
+  if (sky && !prefersReducedMotion()) {
+    var skyTicking = false;
+    var drift = function () {
+      skyTicking = false;
+      var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+      sky.style.transform = "translate3d(0," + (-y * 0.12) + "px,0)";
+    };
+    window.addEventListener("scroll", function () {
+      if (skyTicking) return;
+      skyTicking = true;
+      window.requestAnimationFrame(drift);
+    }, { passive: true });
+    drift();
+  }
+
+
   /* ---- the theme strip --------------------------------------------------
    *
    * Every palette on this page is the CLIENT's, extracted from its own

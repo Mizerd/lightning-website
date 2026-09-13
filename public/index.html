@@ -377,6 +377,7 @@
   --accent: #4A4EED;
   --link: #93C5FD;
   color-scheme: dark;
+  --sky-opacity: 0.16;
   --bolt:     #FFD447;   /* _stoBolt -- the brand accent and the logo's gold */
   --bolt-ink: #0A0F24;   /* _stoBoltInk */
   --card:     var(--elevated);
@@ -384,17 +385,17 @@
 }
 /* Every theme, from the client's own palettes. Clicking a swatch sets
    data-theme on <html>; nothing else on the page needs to know. */
-[data-theme="indigo-night"] { --page: #1F1D26; --raised: #292632; --elevated: #32303D; --hairline: #423E4E; --border: #5A5768; --text: #E8E8EF; --text-2: #A4A6B8; --text-3: #9E9BA6; --accent: #4A4EED; --link: #93C5FD; color-scheme: dark; }
-[data-theme="moss-light"] { --page: #D2E5D6; --raised: #DCEEE2; --elevated: #F6FBF7; --hairline: #D2E2D6; --border: #A0B2A4; --text: #161D18; --text-2: #4E5A51; --text-3: #57625A; --accent: #007757; --link: #00734E; color-scheme: light; }
-[data-theme="deep-teal"] { --page: #022323; --raised: #0C3031; --elevated: #163D3D; --hairline: #284E4E; --border: #406666; --text: #E6ECEC; --text-2: #B9C8C8; --text-3: #8FA5A8; --accent: #27C2AD; --link: #61C4C7; color-scheme: dark; }
-[data-theme="storm"] { --page: #02051D; --raised: #121655; --elevated: #202473; --hairline: #303C80; --border: #434F9D; --text: #F2F4FF; --text-2: #C9D2F2; --text-3: #9CA3D2; --accent: #FFD447; --link: #9295F5; color-scheme: dark; }
-[data-theme="lightning-light"] { --page: #D3E1F2; --raised: #DEEBFD; --elevated: #F5F9FE; --hairline: #C4D2E7; --border: #7A94B6; --text: #1E293B; --text-2: #4C5661; --text-3: #525C68; --accent: #1D57FF; --link: #005FB5; color-scheme: light; }
-[data-theme="lightning-dark"] { --page: #0D1117; --raised: #1B242F; --elevated: #2A3140; --hairline: #4C596D; --border: #5D6B87; --text: #E9EEF6; --text-2: #B7C2D4; --text-3: #98A5BB; --accent: #1D57FF; --link: #9EAAFC; color-scheme: dark; }
-[data-theme="graphite"] { --page: #141417; --raised: #1D1E21; --elevated: #27272B; --hairline: #43444A; --border: #5C5C64; --text: #F5F5F7; --text-2: #C7C7CC; --text-3: #9A9AA2; --accent: #2E6EEB; --link: #A8AFF9; color-scheme: dark; }
-[data-theme="midnight"] { --page: #09182C; --raised: #1B263B; --elevated: #273246; --hairline: #394859; --border: #526172; --text: #F8FAFC; --text-2: #CBD5E1; --text-3: #94A3B8; --accent: #1D57FF; --link: #8CC3FF; color-scheme: dark; }
-[data-theme="nordic"] { --page: #2E3440; --raised: #262C38; --elevated: #3B4252; --hairline: #464F62; --border: #5A6478; --text: #ECEFF4; --text-2: #D8DEE9; --text-3: #ABB2C0; --accent: #5E81AC; --link: #9DE4FF; color-scheme: dark; }
-[data-theme="purple-dusk"] { --page: #17142A; --raised: #2B2642; --elevated: #3C3455; --hairline: #5D537E; --border: #716598; --text: #F3EEFF; --text-2: #D6CCF0; --text-3: #B5ABD6; --accent: #8F73E9; --link: #C7B2FC; color-scheme: dark; }
-[data-theme="warm"] { --page: #EBDCC6; --raised: #F6E6D0; --elevated: #FFFDF8; --hairline: #DCD0B8; --border: #C2B394; --text: #3B3428; --text-2: #675944; --text-3: #6A604D; --accent: #A34C00; --link: #00598B; color-scheme: light; }
+[data-theme="indigo-night"] { --page: #1F1D26; --raised: #292632; --elevated: #32303D; --hairline: #423E4E; --border: #5A5768; --text: #E8E8EF; --text-2: #A4A6B8; --text-3: #9E9BA6; --accent: #4A4EED; --link: #93C5FD; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="moss-light"] { --page: #D2E5D6; --raised: #DCEEE2; --elevated: #F6FBF7; --hairline: #D2E2D6; --border: #A0B2A4; --text: #161D18; --text-2: #4E5A51; --text-3: #57625A; --accent: #007757; --link: #00734E; color-scheme: light; --sky-opacity: 0.46; }
+[data-theme="deep-teal"] { --page: #022323; --raised: #0C3031; --elevated: #163D3D; --hairline: #284E4E; --border: #406666; --text: #E6ECEC; --text-2: #B9C8C8; --text-3: #8FA5A8; --accent: #27C2AD; --link: #61C4C7; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="storm"] { --page: #02051D; --raised: #121655; --elevated: #202473; --hairline: #303C80; --border: #434F9D; --text: #F2F4FF; --text-2: #C9D2F2; --text-3: #9CA3D2; --accent: #FFD447; --link: #9295F5; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="lightning-light"] { --page: #D3E1F2; --raised: #DEEBFD; --elevated: #F5F9FE; --hairline: #C4D2E7; --border: #7A94B6; --text: #1E293B; --text-2: #4C5661; --text-3: #525C68; --accent: #1D57FF; --link: #005FB5; color-scheme: light; --sky-opacity: 0.46; }
+[data-theme="lightning-dark"] { --page: #0D1117; --raised: #1B242F; --elevated: #2A3140; --hairline: #4C596D; --border: #5D6B87; --text: #E9EEF6; --text-2: #B7C2D4; --text-3: #98A5BB; --accent: #1D57FF; --link: #9EAAFC; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="graphite"] { --page: #141417; --raised: #1D1E21; --elevated: #27272B; --hairline: #43444A; --border: #5C5C64; --text: #F5F5F7; --text-2: #C7C7CC; --text-3: #9A9AA2; --accent: #2E6EEB; --link: #A8AFF9; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="midnight"] { --page: #09182C; --raised: #1B263B; --elevated: #273246; --hairline: #394859; --border: #526172; --text: #F8FAFC; --text-2: #CBD5E1; --text-3: #94A3B8; --accent: #1D57FF; --link: #8CC3FF; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="nordic"] { --page: #2E3440; --raised: #262C38; --elevated: #3B4252; --hairline: #464F62; --border: #5A6478; --text: #ECEFF4; --text-2: #D8DEE9; --text-3: #ABB2C0; --accent: #5E81AC; --link: #9DE4FF; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="purple-dusk"] { --page: #17142A; --raised: #2B2642; --elevated: #3C3455; --hairline: #5D537E; --border: #716598; --text: #F3EEFF; --text-2: #D6CCF0; --text-3: #B5ABD6; --accent: #8F73E9; --link: #C7B2FC; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="warm"] { --page: #EBDCC6; --raised: #F6E6D0; --elevated: #FFFDF8; --hairline: #DCD0B8; --border: #C2B394; --text: #3B3428; --text-2: #675944; --text-3: #6A604D; --accent: #A34C00; --link: #00598B; color-scheme: light; --sky-opacity: 0.46; }
 /* The tokens are what change; everything below reads them, so a theme switch
    is one attribute write and no reflow of anything structural. */
 html { transition: background-color 260ms ease; }
@@ -437,9 +438,16 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
    so it inverts with the theme instead of being pale dust on the light three.
    Low enough that you notice it only once you look for it. */
 .lg-sky {
-  position: fixed; inset: 0; width: 100%; height: 100%;
+  /* Taller than the viewport and hung above it, so the parallax drift never
+     runs out of sky at either end. */
+  position: fixed; left: 0; top: -20%; width: 100%; height: 140%;
   z-index: 0; pointer-events: none;
-  color: var(--text); opacity: 0.16;
+  color: var(--text);
+  /* Per theme: the light palettes need roughly double. A dark dot at 16% on a
+     cream ground is a smudge -- the stars were being swallowed exactly where
+     the ground is brightest. */
+  opacity: var(--sky-opacity, 0.16);
+  will-change: transform;
 }
 .lg-sky circle { fill: currentColor; }
 .lg-sky line { stroke: currentColor; stroke-width: 0.5; opacity: 0.45; }
@@ -531,9 +539,14 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-shot { margin: 0; }
 .lg-shot-btn {
   display: block; width: 100%; padding: 0; cursor: zoom-in;
-  background: var(--raised); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--raised); border: 3px solid var(--border); border-radius: var(--r-lg);
   overflow: hidden; position: relative;
-  transition: border-color 120ms ease;
+  /* A screenshot of a dark UI on a dark page has no edge of its own, and on
+     the light palettes the pale chrome dissolves into the ground. The frame
+     is the edge. 3px reads as a deliberate mount rather than a hairline that
+     lost an argument with the background. */
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent) inset;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .lg-shot-btn:hover { border-color: var(--text-3); }
 .lg-zoomhint {

@@ -160,6 +160,16 @@ _WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
 _n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux")
 LINUX_COUNT_WORD = _WORDS.get(_n_linux, str(_n_linux))
 
+_has_macos = any(p["os"] == "macos" for p in feed["packages"])
+MACOS_LIMIT = (
+    "<b>macOS is effectively untested.</b> It builds and it is published. "
+    "Nobody has sat down and used it."
+    if _has_macos else
+    "<b>There is no macOS download in this release.</b> The bundle builds and "
+    "passes its checks on a real Mac; uploading it to the release server does "
+    "not. It would be effectively untested in any case \u2014 nobody has sat "
+    "down and used it.")
+
 LINUX_BLOCK = platform_block(
     "linux", "Linux",
     "AppImage and Flatpak carry their own Qt and run anywhere",
@@ -579,7 +589,7 @@ def build():
     <h2>What it cannot do yet</h2>
     <p class="lg-lede">Lightning is alpha. This section is part of the pitch, not a disclaimer under it — it is the same list the project keeps for itself.</p>
     <ul class="lg-list">
-      <li><b>macOS is effectively untested.</b> It builds and it is published. Nobody has sat down and used it.</li>
+      <li>{MACOS_LIMIT}</li>
       <li><b>Nobody has listened to a call.</b> Audio is proven to flow both ways and to reach the audio engine; no human has confirmed it sounds like anything.</li>
       <li><b>Recovery and key backup are verified by reading the code, not by using them.</b> Exercising them puts a recovery key on screen, so the audit is the evidence. Four known rough edges are listed in the release notes.</li>
       <li><b>Screen sharing and the camera are untested on the Snap</b> — the test machine has no desktop portal for a confined app to talk to.</li>

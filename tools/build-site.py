@@ -265,9 +265,20 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-top .wrap { display: flex; align-items: center; gap: 20px; height: 58px; }
 .lg-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: var(--text); text-decoration: none; }
 .lg-brand img { width: 20px; height: 20px; }
-.lg-nav { margin-left: auto; display: flex; gap: 22px; }
+.lg-nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
 .lg-nav a { color: var(--text-2); text-decoration: none; font-size: 14px; font-weight: 500; }
 .lg-nav a:hover { color: var(--text); }
+/* Source is the only item here that LEAVES the site -- the other four are
+   in-page anchors -- and nothing said so. The mark names the destination
+   rather than decorating the word; the negative margin keeps the pill from
+   changing the header's height. */
+.lg-nav a.lg-src {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 11px; margin: -5px 0;
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+}
+.lg-nav a.lg-src:hover { border-color: var(--text-3); }
+.lg-nav a.lg-src svg { width: 15px; height: 15px; fill: currentColor; display: block; }
 
 /* ---- hero: copy left, product right, same scroll position ---------------- */
 .lg-hero { padding: 72px 0 64px; }
@@ -460,7 +471,7 @@ def build():
       <a href="#features">Features</a>
       <a href="#download">Download</a>
       <a href="#limits">Limits</a>
-      <a href="https://github.com/Mizerd/lightning">Source</a>
+      <a class="lg-src" href="https://github.com/Mizerd/lightning"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Source</a>
     </nav>
   </div>
 </header>

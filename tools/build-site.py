@@ -57,14 +57,41 @@ SHOTS = {name: _png_size(name) for name in (
 # The eleven themes, named as the app names them. The swatch colours are each
 # theme's own accent from qml/AppTheme.qml. check.py cannot verify they are
 # current -- it can only prove nobody quietly dropped one.
-THEMES = [
-    ("Indigo Night", "#4A4EED"), ("Moss Light", "#1F7A4C"),
-    ("Deep Teal", "#12A594"), ("Storm", "#FFD447"),
-    ("Lightning Light", "#3B7FF0"), ("Lightning Dark", "#5B8DEF"),
-    ("Graphite", "#7C8497"), ("Midnight", "#4C6FFF"),
-    ("Nordic", "#5E81AC"), ("Purple Dusk", "#9D7CD8"),
-    ("Warm", "#D98A4B"),
-]
+# The eleven palettes, extracted from the CLIENT's qml/AppTheme.qml by
+# tools/extract-themes.py. Not a hand-kept table of accents any more: every
+# token the page paints with, for every theme, so clicking a swatch repaints
+# the page the way the application actually looks.
+THEMES_DATA = json.loads((PUB / "themes.json").read_text(encoding="utf-8"))["themes"]
+
+
+def _slug(name):
+    return name.lower().replace(" ", "-")
+
+
+def theme_css():
+    """One [data-theme] block per theme, plus the default on bare :root.
+
+    The default IS Indigo Night, so its block is emitted on `:root` as well --
+    a page that has never been clicked must not depend on JavaScript having run
+    to have colours.
+    """
+    out = []
+    for t in THEMES_DATA:
+        k = t["tokens"]
+        decls = " ".join(
+            f"--{tok}: {k[tok]};" for tok in
+            ("page", "raised", "elevated", "hairline", "border",
+             "text", "text-2", "text-3", "accent", "link"))
+        decls += f" color-scheme: {'dark' if k['dark'] else 'light'};"
+        out.append(f'[data-theme="{_slug(t["name"])}"] {{ {decls} }}')
+    return "\n".join(out)
+
+
+THEMES = [(t["name"], t["tokens"]["accent"]) for t in THEMES_DATA]
+
+
+def _tok(name, token):
+    return next(t["tokens"][token] for t in THEMES_DATA if t["name"] == name)
 
 
 def shot(name, alt, cls=""):
@@ -234,22 +261,29 @@ CSS = """
    ladder was a defect they had to rebuild Storm to fix; repeating it here
    would repeat the bug. */
 :root {
-  --page:     #0E0E14;   /* _indRail */
-  --raised:   #1F1D26;   /* _indBg */
-  --card:     #2A2833;
-  --hairline: #2A2733;
-  --border:   #423E4E;   /* _indBorder */
-  --text:     #E8E8EF;   /* _indTextPrimary */
-  --text-2:   #A4A6B8;   /* _indTextSecondary */
-  --text-3:   #8A8C9E;   /* lifted from _indTextDisabled to clear AA */
+  /* Indigo Night, the default -- the SAME values theme_css() emits for it, so
+     a page whose JavaScript never runs still has the right colours. The two
+     are generated from one source; do not edit either by hand. */
+{INDIGO_TOKENS}
   --bolt:     #FFD447;   /* _stoBolt -- the brand accent and the logo's gold */
   --bolt-ink: #0A0F24;   /* _stoBoltInk */
-  --link:     #93C5FD;   /* _indLink. NOT the accent: white-on-accent is
-                            pinned at 3:1, which caps the accent's luminance
-                            below what an AA link needs. The app hit this and
-                            gave links their own ink; so does this page. */
+  --card:     var(--elevated);
   --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-pill: 999px;
-  color-scheme: dark;
+}
+/* Every theme, from the client's own palettes. Clicking a swatch sets
+   data-theme on <html>; nothing else on the page needs to know. */
+{THEME_CSS}
+/* The tokens are what change; everything below reads them, so a theme switch
+   is one attribute write and no reflow of anything structural. */
+html { transition: background-color 260ms ease; }
+body, .lg-pkg, .lg-shot-btn, .lg-swatch, .lg-btn, .lg-card {
+  transition: background-color 260ms ease, border-color 260ms ease,
+              color 260ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html, body, .lg-pkg, .lg-shot-btn, .lg-swatch, .lg-btn, .lg-card {
+    transition: none;
+  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -280,7 +314,7 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-top {
   border-bottom: 1px solid var(--hairline);
   position: sticky; top: 0; z-index: 20;
-  background: rgba(14,14,20,0.92);
+  background: color-mix(in srgb, var(--page) 92%, transparent);
 }
 .lg-top .wrap { display: flex; align-items: center; gap: 20px; height: 58px; }
 .lg-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: var(--text); text-decoration: none; }
@@ -369,18 +403,38 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
   position: absolute; right: 10px; bottom: 10px;
   font-family: 'JetBrains Mono', monospace; font-size: 11px;
   padding: 3px 8px; border-radius: var(--r-sm);
-  background: rgba(14,14,20,0.86); color: var(--text-2); border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--page) 86%, transparent);
+  color: var(--text-2); border: 1px solid var(--border);
 }
 
 /* ---- themes --------------------------------------------------------------- */
 .lg-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+/* Each swatch is painted in ITS OWN theme's colours, so the row reads as
+   eleven miniature themes rather than eleven labels. That is the affordance:
+   you can see they are different things and that one of them is currently on,
+   without a word of instruction. */
 .lg-swatch {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 12px 7px 8px; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--raised);
-  font-size: 13px; color: var(--text-2);
+  font-size: 13px; color: var(--text-2); font-family: inherit;
+  cursor: pointer; position: relative;
+  transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1),
+              box-shadow 160ms ease, border-color 160ms ease;
 }
-.lg-swatch i { width: 12px; height: 12px; border-radius: var(--r-pill); display: block; }
+/* The lift. Commet's author bubbles do this and it is the whole reason a
+   static chip reads as pressable: it moves before you commit to it. */
+.lg-swatch:hover { transform: translateY(-3px); }
+.lg-swatch:active { transform: translateY(-1px); }
+.lg-swatch:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.lg-swatch i {
+  width: 12px; height: 12px; border-radius: var(--r-pill); display: block;
+  transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1);
+}
+.lg-swatch:hover i { transform: scale(1.35); }
+/* The one that is on. A ring rather than a tick, so it reads at a glance
+   across eleven of them. */
+.lg-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sw-accent); }
 
 /* ---- downloads ------------------------------------------------------------ */
 .lg-relhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px; margin-top: 22px;
@@ -441,7 +495,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 /* ---- lightbox ------------------------------------------------------------- */
 .lg-lightbox {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-  background: rgba(8,8,12,0.94); padding: 28px; cursor: zoom-out;
+  background: color-mix(in srgb, var(--page) 94%, #000);
+  padding: 28px; cursor: zoom-out;
 }
 .lg-lightbox img { max-width: 100%; max-height: 100%; border-radius: var(--r-md); }
 
@@ -457,10 +512,28 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 """
 
 
+def indigo_tokens():
+    """The default theme's tokens, indented for the :root block."""
+    k = next(t["tokens"] for t in THEMES_DATA if t["name"] == "Indigo Night")
+    pad = "  "
+    lines = [f"{pad}--{tok}: {k[tok]};" for tok in
+             ("page", "raised", "elevated", "hairline", "border",
+              "text", "text-2", "text-3", "accent", "link")]
+    lines.append(f"{pad}color-scheme: {'dark' if k['dark'] else 'light'};")
+    return "\n".join(lines)
+
+
+CSS = (CSS.replace("{INDIGO_TOKENS}", indigo_tokens())
+          .replace("{THEME_CSS}", theme_css()))
+
 def build():
     nl = "\n"
     swatches = nl.join(
-        f'  <span class="lg-swatch"><i style="background:{c}"></i>{n}</span>'
+        f'  <button type="button" class="lg-swatch" data-lg-theme="{_slug(n)}"'
+        f' aria-pressed="{str(_slug(n) == "indigo-night").lower()}"'
+        f' style="background:{_tok(n, "raised")};border-color:{_tok(n, "border")};'
+        f'color:{_tok(n, "text-2")};--sw-accent:{c}">'
+        f'<i style="background:{c}"></i>{n}</button>'
         for n, c in THEMES)
 
     html = f"""<!DOCTYPE html>
@@ -594,7 +667,7 @@ def build():
 <section id="themes">
   <div class="wrap">
     <h2>Eleven themes</h2>
-    <p class="lg-lede">These swatches are the application's own accents, read from the same file the client reads. The page you are on uses two of them.</p>
+    <p class="lg-lede">Every one is the client's own palette, read from its own theme file. Pick one and the page repaints.</p>
     <div class="lg-swatches">
 {swatches}
     </div>

@@ -291,6 +291,50 @@
     );
   });
 
+  /* ---- the theme strip --------------------------------------------------
+   *
+   * Every palette on this page is the CLIENT's, extracted from its own
+   * AppTheme.qml, so picking one shows what the application actually looks
+   * like rather than a web designer's impression of it. The whole switch is
+   * one attribute on <html>: the CSS carries a [data-theme] block per theme
+   * and everything else reads tokens.
+   *
+   * The choice is remembered. Someone who picks a theme has told you which
+   * one they want to look at; making them pick again every visit is a worse
+   * page. localStorage only -- nothing leaves the browser.
+   */
+  var THEME_KEY = "lg-theme";
+
+  function applyTheme(slug, remember) {
+    if (!slug) return;
+    document.documentElement.setAttribute("data-theme", slug);
+    document.querySelectorAll("[data-lg-theme]").forEach(function (b) {
+      b.setAttribute("aria-pressed",
+                     b.getAttribute("data-lg-theme") === slug ? "true" : "false");
+    });
+    if (remember) {
+      // A browser with storage disabled must still switch themes; only the
+      // remembering is optional.
+      try { localStorage.setItem(THEME_KEY, slug); } catch (e) { /* fine */ }
+    }
+  }
+
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target && ev.target.closest
+      ? ev.target.closest("[data-lg-theme]") : null;
+    if (!btn) return;
+    applyTheme(btn.getAttribute("data-lg-theme"), true);
+  });
+
+  // Restore on load. The default is already correct in the CSS, so this only
+  // ever has to act when a previous visit chose something else.
+  try {
+    var saved = localStorage.getItem(THEME_KEY);
+    if (saved && document.querySelector('[data-lg-theme="' + saved + '"]')) {
+      applyTheme(saved, false);
+    }
+  } catch (e) { /* no storage, no restore, still a working page */ }
+
   /* ---- full-screen screenshots ------------------------------------------
    *
    * Each screenshot is wrapped in a <button data-lg-zoom> by the generator

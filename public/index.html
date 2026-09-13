@@ -363,22 +363,49 @@
    ladder was a defect they had to rebuild Storm to fix; repeating it here
    would repeat the bug. */
 :root {
-  --page:     #0E0E14;   /* _indRail */
-  --raised:   #1F1D26;   /* _indBg */
-  --card:     #2A2833;
-  --hairline: #2A2733;
-  --border:   #423E4E;   /* _indBorder */
-  --text:     #E8E8EF;   /* _indTextPrimary */
-  --text-2:   #A4A6B8;   /* _indTextSecondary */
-  --text-3:   #8A8C9E;   /* lifted from _indTextDisabled to clear AA */
+  /* Indigo Night, the default -- the SAME values theme_css() emits for it, so
+     a page whose JavaScript never runs still has the right colours. The two
+     are generated from one source; do not edit either by hand. */
+  --page: #1F1D26;
+  --raised: #292632;
+  --elevated: #32303D;
+  --hairline: #423E4E;
+  --border: #5A5768;
+  --text: #E8E8EF;
+  --text-2: #A4A6B8;
+  --text-3: #9E9BA6;
+  --accent: #4A4EED;
+  --link: #93C5FD;
+  color-scheme: dark;
   --bolt:     #FFD447;   /* _stoBolt -- the brand accent and the logo's gold */
   --bolt-ink: #0A0F24;   /* _stoBoltInk */
-  --link:     #93C5FD;   /* _indLink. NOT the accent: white-on-accent is
-                            pinned at 3:1, which caps the accent's luminance
-                            below what an AA link needs. The app hit this and
-                            gave links their own ink; so does this page. */
+  --card:     var(--elevated);
   --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-pill: 999px;
-  color-scheme: dark;
+}
+/* Every theme, from the client's own palettes. Clicking a swatch sets
+   data-theme on <html>; nothing else on the page needs to know. */
+[data-theme="indigo-night"] { --page: #1F1D26; --raised: #292632; --elevated: #32303D; --hairline: #423E4E; --border: #5A5768; --text: #E8E8EF; --text-2: #A4A6B8; --text-3: #9E9BA6; --accent: #4A4EED; --link: #93C5FD; color-scheme: dark; }
+[data-theme="moss-light"] { --page: #D2E5D6; --raised: #DCEEE2; --elevated: #F6FBF7; --hairline: #D2E2D6; --border: #A0B2A4; --text: #161D18; --text-2: #4E5A51; --text-3: #57625A; --accent: #007757; --link: #00734E; color-scheme: light; }
+[data-theme="deep-teal"] { --page: #022323; --raised: #0C3031; --elevated: #163D3D; --hairline: #284E4E; --border: #406666; --text: #E6ECEC; --text-2: #B9C8C8; --text-3: #8FA5A8; --accent: #27C2AD; --link: #61C4C7; color-scheme: dark; }
+[data-theme="storm"] { --page: #02051D; --raised: #121655; --elevated: #202473; --hairline: #303C80; --border: #434F9D; --text: #F2F4FF; --text-2: #C9D2F2; --text-3: #9CA3D2; --accent: #FFD447; --link: #9295F5; color-scheme: dark; }
+[data-theme="lightning-light"] { --page: #D3E1F2; --raised: #DEEBFD; --elevated: #F5F9FE; --hairline: #C4D2E7; --border: #7A94B6; --text: #1E293B; --text-2: #4C5661; --text-3: #525C68; --accent: #1D57FF; --link: #005FB5; color-scheme: light; }
+[data-theme="lightning-dark"] { --page: #0D1117; --raised: #1B242F; --elevated: #2A3140; --hairline: #4C596D; --border: #5D6B87; --text: #E9EEF6; --text-2: #B7C2D4; --text-3: #98A5BB; --accent: #1D57FF; --link: #9EAAFC; color-scheme: dark; }
+[data-theme="graphite"] { --page: #141417; --raised: #1D1E21; --elevated: #27272B; --hairline: #43444A; --border: #5C5C64; --text: #F5F5F7; --text-2: #C7C7CC; --text-3: #9A9AA2; --accent: #2E6EEB; --link: #A8AFF9; color-scheme: dark; }
+[data-theme="midnight"] { --page: #09182C; --raised: #1B263B; --elevated: #273246; --hairline: #394859; --border: #526172; --text: #F8FAFC; --text-2: #CBD5E1; --text-3: #94A3B8; --accent: #1D57FF; --link: #8CC3FF; color-scheme: dark; }
+[data-theme="nordic"] { --page: #2E3440; --raised: #262C38; --elevated: #3B4252; --hairline: #464F62; --border: #5A6478; --text: #ECEFF4; --text-2: #D8DEE9; --text-3: #ABB2C0; --accent: #5E81AC; --link: #9DE4FF; color-scheme: dark; }
+[data-theme="purple-dusk"] { --page: #17142A; --raised: #2B2642; --elevated: #3C3455; --hairline: #5D537E; --border: #716598; --text: #F3EEFF; --text-2: #D6CCF0; --text-3: #B5ABD6; --accent: #8F73E9; --link: #C7B2FC; color-scheme: dark; }
+[data-theme="warm"] { --page: #EBDCC6; --raised: #F6E6D0; --elevated: #FFFDF8; --hairline: #DCD0B8; --border: #C2B394; --text: #3B3428; --text-2: #675944; --text-3: #6A604D; --accent: #A34C00; --link: #00598B; color-scheme: light; }
+/* The tokens are what change; everything below reads them, so a theme switch
+   is one attribute write and no reflow of anything structural. */
+html { transition: background-color 260ms ease; }
+body, .lg-pkg, .lg-shot-btn, .lg-swatch, .lg-btn, .lg-card {
+  transition: background-color 260ms ease, border-color 260ms ease,
+              color 260ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html, body, .lg-pkg, .lg-shot-btn, .lg-swatch, .lg-btn, .lg-card {
+    transition: none;
+  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -409,7 +436,7 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-top {
   border-bottom: 1px solid var(--hairline);
   position: sticky; top: 0; z-index: 20;
-  background: rgba(14,14,20,0.92);
+  background: color-mix(in srgb, var(--page) 92%, transparent);
 }
 .lg-top .wrap { display: flex; align-items: center; gap: 20px; height: 58px; }
 .lg-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: var(--text); text-decoration: none; }
@@ -498,18 +525,38 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
   position: absolute; right: 10px; bottom: 10px;
   font-family: 'JetBrains Mono', monospace; font-size: 11px;
   padding: 3px 8px; border-radius: var(--r-sm);
-  background: rgba(14,14,20,0.86); color: var(--text-2); border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--page) 86%, transparent);
+  color: var(--text-2); border: 1px solid var(--border);
 }
 
 /* ---- themes --------------------------------------------------------------- */
 .lg-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+/* Each swatch is painted in ITS OWN theme's colours, so the row reads as
+   eleven miniature themes rather than eleven labels. That is the affordance:
+   you can see they are different things and that one of them is currently on,
+   without a word of instruction. */
 .lg-swatch {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 12px 7px 8px; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--raised);
-  font-size: 13px; color: var(--text-2);
+  font-size: 13px; color: var(--text-2); font-family: inherit;
+  cursor: pointer; position: relative;
+  transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1),
+              box-shadow 160ms ease, border-color 160ms ease;
 }
-.lg-swatch i { width: 12px; height: 12px; border-radius: var(--r-pill); display: block; }
+/* The lift. Commet's author bubbles do this and it is the whole reason a
+   static chip reads as pressable: it moves before you commit to it. */
+.lg-swatch:hover { transform: translateY(-3px); }
+.lg-swatch:active { transform: translateY(-1px); }
+.lg-swatch:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.lg-swatch i {
+  width: 12px; height: 12px; border-radius: var(--r-pill); display: block;
+  transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1);
+}
+.lg-swatch:hover i { transform: scale(1.35); }
+/* The one that is on. A ring rather than a tick, so it reads at a glance
+   across eleven of them. */
+.lg-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sw-accent); }
 
 /* ---- downloads ------------------------------------------------------------ */
 .lg-relhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px; margin-top: 22px;
@@ -570,7 +617,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 /* ---- lightbox ------------------------------------------------------------- */
 .lg-lightbox {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-  background: rgba(8,8,12,0.94); padding: 28px; cursor: zoom-out;
+  background: color-mix(in srgb, var(--page) 94%, #000);
+  padding: 28px; cursor: zoom-out;
 }
 .lg-lightbox img { max-width: 100%; max-height: 100%; border-radius: var(--r-md); }
 
@@ -725,19 +773,19 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 <section id="themes">
   <div class="wrap">
     <h2>Eleven themes</h2>
-    <p class="lg-lede">These swatches are the application's own accents, read from the same file the client reads. The page you are on uses two of them.</p>
+    <p class="lg-lede">Every one is the client's own palette, read from its own theme file. Pick one and the page repaints.</p>
     <div class="lg-swatches">
-  <span class="lg-swatch"><i style="background:#4A4EED"></i>Indigo Night</span>
-  <span class="lg-swatch"><i style="background:#1F7A4C"></i>Moss Light</span>
-  <span class="lg-swatch"><i style="background:#12A594"></i>Deep Teal</span>
-  <span class="lg-swatch"><i style="background:#FFD447"></i>Storm</span>
-  <span class="lg-swatch"><i style="background:#3B7FF0"></i>Lightning Light</span>
-  <span class="lg-swatch"><i style="background:#5B8DEF"></i>Lightning Dark</span>
-  <span class="lg-swatch"><i style="background:#7C8497"></i>Graphite</span>
-  <span class="lg-swatch"><i style="background:#4C6FFF"></i>Midnight</span>
-  <span class="lg-swatch"><i style="background:#5E81AC"></i>Nordic</span>
-  <span class="lg-swatch"><i style="background:#9D7CD8"></i>Purple Dusk</span>
-  <span class="lg-swatch"><i style="background:#D98A4B"></i>Warm</span>
+  <button type="button" class="lg-swatch" data-lg-theme="indigo-night" aria-pressed="true" style="background:#292632;border-color:#5A5768;color:#A4A6B8;--sw-accent:#4A4EED"><i style="background:#4A4EED"></i>Indigo Night</button>
+  <button type="button" class="lg-swatch" data-lg-theme="moss-light" aria-pressed="false" style="background:#DCEEE2;border-color:#A0B2A4;color:#4E5A51;--sw-accent:#007757"><i style="background:#007757"></i>Moss Light</button>
+  <button type="button" class="lg-swatch" data-lg-theme="deep-teal" aria-pressed="false" style="background:#0C3031;border-color:#406666;color:#B9C8C8;--sw-accent:#27C2AD"><i style="background:#27C2AD"></i>Deep Teal</button>
+  <button type="button" class="lg-swatch" data-lg-theme="storm" aria-pressed="false" style="background:#121655;border-color:#434F9D;color:#C9D2F2;--sw-accent:#FFD447"><i style="background:#FFD447"></i>Storm</button>
+  <button type="button" class="lg-swatch" data-lg-theme="lightning-light" aria-pressed="false" style="background:#DEEBFD;border-color:#7A94B6;color:#4C5661;--sw-accent:#1D57FF"><i style="background:#1D57FF"></i>Lightning Light</button>
+  <button type="button" class="lg-swatch" data-lg-theme="lightning-dark" aria-pressed="false" style="background:#1B242F;border-color:#5D6B87;color:#B7C2D4;--sw-accent:#1D57FF"><i style="background:#1D57FF"></i>Lightning Dark</button>
+  <button type="button" class="lg-swatch" data-lg-theme="graphite" aria-pressed="false" style="background:#1D1E21;border-color:#5C5C64;color:#C7C7CC;--sw-accent:#2E6EEB"><i style="background:#2E6EEB"></i>Graphite</button>
+  <button type="button" class="lg-swatch" data-lg-theme="midnight" aria-pressed="false" style="background:#1B263B;border-color:#526172;color:#CBD5E1;--sw-accent:#1D57FF"><i style="background:#1D57FF"></i>Midnight</button>
+  <button type="button" class="lg-swatch" data-lg-theme="nordic" aria-pressed="false" style="background:#262C38;border-color:#5A6478;color:#D8DEE9;--sw-accent:#5E81AC"><i style="background:#5E81AC"></i>Nordic</button>
+  <button type="button" class="lg-swatch" data-lg-theme="purple-dusk" aria-pressed="false" style="background:#2B2642;border-color:#716598;color:#D6CCF0;--sw-accent:#8F73E9"><i style="background:#8F73E9"></i>Purple Dusk</button>
+  <button type="button" class="lg-swatch" data-lg-theme="warm" aria-pressed="false" style="background:#F6E6D0;border-color:#C2B394;color:#675944;--sw-accent:#A34C00"><i style="background:#A34C00"></i>Warm</button>
     </div>
   </div>
 </section>

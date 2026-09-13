@@ -381,9 +381,11 @@
     // One listener on the overlay covers the backdrop, the caption and the
     // close button. The image is the only thing that does NOT close, so it
     // can be pinched and panned without the first tap dismissing it.
-    lb.addEventListener("click", function (ev) {
-      if (ev.target !== lbImg) closeLightbox();
-    });
+    // Clicking ANYWHERE closes, the picture included. This used to exempt the
+    // image so a phone could pinch and pan it; the maintainer asked for
+    // click-anywhere on 2026-09-13 and that is the trade -- easier to dismiss
+    // everywhere, no panning a zoomed screenshot on a touch screen.
+    lb.addEventListener("click", function () { closeLightbox(); });
   }
 
   function openLightbox(btn) {
@@ -431,12 +433,65 @@
     void lb.offsetWidth;
     lb.classList.add("lg-lbon");
 
+    // THE FLIGHT. The overlay image is placed exactly over the thumbnail that
+    // was clicked and then released to its natural size, so the picture grows
+    // out of the card instead of appearing on top of it. Measured, not
+    // guessed: the thumbnail's own rect against the image's final rect, which
+    // is why this runs AFTER the class that lays the overlay out.
+    //
+    // transform only -- width/height would relayout the overlay on every
+    // frame. A scale is one composited property and cannot reflow anything.
+    flyFrom(img);
+
     var closeBtn = lb.querySelector(".lg-lbclose");
     if (closeBtn) closeBtn.focus();
   }
 
+  function flyFrom(thumb) {
+    if (!thumb || !lbImg || prefersReducedMotion()) return;
+    var from = thumb.getBoundingClientRect();
+    var to = lbImg.getBoundingClientRect();
+    if (!from.width || !to.width) return;
+    var sx = from.width / to.width;
+    var sy = from.height / to.height;
+    var dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+    var dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+    lbImg.style.transition = "none";
+    lbImg.style.transformOrigin = "center center";
+    lbImg.style.transform =
+      "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
+    void lbImg.offsetWidth;          // same forced reflow, same reason
+    lbImg.style.transition = "transform 300ms cubic-bezier(0.2,0.75,0.25,1)";
+    lbImg.style.transform = "none";
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (e) { return false; }
+  }
+
   function closeLightbox() {
     if (!lb || lb.hidden) return;
+
+    // Fly back to the card it came from, so the picture returns to where the
+    // reader's eye already is rather than dissolving in the middle of the
+    // screen. `lbReturn` is the button that opened it and is still on screen.
+    var thumb = lbReturn && lbReturn.querySelector
+      ? lbReturn.querySelector("img") : null;
+    if (thumb && lbImg && !prefersReducedMotion()) {
+      var from = lbImg.getBoundingClientRect();
+      var to = thumb.getBoundingClientRect();
+      if (from.width && to.width) {
+        lbImg.style.transition = "transform 260ms cubic-bezier(0.4,0,0.7,0.3)";
+        lbImg.style.transform =
+          "translate(" + ((to.left + to.width / 2) - (from.left + from.width / 2))
+          + "px," + ((to.top + to.height / 2) - (from.top + from.height / 2))
+          + "px) scale(" + (to.width / from.width) + ","
+          + (to.height / from.height) + ")";
+      }
+    }
     lb.classList.remove("lg-lbon");
 
     // The page is released and focus goes back immediately -- only the
@@ -457,6 +512,8 @@
       // Drop the source so a 3,839px image is not held decoded for a page
       // the reader has gone back to scrolling.
       lbImg.removeAttribute("src");
+      lbImg.style.transition = "";
+      lbImg.style.transform = "";
     }, 280);
   }
 

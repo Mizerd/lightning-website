@@ -122,9 +122,20 @@ async function run(apiUp) {
      lb.getAttribute("role") === "dialog" && lb.getAttribute("aria-modal") === "true",
      lb.getAttribute("role"));
 
-  // --- clicking the image must NOT close it (pinch and pan on a phone) --
+  // --- clicking the image DOES close it now -----------------------------
+  //
+  // This asserted the opposite until 2026-09-13, and the reason it gave was
+  // real: exempting the image is what lets a phone pinch and pan a zoomed
+  // screenshot without the first touch dismissing it. The maintainer asked for
+  // click-anywhere anyway, so the contract changed and this case changed with
+  // it rather than being deleted -- the behaviour is still pinned, just to the
+  // other value, and the cost is written down where the next reader will find
+  // it.
   click(lbImg);
-  ok(tag + " clicking the image keeps it open", !lb.hidden, "closed on the image");
+  ok(tag + " clicking the image closes it", lb.classList.contains("lg-lbon") === false,
+     "image click did not start the close");
+  // Reopen for the assertions below, which are about the close sequence.
+  click(btns[0]);
 
   // --- clicking anywhere else closes -----------------------------------
   // The scroll lock and focus come back at once; making the reader wait out

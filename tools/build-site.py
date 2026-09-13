@@ -18,6 +18,7 @@ size; the app wrote that reasoning down and it holds here.
 """
 import html
 import json
+import random
 import os
 import pathlib
 import struct
@@ -310,6 +311,21 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
 .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
+/* ---- the sky ---------------------------------------------------------------
+   Fixed behind everything, pointer-transparent, and coloured by currentColor
+   so it inverts with the theme instead of being pale dust on the light three.
+   Low enough that you notice it only once you look for it. */
+.lg-sky {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
+  color: var(--text); opacity: 0.16;
+}
+.lg-sky circle { fill: currentColor; }
+.lg-sky line { stroke: currentColor; stroke-width: 0.5; opacity: 0.45; }
+.lg-sky-mark { fill: var(--accent); opacity: 0.9; }
+/* Everything real sits above it. */
+.lg-top, main, footer { position: relative; z-index: 1; }
+
 /* ---- header --------------------------------------------------------------- */
 .lg-top {
   border-bottom: 1px solid var(--hairline);
@@ -526,6 +542,59 @@ def indigo_tokens():
 CSS = (CSS.replace("{INDIGO_TOKENS}", indigo_tokens())
           .replace("{THEME_CSS}", theme_css()))
 
+def sky_svg():
+    """The constellation layer: a fixed, seeded starfield behind the page.
+
+    SEEDED, so the layout is identical on every build. A random one would make
+    every rebuild a noisy diff of meaningless coordinates, and nobody could
+    tell a deliberate change from the generator rolling again.
+
+    It takes its colour from `currentColor`, which is `--text`, so it inverts
+    with the theme by itself -- pale stars on the dark palettes, faint ink on
+    Warm, Moss Light and Lightning Light. A fixed white starfield would look
+    like dust on the light three.
+
+    The ONE accent star is the barely-noticeable detail: a single point in the
+    theme's own accent, slightly larger, with a faint halo. Nothing points at
+    it and nothing explains it.
+    """
+    rng = random.Random(0x11667)
+    W, H = 1000, 1000
+    stars = []
+    # Scatter, but keep a margin off the centre column where the text lives, so
+    # the field reads as sky around the content rather than noise behind it.
+    while len(stars) < 46:
+        x, y = rng.uniform(0, W), rng.uniform(0, H)
+        if 300 < x < 700 and 120 < y < 880:
+            continue
+        stars.append((round(x, 1), round(y, 1), round(rng.uniform(0.7, 1.7), 2)))
+
+    # Three small constellations, each a short path through nearby stars.
+    # Only SHORT hops. The viewBox is sliced to the viewport, so a link between
+    # two stars that are merely "nearest" in a 1000x1000 field can cross the
+    # whole screen and read as a streak rather than a constellation.
+    MAX2 = 150 ** 2
+    lines = []
+    for seed_i in (2, 17, 31, 40):
+        a = stars[seed_i]
+        near = sorted(stars, key=lambda s: (s[0] - a[0]) ** 2 + (s[1] - a[1]) ** 2)[1:5]
+        prev = a
+        for b in near:
+            if (prev[0] - b[0]) ** 2 + (prev[1] - b[1]) ** 2 > MAX2:
+                continue
+            lines.append((prev[0], prev[1], b[0], b[1]))
+            prev = b
+
+    parts = [f'<svg class="lg-sky" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">']
+    for x1, y1, x2, y2 in lines:
+        parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"/>')
+    for x, y, r in stars:
+        parts.append(f'<circle cx="{x}" cy="{y}" r="{r}"/>')
+    ax, ay, _ = stars[9]
+    parts.append(f'<circle class="lg-sky-mark" cx="{ax}" cy="{ay}" r="2.6"/>')
+    parts.append('</svg>')
+    return "".join(parts)
+
 def build():
     nl = "\n"
     swatches = nl.join(
@@ -536,6 +605,7 @@ def build():
         f'<i style="background:{c}"></i>{n}</button>'
         for n, c in THEMES)
 
+    SKY = sky_svg()
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -558,6 +628,7 @@ def build():
 {CSS}</style>
 </head>
 <body>
+{SKY}
 
 <header class="lg-top">
   <div class="wrap">

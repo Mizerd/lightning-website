@@ -219,12 +219,10 @@ MACOS_LIMIT = (
 LINUX_BLOCK = platform_block(
     "linux", "Linux",
     "AppImage and Flatpak carry their own Qt and run anywhere",
-    '<p class="lg-pkg-note">Lightning needs Qt 6.8 or newer, and the native'
-    ' packages are built against the Qt their own distribution ships. Neither'
-    ' <code>.deb</code> will install on Ubuntu 24.04, Mint 22.x or Pop!_OS'
-    ' 24.04, and the <code>.rpm</code> will not on Fedora 43 \u2014 their Qt is'
-    ' older than that. Use the AppImage or the Flatpak there; both carry their'
-    ' own.</p>')
+    '<p class="lg-pkg-note">Needs Qt 6.8+. Neither <code>.deb</code> installs on'
+    ' Ubuntu 24.04, Mint 22.x or Pop!_OS 24.04, nor the <code>.rpm</code> on'
+    ' Fedora 43 \u2014 older Qt. Use the AppImage or the Flatpak there; both'
+    ' carry their own.</p>')
 WINDOWS_BLOCK = platform_block(
     "windows", "Windows", "unsigned \u2014 Windows will warn you")
 _macos_note = feed.get("macos_note", "")
@@ -664,7 +662,7 @@ def build():
 <section id="build">
   <div class="wrap">
     <h2>How it is put together</h2>
-    <p class="lg-lede">Most of what a Matrix client gets wrong is cryptography and synchronisation. Lightning writes neither.</p>
+    <p class="lg-lede">Most of what a Matrix client gets wrong is cryptography and synchronisation. Lightning writes neither of them.</p>
     <div class="lg-stack">
 <b>Qt 6 / QML</b>          <span class="k">interface, layout, themes, accessibility</span><br>
 <b>C++20</b>              <span class="k">application state, models, routing, policy</span><br>
@@ -674,15 +672,15 @@ def build():
     <div class="lg-cols">
       <div>
         <h3>No cryptography of its own</h3>
-        <p>Olm, Megolm, cross-signing, key backup and verification are the official Rust SDK's, called through an FFI bridge. Lightning implements none of it and is not permitted to — the rule is written into the project's own development guide.</p>
+        <p>Olm, Megolm, cross-signing, key backup and verification are the official Rust SDK's, through an FFI bridge. Lightning implements none of it and is not permitted to.</p>
       </div>
       <div>
         <h3>Not a webview</h3>
-        <p>No Electron, no Chromium, no web frontend in a native window. The interface is QML compiled into the binary — no JavaScript engine to boot, no browser to host it — which is why it looks and behaves like the rest of your desktop.</p>
+        <p>No Electron, no Chromium, no web frontend in a native window. QML compiled into the binary — no JavaScript engine to boot, no browser to host it.</p>
       </div>
       <div>
         <h3>Calls are native</h3>
-        <p>MatrixRTC is spoken directly through GStreamer and webrtcbin rather than by embedding Element Call in a widget. That is what lets a screen share run on the GPU and a call survive on a laptop.</p>
+        <p>MatrixRTC spoken directly through GStreamer and webrtcbin, not Element Call in a widget. That is what puts a screen share on the GPU.</p>
       </div>
     </div>
   </div>
@@ -691,12 +689,12 @@ def build():
 <section id="features">
   <div class="wrap">
     <h2>Five things that are unusual</h2>
-    <p class="lg-lede">Not a feature list — the client does the ordinary things too. These are the ones worth the paragraph.</p>
+    <p class="lg-lede">It does the ordinary things too. These are the ones worth a paragraph.</p>
 
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Group calls, with screen sharing</h3>
-        <p>Voice and video over MatrixRTC, interoperable with Element Call. Share a whole screen or one window; the scaling runs on the GPU. Per-participant volume, raise-hand, and a call that keeps running while you read another room.</p>
+        <p>MatrixRTC, interoperable with Element Call. Share a screen or one window, scaled on the GPU. Per-participant volume, raised hands, and a call that survives you reading another room.</p>
       </div>
       {shot("screenshot-call.png", "A group call in Lightning")}
     </div>
@@ -704,7 +702,7 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Search inside encrypted rooms</h3>
-        <p>A server cannot search what it cannot read. Lightning keeps a local index so encrypted rooms are searchable at all — the one place it deliberately stores decrypted text, documented in the open rather than glossed over.</p>
+        <p>A server cannot search what it cannot read, so Lightning keeps a local index. It is the one place decrypted text is stored on purpose, and it is documented rather than glossed over.</p>
       </div>
       {shot("screenshot-timeline.png", "A room timeline in Lightning")}
     </div>
@@ -712,7 +710,7 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Spaces, and a Channels layout</h3>
-        <p>Spaces in a rail you can drag, drop one onto another to make a folder, and edit properly — name, topic, avatar, join rule, address and the full power-level matrix. Or switch to the Channels layout if that is how your brain works.</p>
+        <p>Drag Spaces in the rail, drop one on another to make a folder, edit every setting down to the power-level matrix. Or switch to the Channels layout instead.</p>
       </div>
       {shot("screenshot-channels.png", "The Channels layout in Lightning")}
     </div>
@@ -720,7 +718,7 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Threads that are actually threads</h3>
-        <p>Real <code>m.thread</code> relations through the SDK's own thread timelines, with summary cards on the root and per-thread unread state. Replies never leak into the main timeline, which is the part most clients get wrong.</p>
+        <p>Real <code>m.thread</code> relations on the SDK's own thread timelines, with summary cards and per-thread unread state. Replies never leak into the main timeline — the part most clients get wrong.</p>
       </div>
       {shot("screenshot-emoji-and-polls.png", "Reactions and a poll in Lightning")}
     </div>
@@ -728,7 +726,7 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>A theme editor, not a theme setting</h3>
-        <p>Pick a colour for any part of the window and watch a sample room repaint as you go. Eleven themes ship, all checked for WCAG-AA contrast, and each one is per-account.</p>
+        <p>Pick a colour for any part of the window and watch a sample room repaint as you go. Eleven themes ship, all WCAG-AA checked, each one per-account.</p>
       </div>
       {shot("screenshot-theme-editor.png", "The theme editor in Lightning")}
     </div>
@@ -760,20 +758,20 @@ def build():
 
 {MACOS_BLOCK}
 
-    <p class="lg-pkg-note">Every release ships a <code>SHA256SUMS</code> file, and the manifest the updater reads is signed.</p>
+    <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
   </div>
 </section>
 
 <section id="limits">
   <div class="wrap">
     <h2>What it cannot do yet</h2>
-    <p class="lg-lede">Lightning is alpha. This section is part of the pitch, not a disclaimer under it — it is the same list the project keeps for itself.</p>
+    <p class="lg-lede">Alpha. This is the same list the project keeps for itself.</p>
     <ul class="lg-list">
       <li>{MACOS_LIMIT}</li>
-      <li><b>Nobody has listened to a call.</b> Audio is proven to flow both ways and to reach the audio engine; no human has confirmed it sounds like anything.</li>
-      <li><b>Recovery and key backup are verified by reading the code, not by using them.</b> Exercising them puts a recovery key on screen, so the audit is the evidence. Four known rough edges are listed in the release notes.</li>
-      <li><b>Screen sharing and the camera are untested on the Snap</b> — the test machine has no desktop portal for a confined app to talk to.</li>
-      <li><b>Some distributions ship a Qt too old for the native packages.</b> Named above, with the versions.</li>
+      <li><b>Nobody has listened to a call.</b> Audio provably reaches the far end and the audio engine. No human has confirmed it sounds like anything.</li>
+      <li><b>Recovery and key backup are verified by reading the code, not by using it.</b> Exercising it puts a recovery key on screen. Four known rough edges are in the release notes.</li>
+      <li><b>Screen sharing and the camera are untested on the Snap</b> — no desktop portal on the test machine.</li>
+      <li><b>Some distributions ship a Qt too old for the native packages.</b> Named above.</li>
     </ul>
   </div>
 </section>
@@ -781,13 +779,13 @@ def build():
 <section id="privacy">
   <div class="wrap">
     <h2>Privacy, checkably</h2>
-    <p class="lg-lede">Each of these names the thing that implements it, so it can be checked — and shown to be wrong if it ever drifts.</p>
+    <p class="lg-lede">Each names the thing that implements it, so it can be checked.</p>
     <ul class="lg-list">
-      <li><b>No telemetry, no analytics, no crash reporting.</b> Lightning talks to your homeserver, and to our release server when it checks for an update — that request carries a version number and nothing else.</li>
-      <li><b>Message content is stored on your disk unencrypted.</b> Once the SDK decrypts a message it keeps the plain text in its cache and in the search index, as plain SQLite in your account's directory — readable only by your user, deleted with the account. Full-disk encryption is what protects it at rest today. An encrypted store is open work, not a shipped feature.</li>
-      <li><b>Keys, tokens, recovery keys and message bodies never reach the logs.</b> The diagnostics you can copy out carry hashed account identifiers and no paths.</li>
-      <li><b>Access tokens go to your OS secret service</b> — libsecret, Windows Credential Manager — with a clearly flagged insecure fallback where there is none.</li>
-      <li><b>GIF search is the one thing that leaves.</b> Your search term goes to the provider you picked, and nothing else does: no Matrix IDs, no room or event IDs, no message text.</li>
+      <li><b>No telemetry, no analytics, no crash reporting.</b> It talks to your homeserver, and to the release server when checking for updates — a version number, nothing else.</li>
+      <li><b>Message content is stored on your disk unencrypted.</b> Decrypted text sits in the SDK cache and the search index as plain SQLite in your account directory — your user only, deleted with the account. Full-disk encryption is what protects it today. An encrypted store is open work, not a feature.</li>
+      <li><b>Keys, tokens, recovery keys and message bodies never reach the logs.</b> Copyable diagnostics carry hashed identifiers and no paths.</li>
+      <li><b>Access tokens go to your OS secret service</b> — libsecret, Windows Credential Manager — with a flagged insecure fallback where there is none.</li>
+      <li><b>GIF search is the one thing that leaves.</b> Your search term goes to the provider you picked. Nothing else does — no Matrix IDs, no room or event IDs, no message text.</li>
     </ul>
   </div>
 </section>

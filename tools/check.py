@@ -250,6 +250,19 @@ check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
 # stuck empty.
 check("motion.js is served", os.path.exists(os.path.join(PUB, "motion.js")))
 check("the page loads motion.js", '<script src="/motion.js"' in html)
+# THE BAKED DATE, not just the baked version.
+#
+# index.html carries hard-coded values so the page is correct with JavaScript
+# OFF -- and that is exactly the reader for whom a stale value is never
+# corrected. The version was asserted here; the DATE was not, and on
+# 2026-09-13 it was found reading 2026-08-27 against a feed saying 2026-09-10.
+# Two weeks wrong, for the only visitor the baked copy exists to serve.
+baked_date = re.search(r'data-lg-bind="released"[^>]*>([^<]+)<', html)
+check("the baked release date matches the feed",
+      baked_date is not None and baked_date.group(1).strip() == feed["released"],
+      f'baked {baked_date.group(1).strip() if baked_date else "MISSING"!r} '
+      f'vs feed {feed["released"]!r}')
+
 check("the progress bar ships empty", "transform: scaleX(0);" in html)
 # Bounded, or a renamed attribute (data-lg-topmost, data-lg-topX) still
 # contains the needle and the check passes over a sentinel motion.js

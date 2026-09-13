@@ -1055,7 +1055,7 @@ html, body { overflow-x: clip; }
         </div>
         <div style="padding: 22px 24px; background: #10151c; transition: background 0.3s ease;" class="hv-10 lg-card">
           <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #e8edf5;">Eleven themes</div>
-          <div style="margin-top: 7px; font-size: 13.5px; line-height: 1.5; color: #8d99a8;">All checked for WCAG-AA contrast, led by the Storm theme. Set one per account.</div>
+          <div style="margin-top: 7px; font-size: 13.5px; line-height: 1.5; color: #8d99a8;">All checked for WCAG-AA contrast, led by Indigo Night. Set one per account.</div>
         </div>
         <div style="padding: 22px 24px; background: #10151c; transition: background 0.3s ease;" class="hv-11 lg-card">
           <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #e8edf5;">Nothing home-rolled</div>
@@ -1311,7 +1311,7 @@ html, body { overflow-x: clip; }
         <div>
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5f88cc;">Download</div>
           <h2 style="margin-top: 16px; font-size: 42px; animation: lgRise 0.75s cubic-bezier(0.16,1,0.3,1) both; animation-timeline: view(); animation-range: entry 0% cover 20%; line-height: 1.1; font-weight: 700;" class="lg-t2">Version <span data-lg-bind="version">0.9.4</span></h2>
-          <p style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7d8b9c;">Released <span data-lg-bind="released">2026-08-27</span> · every release comes with a SHA256SUMS file</p>
+          <p style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7d8b9c;">Released <span data-lg-bind="released">2026-09-10</span> · every release comes with a SHA256SUMS file</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 12px;">
           <a data-lg-href="releasesUrl" href="https://github.com/Mizerd/lightning/releases" style="padding: 13px 22px; border-radius: 9px; background: #3b7ff0; color: #fff; font-size: 14.5px; font-weight: 600;" class="hv-23">Releases (GitHub)</a>
@@ -1483,8 +1483,8 @@ html, body { overflow-x: clip; }
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1px; margin-top: 44px; background: #1b222c; border: 1px solid #1b222c; border-radius: 13px; overflow: hidden;" class="lg-grid">
         <div style="padding: 26px; background: #10151c;" class="lg-card">
-          <h3 style="font-size: 16px; font-weight: 600;">Messages stay in memory</h3>
-          <p style="margin-top: 10px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Decrypted messages aren't written to Lightning's caches, and keys, tokens, recovery keys and message text never go into the logs.</p>
+          <h3 style="font-size: 16px; font-weight: 600;">Messages are on your disk, unencrypted</h3>
+          <p style="margin-top: 10px; font-size: 14px; line-height: 1.6; color: #8d99a8;">Once a message is decrypted, the SDK keeps the plain text in its own cache and in Lightning's search index — plain SQLite in your account's store directory, readable only by your user, deleted with the account. Full-disk encryption is what protects it at rest today. Keys, tokens, recovery keys and message text never go into the logs.</p>
         </div>
         <div style="padding: 26px; background: #10151c;" class="lg-card">
           <h3 style="font-size: 16px; font-weight: 600;">Tokens go in your keyring</h3>

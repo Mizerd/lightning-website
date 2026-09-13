@@ -18,6 +18,7 @@ size; the app wrote that reasoning down and it holds here.
 """
 import html
 import json
+import math
 import random
 import os
 import pathlib
@@ -322,17 +323,27 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
 /* ---- the sky ---------------------------------------------------------------
-   Fixed behind everything, pointer-transparent, and coloured by currentColor
-   so it inverts with the theme instead of being pale dust on the light three.
-   Low enough that you notice it only once you look for it. */
+   Constellations behind everything, pointer-transparent, and coloured by
+   currentColor so they invert with the theme instead of being pale dust on the
+   light three. Low enough that you notice them only once you look. The field
+   baked below is the one a reader without JavaScript gets; releases.js rolls a
+   fresh one from the same shapes on every load. */
 .lg-sky {
-  /* ABSOLUTE, not fixed, and stretched over the whole document by top/bottom
-     rather than a percentage height (body's height is auto, so a percentage
-     would not resolve). Being part of the document is what makes the stars
+  /* ABSOLUTE, not fixed. Being part of the document is what makes the stars
      move EXACTLY as far as the page does -- a fixed layer dragged along by a
      scroll handler always lags or leads, and reads as the background being out
-     of sync rather than as depth. It also needs no JavaScript at all. */
-  position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+     of sync rather than as depth. It also needs no JavaScript at all.
+
+     THE WIDTH AND HEIGHT ARE EXPLICIT, AND THAT IS NOT TIDINESS. An <svg> is a
+     REPLACED element: absolutely positioned with `width: auto` and `height:
+     auto`, CSS resolves its size from its INTRINSIC RATIO and ignores `right`
+     and `bottom` as over-constrained. viewBox="0 0 1440 6800" is a ratio of
+     0.21, so at a 2560px-wide window the layer computed 12,000px tall against
+     ~6,500px of page and the document scrolled to nearly twice its content --
+     half of it empty sky. A percentage DOES resolve here, unlike in normal
+     flow: an absolutely positioned box resolves percentage heights against its
+     containing block even when that block's own height is auto. */
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   z-index: 0; pointer-events: none;
   color: var(--text);
   /* Per theme: the light palettes need roughly double. A dark dot at 16% on a
@@ -341,7 +352,7 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
   opacity: var(--sky-opacity, 0.16);
 }
 .lg-sky circle { fill: currentColor; }
-.lg-sky line { stroke: currentColor; stroke-width: 0.5; opacity: 0.45; }
+.lg-sky line { stroke: currentColor; stroke-width: 0.8; opacity: 0.5; }
 .lg-sky-mark { fill: var(--accent); opacity: 0.9; }
 /* Everything real sits above it. */
 .lg-top, main, footer { position: relative; z-index: 1; }
@@ -594,61 +605,137 @@ def indigo_tokens():
 CSS = (CSS.replace("{INDIGO_TOKENS}", indigo_tokens())
           .replace("{THEME_CSS}", theme_css()))
 
-def sky_svg():
-    """The constellation layer: a fixed, seeded starfield behind the page.
+SKY_SHAPES = json.loads((PUB / "sky-shapes.json").read_text(encoding="utf-8"))["shapes"]
 
-    SEEDED, so the layout is identical on every build. A random one would make
-    every rebuild a noisy diff of meaningless coordinates, and nobody could
-    tell a deliberate change from the generator rolling again.
+# The baked field's coordinate space. It is in CSS pixels rather than some
+# abstract grid, so a `stroke-width: 0.8` reads the same here as it does in the
+# field releases.js generates at the document's real size.
+SKY_W, SKY_H = 1440, 6800
+
+
+def sky_field(rng, W, H, shapes):
+    """One star field: (lines, stars, accent_index_into_stars).
+
+    Built from SET SHAPES, not from noise. A handful of the constellations in
+    `sky-shapes.json` are scaled, rotated and dropped into the margins, and a
+    dust of unconnected stars fills in around them. That is the difference
+    between a sky and a scatter plot: the eye finds figures in it.
+
+    THE CENTRE COLUMN IS KEPT CLEAR. The page's text sits in a 1080px column
+    and the layer is behind it, so anything placed there is noise behind
+    paragraphs. The band narrows on a narrow window rather than swallowing the
+    whole width -- at 700px there would otherwise be nowhere left to put a star.
+
+    This is the SHARED algorithm: releases.js runs the same one in JavaScript
+    at the document's real size. They are deliberately not required to agree
+    byte for byte -- each rolls its own field -- only to build from the same
+    shapes.
+    """
+    # The clear band: the content column, but never more than leaves 120px of
+    # sky either side.
+    keep = min(1080.0, W * 0.72)
+    keep = min(keep, max(0.0, W - 240.0))
+    lo, hi = (W - keep) / 2.0, (W + keep) / 2.0
+
+    def in_band(x):
+        return lo < x < hi
+
+    lines, stars, placed = [], [], []
+    n_const = max(5, min(16, round(W * H / 1_000_000)))
+    for _ in range(n_const):
+        shape = shapes[rng.randrange(len(shapes))]
+        size = rng.uniform(90, 210)
+        rot = rng.uniform(0, 2 * math.pi)
+        squash = rng.uniform(0.78, 1.25)
+        cos, sin = math.cos(rot), math.sin(rot)
+        # Centres go in the margins; a figure may SPILL towards the column,
+        # which reads as sky continuing behind the page rather than stopping
+        # at a line. Rejection-sampled against what is already placed so two
+        # constellations do not land on top of each other and read as noise.
+        cx = cy = 0.0
+        for _try in range(40):
+            if lo <= 60:
+                cx = rng.uniform(0, W)          # no margin to speak of
+            elif rng.random() < 0.5:
+                cx = rng.uniform(0, lo)
+            else:
+                cx = rng.uniform(hi, W)
+            cy = rng.uniform(size * 0.6, H - size * 0.6)
+            if all((cx - px) ** 2 + (cy - py) ** 2 > ((size + ps) * 0.6) ** 2
+                   for px, py, ps in placed):
+                break
+        placed.append((cx, cy, size))
+
+        pts = []
+        for x, y in shape["pts"]:
+            dx, dy = (x - 0.5) * size, (y - 0.5) * size * squash
+            pts.append((round(cx + dx * cos - dy * sin, 1),
+                        round(cy + dx * sin + dy * cos, 1)))
+        for a, b in shape["edges"]:
+            lines.append((pts[a][0], pts[a][1], pts[b][0], pts[b][1]))
+        for x, y in pts:
+            stars.append((x, y, round(rng.uniform(1.2, 2.1), 2)))
+
+    # The accent star is one of a constellation's own vertices, so the detail
+    # sits inside a figure rather than floating in the dust.
+    accent = rng.randrange(len(stars)) if stars else -1
+
+    # Dust: unconnected stars, kept out of the column, at a density that
+    # follows the area rather than a number somebody typed once.
+    vertices = len(stars)
+    n_dust = round(W * H / 34_000)
+    tries = 0
+    while len(stars) - vertices < n_dust and tries < n_dust * 12:
+        tries += 1
+        x, y = rng.uniform(0, W), rng.uniform(0, H)
+        if in_band(x):
+            continue
+        stars.append((round(x, 1), round(y, 1), round(rng.uniform(0.6, 1.6), 2)))
+    return lines, stars, accent
+
+
+def sky_svg():
+    """The constellation layer, baked for a reader without JavaScript.
+
+    SEEDED, so a rebuild is not a noisy diff of meaningless coordinates and a
+    deliberate change is still visible in one. The LIVE page does not keep this
+    field: releases.js rolls a new one from the same shapes on every load, at
+    the document's real width and height, which is also the only way the star
+    density can be right on a phone and on a 4K panel at once.
 
     It takes its colour from `currentColor`, which is `--text`, so it inverts
     with the theme by itself -- pale stars on the dark palettes, faint ink on
-    Warm, Moss Light and Lightning Light. A fixed white starfield would look
-    like dust on the light three.
+    Warm, Moss Light and Lightning Light.
 
     The ONE accent star is the barely-noticeable detail: a single point in the
-    theme's own accent, slightly larger, with a faint halo. Nothing points at
-    it and nothing explains it.
+    theme's own accent, slightly larger. Nothing points at it and nothing
+    explains it.
     """
     rng = random.Random(0x11667)
-    # A TALL field, not a viewport-sized one. The layer spans the whole
-    # document now, so the viewBox has to be the document's rough aspect or
-    # `slice` would scale a square field up by five and leave a handful of
-    # enormous stars. 1000x5000 at ~1400px wide is about right for this page,
-    # and the star count scales with the area so the density is unchanged.
-    W, H = 1000, 5000
-    stars = []
-    while len(stars) < 230:
-        x, y = rng.uniform(0, W), rng.uniform(0, H)
-        # Keep off the centre column where the text lives, so the field reads
-        # as sky around the content rather than noise behind it.
-        if 300 < x < 700:
-            continue
-        stars.append((round(x, 1), round(y, 1), round(rng.uniform(0.7, 1.7), 2)))
-
-    # Only SHORT hops, or a link reads as a streak across the page.
-    MAX2 = 150 ** 2
-    lines = []
-    for seed_i in range(4, len(stars), 14):
-        a = stars[seed_i]
-        near = sorted(stars, key=lambda s: (s[0] - a[0]) ** 2 + (s[1] - a[1]) ** 2)[1:5]
-        prev = a
-        for b in near:
-            if (prev[0] - b[0]) ** 2 + (prev[1] - b[1]) ** 2 > MAX2:
-                continue
-            lines.append((prev[0], prev[1], b[0], b[1]))
-            prev = b
-
-    parts = [f'<svg class="lg-sky" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">']
+    lines, stars, accent = sky_field(rng, SKY_W, SKY_H, SKY_SHAPES)
+    parts = [f'<svg class="lg-sky" viewBox="0 0 {SKY_W} {SKY_H}"'
+             f' preserveAspectRatio="xMidYMid slice" aria-hidden="true">']
     for x1, y1, x2, y2 in lines:
         parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"/>')
-    for x, y, r in stars:
-        parts.append(f'<circle cx="{x}" cy="{y}" r="{r}"/>')
-    # The one accent star, a third of the way down where it will be seen.
-    ax, ay, _ = stars[70]
-    parts.append(f'<circle class="lg-sky-mark" cx="{ax}" cy="{ay}" r="2.6"/>')
+    for i, (x, y, r) in enumerate(stars):
+        cls = ' class="lg-sky-mark"' if i == accent else ""
+        rr = 2.6 if i == accent else r
+        parts.append(f'<circle{cls} cx="{x}" cy="{y}" r="{rr}"/>')
     parts.append('</svg>')
     return "".join(parts)
+
+
+def sky_shape_data():
+    """The shape table, inlined for releases.js to roll its own field from.
+
+    Inlined rather than fetched: it is under 2KB, and a second request for
+    decoration that must be on screen at first paint is a worse trade than the
+    bytes. One source of truth either way -- this is `public/sky-shapes.json`.
+    """
+    compact = json.dumps({"shapes": SKY_SHAPES}, separators=(",", ":"))
+    return ('<script type="application/json" id="lg-sky-shapes">'
+            + compact.replace("<", "\\u003c") + '</script>')
+
 
 def room_card():
     """The support room, or nothing.
@@ -683,7 +770,7 @@ def build():
         f'<i style="background:{c}"></i>{n}</button>'
         for n, c in THEMES)
 
-    SKY = sky_svg()
+    SKY = sky_svg() + sky_shape_data()
     ROOM_CARD = room_card()
     html = f"""<!DOCTYPE html>
 <html lang="en">

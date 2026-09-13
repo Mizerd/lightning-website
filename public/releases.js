@@ -541,6 +541,158 @@
     el.hidden = false;
   });
 
+  /* ---- the sky --------------------------------------------------------------
+   * A fresh constellation field on every load, built from the SET SHAPES in
+   * public/sky-shapes.json (inlined into the page as #lg-sky-shapes).
+   *
+   * index.html ships a baked field so a reader without JavaScript still gets a
+   * sky, and this replaces it for two reasons. The first is that it is a
+   * different sky every time, which is the point. The second is less obvious
+   * and matters more: the baked one is a fixed viewBox scaled to fit, so on a
+   * phone it is a handful of enormous stars and on a 4K panel a fine mist.
+   * Rolled here, the field is generated in the layer's REAL pixel size, so the
+   * density and the star sizes are the same everywhere.
+   */
+  function skyShapes() {
+    var el = document.getElementById("lg-sky-shapes");
+    if (!el) return null;
+    try {
+      var data = JSON.parse(el.textContent);
+      return data && data.shapes && data.shapes.length ? data.shapes : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function r1(v) { return Math.round(v * 10) / 10; }
+  function r2(v) { return Math.round(v * 100) / 100; }
+
+  // The same algorithm build-site.py bakes with, in the same coordinate space.
+  // They are not required to agree star for star -- each rolls its own -- only
+  // to build from the same shapes.
+  function skyField(W, H, shapes) {
+    // Keep the centre column clear: the page's text sits in a 1080px column
+    // and this layer is behind it. The band narrows on a narrow window rather
+    // than swallowing the whole width.
+    var keep = Math.min(1080, W * 0.72);
+    keep = Math.min(keep, Math.max(0, W - 240));
+    var lo = (W - keep) / 2, hi = (W + keep) / 2;
+
+    var lines = [], circles = [], stars = [], placed = [];
+    var nConst = Math.max(5, Math.min(16, Math.round(W * H / 1000000)));
+    for (var i = 0; i < nConst; i++) {
+      var shape = shapes[(Math.random() * shapes.length) | 0];
+      var size = 90 + Math.random() * 120;
+      var rot = Math.random() * Math.PI * 2;
+      var squash = 0.78 + Math.random() * 0.47;
+      var cos = Math.cos(rot), sin = Math.sin(rot);
+
+      // Centres go in the margins; a figure may spill towards the column,
+      // which reads as sky continuing behind the page rather than stopping at
+      // a line. Rejection-sampled so two figures do not land on each other.
+      var cx = 0, cy = 0;
+      for (var t = 0; t < 40; t++) {
+        cx = lo <= 60 ? Math.random() * W
+           : (Math.random() < 0.5 ? Math.random() * lo
+                                  : hi + Math.random() * (W - hi));
+        cy = size * 0.6 + Math.random() * Math.max(1, H - size * 1.2);
+        var clear = true;
+        for (var q = 0; q < placed.length; q++) {
+          var qx = cx - placed[q][0], qy = cy - placed[q][1];
+          var lim = (size + placed[q][2]) * 0.6;
+          if (qx * qx + qy * qy <= lim * lim) { clear = false; break; }
+        }
+        if (clear) break;
+      }
+      placed.push([cx, cy, size]);
+
+      var pts = [];
+      for (var k = 0; k < shape.pts.length; k++) {
+        var dx = (shape.pts[k][0] - 0.5) * size;
+        var dy = (shape.pts[k][1] - 0.5) * size * squash;
+        pts.push([r1(cx + dx * cos - dy * sin), r1(cy + dx * sin + dy * cos)]);
+      }
+      for (var e = 0; e < shape.edges.length; e++) {
+        var a = pts[shape.edges[e][0]], b = pts[shape.edges[e][1]];
+        if (!a || !b) continue;
+        lines.push('<line x1="' + a[0] + '" y1="' + a[1] +
+                   '" x2="' + b[0] + '" y2="' + b[1] + '"/>');
+      }
+      for (var v = 0; v < pts.length; v++) {
+        stars.push([pts[v][0], pts[v][1], r2(1.2 + Math.random() * 0.9)]);
+      }
+    }
+
+    // The accent star is one of a constellation's own vertices, so the detail
+    // sits inside a figure rather than floating in the dust.
+    var accent = stars.length ? (Math.random() * stars.length) | 0 : -1;
+
+    // Dust: unconnected stars, kept out of the column, at a density that
+    // follows the area rather than a number somebody typed once.
+    var vertices = stars.length;
+    var nDust = Math.round(W * H / 34000);
+    for (var tries = 0; stars.length - vertices < nDust && tries < nDust * 12; tries++) {
+      var x = Math.random() * W, y = Math.random() * H;
+      if (x > lo && x < hi) continue;
+      stars.push([r1(x), r1(y), r2(0.6 + Math.random())]);
+    }
+
+    for (var s = 0; s < stars.length; s++) {
+      circles.push('<circle' + (s === accent ? ' class="lg-sky-mark"' : '') +
+                   ' cx="' + stars[s][0] + '" cy="' + stars[s][1] +
+                   '" r="' + (s === accent ? 2.6 : stars[s][2]) + '"/>');
+    }
+    return lines.join("") + circles.join("");
+  }
+
+  var skyW = 0, skyH = 0, skyTimer = 0;
+
+  function paintSky() {
+    var svg = document.querySelector("svg.lg-sky");
+    var shapes = skyShapes();
+    if (!svg || !shapes) return;
+    // The layer's own box, not the window and not scrollHeight: it is sized by
+    // CSS to cover the document, and measuring what we are actually filling is
+    // the one measurement that cannot disagree with it.
+    var box = svg.getBoundingClientRect();
+    var W = Math.round(box.width), H = Math.round(box.height);
+    if (W < 240 || H < 240) return;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.innerHTML = skyField(W, H, shapes);
+    skyW = W;
+    skyH = H;
+  }
+
+  // Repaint only when the document has actually changed shape. Fonts landing,
+  // images decoding and a window resize all move it; a few pixels do not
+  // deserve a whole new sky, and rerolling on every observer callback would
+  // make the stars flicker while the reader drags a window edge.
+  function skyResized() {
+    var svg = document.querySelector("svg.lg-sky");
+    if (!svg) return;
+    var box = svg.getBoundingClientRect();
+    if (Math.abs(box.width - skyW) < 48 && Math.abs(box.height - skyH) < 240) return;
+    paintSky();
+  }
+
+  function skyWatch() {
+    var svg = document.querySelector("svg.lg-sky");
+    if (!svg) return;
+    function later() {
+      clearTimeout(skyTimer);
+      skyTimer = setTimeout(skyResized, 220);
+    }
+    if (window.ResizeObserver) {
+      new ResizeObserver(later).observe(svg);
+    } else {
+      window.addEventListener("resize", later);
+    }
+    window.addEventListener("load", later);
+  }
+
+  paintSky();
+  skyWatch();
+
   function load(url, apply, opts) {
     return fetch(url, opts)
       .then(function (r) { return r.ok ? r.json() : null; })

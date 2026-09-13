@@ -396,6 +396,72 @@ check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
 # so motion.js went with them.
 
 
+# ---- the sky ----------------------------------------------------------------
+# THE ONE THAT COST HALF A PAGE OF SCROLLING. `.lg-sky` is an <svg>, which is a
+# REPLACED element: absolutely positioned with auto width and height, CSS sizes
+# it from its viewBox's intrinsic RATIO and ignores `right`/`bottom` as
+# over-constrained. Stretching it with `top: 0; bottom: 0` therefore did not
+# stretch it at all -- at a 2560px-wide window the layer computed ~12,000px
+# against ~6,800px of page, and the document scrolled to nearly twice its own
+# content with nothing in the bottom half but stars. Both dimensions must be
+# stated explicitly, and nothing in this file can see a layout, so the
+# declaration itself is what is asserted.
+sky_rule = re.search(r"\.lg-sky\s*\{(.*?)\}", html, re.S)
+# Without the comments: this rule's own comment explains the trap in prose, and
+# prose about `width` is not a declaration of it.
+sky_body = re.sub(r"/\*.*?\*/", "", sky_rule.group(1) if sky_rule else "", flags=re.S)
+sky_body = " ".join(sky_body.split())
+check("the sky cannot outgrow the document",
+      bool(re.search(r"(?<!-)\bwidth:\s*100%", sky_body))
+      and bool(re.search(r"(?<!-)\bheight:\s*100%", sky_body)),
+      "`.lg-sky` needs an explicit width AND height, or its intrinsic ratio "
+      "sizes it: %r" % sky_body.strip())
+
+# The shape table releases.js rolls a fresh field from, inlined into the page.
+# A missing or malformed one is silent: the baked field simply stays, and the
+# sky stops being different every visit without anything saying so.
+shapes_tag = re.search(
+    r'<script type="application/json" id="lg-sky-shapes">(.*?)</script>', html, re.S)
+shapes = []
+if shapes_tag:
+    try:
+        # `<` is emitted as the JSON escape \u003c so it cannot end the
+        # <script> element early; json.loads understands that by itself.
+        shapes = json.loads(shapes_tag.group(1))["shapes"]
+    except Exception as exc:                                  # noqa: BLE001
+        check("the sky's shape table parses", False, str(exc))
+check("the sky's shape table is inlined", bool(shapes),
+      "no #lg-sky-shapes in the page")
+
+on_disk = json.load(open(os.path.join(PUB, "sky-shapes.json"), encoding="utf-8"))["shapes"]
+check("the inlined shapes are public/sky-shapes.json",
+      shapes == on_disk,
+      "the page was built from a different shape table; rebuild")
+
+# Every edge must name points the shape actually has. An out-of-range index is
+# a line to nowhere in Python and a thrown TypeError in the browser -- which
+# takes the WHOLE of releases.js down with it, cards and lightbox included.
+bad_edges = []
+for sh in on_disk:
+    n = len(sh.get("pts", []))
+    if n < 2:
+        bad_edges.append("%s: %d points" % (sh.get("name"), n))
+    for a, b in sh.get("edges", []):
+        if not (0 <= a < n and 0 <= b < n):
+            bad_edges.append("%s: edge %d-%d of %d points" % (sh.get("name"), a, b, n))
+check("every constellation edge resolves", not bad_edges, "; ".join(bad_edges))
+
+# The baked field is what a reader without JavaScript gets, and it is the only
+# one this file can see at all.
+sky_svg_tag = re.search(r'<svg class="lg-sky".*?</svg>', html, re.S)
+baked = sky_svg_tag.group(0) if sky_svg_tag else ""
+check("the baked sky has figures, not just dust",
+      baked.count("<line") >= 20 and baked.count("<circle") >= 100,
+      "%d lines, %d stars" % (baked.count("<line"), baked.count("<circle")))
+check("exactly one accent star", baked.count("lg-sky-mark") == 1,
+      "%d" % baked.count("lg-sky-mark"))
+
+
 # ---- no cache skew between the HTML and the scripts that read it ----------
 # releases.js reads the DOM the generator emits, so it may not outlive that
 # DOM in a cache. This is the check that would have caught the bug where a

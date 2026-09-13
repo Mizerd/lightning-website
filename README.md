@@ -15,8 +15,10 @@ page in step with `releases.json`.
 public/              <- everything Cloudflare serves (the assets directory)
   index.html         <- the site; hand-editable
   releases.json      <- the release feed; edit this to cut a release
-  releases.js        <- optional: refreshes a live page from releases.json
-  motion.js          <- optional: scroll state, nav marker, pointer, reveals
+  releases.js        <- optional: refreshes a live page from releases.json,
+                        recolours it per theme, and rolls the star field
+  themes.json        <- all eleven client palettes; generated, see extract-themes.py
+  sky-shapes.json    <- the constellations the star field is built from
   404.html
   robots.txt
   sitemap.xml
@@ -24,7 +26,7 @@ public/              <- everything Cloudflare serves (the assets directory)
   _redirects         <- Cloudflare: same-site path redirects (relative URLs only)
   assets/
     lightning-mark.svg
-    screenshot-*.png
+    shots/*.png        <- every scenario in every theme: <scenario>--<theme>.png
     og-card.png        <- 1200x630 link preview; source in tools/og-card.html
   fonts/*.woff2      <- Manrope and JetBrains Mono (self-hosted subsets)
 
@@ -41,8 +43,10 @@ tools/
   check.py           <- invariant checks; run after editing public/
   check-assets.py    <- the download cards against a REAL release's assets
   og-card.html       <- source for assets/og-card.png; NOT deployed
+  extract-themes.py  <- reads the CLIENT's qml/AppTheme.qml into themes.json
   lightbox-test.js   <- jsdom test for the screenshot overlay (needs jsdom)
   cards-test.js      <- jsdom test for the package-card rebuild (needs jsdom)
+  sky-test.js        <- jsdom test for the constellation field (needs jsdom)
 ```
 
 Nothing outside `public/` is deployed.
@@ -296,6 +300,17 @@ ones about what must *not* happen: clicking the image does not close it, the
 overlay is reused rather than rebuilt on the second open, the scroll lock is
 released, and focus returns to the screenshot that was clicked.
 
+`tools/sky-test.js` is the third, and it covers the one part of the page that
+does not exist until the script runs. The background constellations are baked
+into `index.html` for a reader without JavaScript, and `releases.js` throws
+that field away and rolls a new one at the layer's real pixel size on every
+load — so `check.py` can only ever see the fallback. jsdom lays nothing out, so
+the test stubs `getBoundingClientRect` on `.lg-sky` and asserts the things that
+fail SILENTLY: stars placed outside the viewBox (clipped away without a word),
+a dust density that does not follow the area (boulders on a phone, mist on a
+4K panel), stars behind the text column, and a field that stops being
+different on every load.
+
 Anything about **layout**, and anything about whether text is actually
 *painted*, needs a real browser instead — jsdom has none. The Copy buttons
 shipped as empty rounded rectangles because `.lg-copy` asked JetBrains Mono for
@@ -517,6 +532,47 @@ and its description now leads with the site before mentioning the mirror. They
 were the reason Google treated the GitHub page as canonical. Nothing here can
 verify them on an ongoing basis — `curl -s https://api.github.com/repos/Mizerd/lightning`
 is the check, and it is worth repeating if search results ever drift back.
+
+## The sky
+
+The faint constellations behind the page are built from **set shapes**, not
+from noise: `public/sky-shapes.json` holds thirteen figures — a plough, a
+Cassiopeia W, a northern cross, a crown, a hunter, and a lightning bolt for the
+house — each a list of points normalised into a 0..1 box plus the edges to draw
+between them. The generator scales, rotates, squashes and drops a handful of
+them into the margins and fills the rest with unconnected dust. Adding a shape
+to that file is the whole procedure; both generators read it.
+
+There are two generators and they do the same thing in two languages, which is
+deliberate. `build-site.py` bakes one field into `index.html` from a **fixed
+seed**, so a rebuild is not a noisy diff of meaningless coordinates and a
+deliberate change is visible in one; that field is what a reader without
+JavaScript gets. `releases.js` throws it away on load and rolls a fresh one —
+a different sky every visit, which is the point, and more importantly one
+generated at the layer's **real pixel size**. The baked field is a fixed
+viewBox scaled to fit, so on a phone it is a handful of boulders and on a 4K
+panel a fine mist; rolled live, the density and the star sizes are the same
+everywhere.
+
+The layer is `position: absolute` over the whole document rather than `fixed`,
+so the stars move exactly as far as the page does. A fixed layer dragged along
+by a scroll handler always lags or leads by a few pixels and reads as the
+background being out of sync rather than as depth — that was tried, and the
+report it earned was "the constellations seem out of sync with the scroll".
+
+**Its width and height are stated explicitly, and that is not tidiness.** An
+`<svg>` is a *replaced* element: absolutely positioned with `width: auto` and
+`height: auto`, CSS sizes it from its viewBox's intrinsic **ratio** and ignores
+`right` and `bottom` as over-constrained. Stretching it with `top: 0; bottom:
+0` therefore did not stretch it at all — at a 2560px-wide window the layer
+computed some twelve thousand pixels tall against a page of about six and a
+half, and the document scrolled to nearly twice its own content with nothing in
+the bottom half but stars. `check.py` asserts both declarations, because
+nothing in that file can see a layout.
+
+Per theme the layer's opacity is `0.16` on the eight dark palettes and `0.46`
+on Moss Light, Lightning Light and Warm. A dark dot at 16% on a cream ground is
+a smudge; the stars were being swallowed exactly where the ground is brightest.
 
 ## Motion
 

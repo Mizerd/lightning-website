@@ -109,12 +109,27 @@ def main():
     old_version = feed["version"]
     print("%s -> %s   (%d assets on GitHub)" % (old_version, version, len(names)))
 
-    kept, dropped = [], []
+    kept, dropped, unpinned = [], [], []
     for pkg in feed["packages"]:
         name = asset_for(pkg, names)
         if not name:
+            # A PINNED package is not dropped: it deliberately names an older
+            # release's file (macOS is pinned at 0.9.4 because 0.9.5 has none),
+            # and it survives until the release it is pinned past actually
+            # ships one. Dropping it would remove the only download there is.
+            if pkg.get("pinned"):
+                print("  KEPT     %s (%s) -- pinned at %s"
+                      % (pkg.get("format"), pkg.get("os"), pkg["pinned"]))
+                kept.append(dict(pkg))
+                continue
             dropped.append("%s (%s)" % (pkg.get("format"), pkg.get("os")))
             continue
+        if pkg.get("pinned"):
+            # The release finally carries it: the pin is over, and the absolute
+            # url goes with it so the normal template takes over again.
+            unpinned.append("%s (%s), was pinned at %s"
+                            % (pkg.get("format"), pkg.get("os"), pkg["pinned"]))
+            pkg = {k: v for k, v in pkg.items() if k not in ("pinned", "url")}
         old_file = pkg.get("file", "")
         pkg = dict(pkg)
         pkg["file"] = name
@@ -126,6 +141,8 @@ def main():
 
     for d in dropped:
         print("  DROPPED  %s -- no asset in %s" % (d, tag))
+    for u in unpinned:
+        print("  UNPINNED %s" % u)
 
     feed["version"] = version
     feed["packages"] = kept

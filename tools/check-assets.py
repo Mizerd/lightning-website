@@ -69,6 +69,11 @@ def main():
         def attr(name):
             m = re.search(name + r'="([^"]*)"', tag_html)
             return m.group(1) if m else None
+        # A pinned card names an older release's file on purpose (macOS is
+        # pinned at 0.9.4), so it must not be resolved against this release's
+        # assets -- it would fail, correctly, and tell nobody anything useful.
+        if attr("data-lg-pinned"):
+            continue
         cards.append((attr("data-lg-pkg"), attr("data-lg-format"),
                       attr("data-lg-match"), attr("data-lg-file")))
     check("the page has download cards", bool(cards))

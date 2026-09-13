@@ -81,7 +81,15 @@ def shot(name, alt, cls=""):
 ASSET = feed["asset_url"]
 
 
-def asset_href(fil):
+def asset_href(fil, pkg=None):
+    """The download URL, or a PINNED package's own absolute one.
+
+    A pinned package is a deliberate exception: it belongs to an older release
+    than the one this page is about, so the version template must not be
+    applied to it. macOS is pinned at 0.9.4 because 0.9.5 has no macOS build.
+    """
+    if pkg and pkg.get("url"):
+        return pkg["url"]
     return ASSET.replace("${version}", VERSION).replace("${file}", fil)
 
 
@@ -116,11 +124,18 @@ def pkg_card(p):
   </div>"""
     else:
         inner = f'  <p class="lg-pkg-note" data-lg-bind="pkg.install">{install}</p>'
-    return f'''<div data-lg-pkg="{p["os"]}" data-lg-format="{p["format"]}" data-lg-file="{fil}"{match} class="lg-pkg">
+    # A pinned card is excluded from the /api/latest pass: that pass resolves a
+    # card against the NEWEST release's assets, and this one deliberately names
+    # an older release's file. Without the marker it would find no macOS asset
+    # and hide the button -- removing the only macOS download there is.
+    pinned = f' data-lg-pinned="{html.escape(p["pinned"])}"' if p.get("pinned") else ""
+    ver = (f'<span class="lg-pkg-ver">{html.escape(p["pinned"])}</span>'
+           if p.get("pinned") else "")
+    return f'''<div data-lg-pkg="{p["os"]}" data-lg-format="{p["format"]}" data-lg-file="{fil}"{match}{pinned} class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">{html.escape(p["format"])}</span>
-    <span class="lg-pkg-label" data-lg-bind="pkg.label">{html.escape(p["label"])}</span>
-    <a class="lg-pkg-dl" data-lg-dl href="{asset_href(fil)}">Download</a>
+    <span class="lg-pkg-label" data-lg-bind="pkg.label">{html.escape(p["label"])}</span>{ver}
+    <a class="lg-pkg-dl" data-lg-dl href="{asset_href(fil, p)}">Download</a>
   </div>
 {inner}
 </div>'''
@@ -161,14 +176,17 @@ _n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux")
 LINUX_COUNT_WORD = _WORDS.get(_n_linux, str(_n_linux))
 
 _has_macos = any(p["os"] == "macos" for p in feed["packages"])
+_macos_pinned = next((p.get("pinned") for p in feed["packages"]
+                      if p["os"] == "macos" and p.get("pinned")), "")
 MACOS_LIMIT = (
+    f"<b>macOS is not available for {VERSION}.</b> It returns in 0.9.6; the "
+    f"download above is {_macos_pinned}. It is effectively untested either "
+    "way \u2014 nobody has sat down and used it."
+    if _macos_pinned else
     "<b>macOS is effectively untested.</b> It builds and it is published. "
     "Nobody has sat down and used it."
     if _has_macos else
-    "<b>There is no macOS download in this release.</b> The bundle builds and "
-    "passes its checks on a real Mac; uploading it to the release server does "
-    "not. It would be effectively untested in any case \u2014 nobody has sat "
-    "down and used it.")
+    "<b>There is no macOS download in this release.</b>")
 
 LINUX_BLOCK = platform_block(
     "linux", "Linux",
@@ -181,8 +199,10 @@ LINUX_BLOCK = platform_block(
     ' own.</p>')
 WINDOWS_BLOCK = platform_block(
     "windows", "Windows", "unsigned \u2014 Windows will warn you")
+_macos_note = feed.get("macos_note", "")
 MACOS_BLOCK = platform_block(
-    "macos", "macOS", "Apple Silicon, macOS 26+, ad-hoc signed")
+    "macos", "macOS", "Apple Silicon, macOS 26+, ad-hoc signed",
+    f'<p class="lg-pkg-note">{html.escape(_macos_note)}</p>' if _macos_note else "")
 
 LD = {
     "@context": "https://schema.org", "@type": "SoftwareApplication",
@@ -373,6 +393,9 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-pkg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .lg-pkg-fmt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px 7px; }
 .lg-pkg-label { color: var(--text-2); font-size: 14px; }
+.lg-pkg-ver { font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  color: var(--text-3); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 1px 6px; }
 .lg-pkg-dl { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--link); white-space: nowrap; }
 .lg-pkg-dl:hover { color: var(--text); }
 .lg-pkg-note { margin: 10px 0 0; color: var(--text-3); font-size: 13px; }

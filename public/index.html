@@ -522,6 +522,9 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-pkg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .lg-pkg-fmt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px 7px; }
 .lg-pkg-label { color: var(--text-2); font-size: 14px; }
+.lg-pkg-ver { font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  color: var(--text-3); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 1px 6px; }
 .lg-pkg-dl { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--link); white-space: nowrap; }
 .lg-pkg-dl:hover { color: var(--text); }
 .lg-pkg-note { margin: 10px 0 0; color: var(--text-3); font-size: 13px; }
@@ -847,7 +850,18 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 </div>
     </div>
 
-
+    <div class="lg-plat">
+      <h3>macOS <span class="hint">Apple Silicon, macOS 26+, ad-hoc signed</span></h3>
+<div data-lg-pkg="macos" data-lg-format=".zip" data-lg-file="Lightning-0.9.4-bcea599-macos-arm64.zip" data-lg-match="-macos-arm64.zip" data-lg-pinned="0.9.4" class="lg-pkg">
+  <div class="lg-pkg-head">
+    <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.zip</span>
+    <span class="lg-pkg-label" data-lg-bind="pkg.label">Apple Silicon, macOS 26 or newer</span><span class="lg-pkg-ver">0.9.4</span>
+    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.9.4/Lightning-0.9.4-bcea599-macos-arm64.zip">Download</a>
+  </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.install">unzip, drag Lightning.app to Applications</p>
+</div>
+      <p class="lg-pkg-note">Not available for 0.9.5. Returns in 0.9.6. The most recent macOS build is 0.9.4.</p>
+    </div>
 
     <p class="lg-pkg-note">Every release ships a <code>SHA256SUMS</code> file, and the manifest the updater reads is signed.</p>
   </div>
@@ -858,7 +872,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
     <h2>What it cannot do yet</h2>
     <p class="lg-lede">Lightning is alpha. This section is part of the pitch, not a disclaimer under it — it is the same list the project keeps for itself.</p>
     <ul class="lg-list">
-      <li><b>There is no macOS download in this release.</b> The bundle builds and passes its checks on a real Mac; uploading it to the release server does not. It would be effectively untested in any case — nobody has sat down and used it.</li>
+      <li><b>macOS is not available for 0.9.5.</b> It returns in 0.9.6; the download above is 0.9.4. It is effectively untested either way — nobody has sat down and used it.</li>
       <li><b>Nobody has listened to a call.</b> Audio is proven to flow both ways and to reach the audio engine; no human has confirmed it sounds like anything.</li>
       <li><b>Recovery and key backup are verified by reading the code, not by using them.</b> Exercising them puts a recovery key on screen, so the audit is the evidence. Four known rough edges are listed in the release notes.</li>
       <li><b>Screen sharing and the camera are untested on the Snap</b> — the test machine has no desktop portal for a confined app to talk to.</li>

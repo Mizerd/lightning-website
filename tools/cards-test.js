@@ -53,7 +53,10 @@ function check(label, ok, detail) {
 const LATEST_VERSION = "9.9.9";
 const LATEST_SHA = "deadbee";
 function latestPayload() {
-  const assets = feed.packages.map(function (p) {
+  // Pinned packages are NOT in the release being published -- that is why they
+  // are pinned -- so the stub must not offer one, or the "left alone" path
+  // would never be exercised.
+  const assets = feed.packages.filter(p => !p.pinned).map(function (p) {
     let name = p.file
       .replace(feed.version, LATEST_VERSION)
       .replace(/-[0-9a-f]{7}-/, "-" + LATEST_SHA + "-");
@@ -113,6 +116,17 @@ async function main() {
     const wrong = [];
     els.forEach(function (card, i) {
       const pkg = feed.packages[i];
+      // A pinned card is deliberately left alone by pass 2 (it names an older
+      // release's file), so under "feed + /api/latest" its filename must NOT
+      // have been rewritten and its button must still point at its own url.
+      if (pkg.pinned) {
+        const a = card.querySelector("[data-lg-dl]");
+        if (card.getAttribute("data-lg-file") !== pkg.file)
+          wrong.push(pkg.format + ": pinned card was rewritten to "
+                     + card.getAttribute("data-lg-file"));
+        if (!a || a.hidden || a.getAttribute("href") !== pkg.url)
+          wrong.push(pkg.format + ": pinned card lost its own download URL");
+      }
       const slot = card.querySelector('[data-lg-bind="pkg.install"]');
       if (!slot) { wrong.push(pkg.format + ": no pkg.install slot"); return; }
       // Pass 2 rewrites the filename inside the command, so compare against
@@ -159,6 +173,7 @@ async function main() {
     els.forEach(function (card, i) {
       const a = card.querySelector("[data-lg-dl]");
       const file = card.getAttribute("data-lg-file");
+      if (card.hasAttribute("data-lg-pinned")) return;
       if (a && file && !String(a.getAttribute("href")).endsWith(file)) {
         mismatched.push(file + " -> " + a.getAttribute("href"));
       }
@@ -182,12 +197,13 @@ async function main() {
       check("the page follows the published version",
             shown.length > 0 && shown.every(v => v === LATEST_VERSION),
             JSON.stringify(shown));
-      const renamed = els.filter(function (c) {
+      const unpinned = els.filter(c => !c.hasAttribute("data-lg-pinned"));
+      const renamed = unpinned.filter(function (c) {
         return String(c.getAttribute("data-lg-file")).indexOf(LATEST_VERSION) >= 0;
       });
       check("card filenames follow the published assets",
-            renamed.length === els.length,
-            renamed.length + " of " + els.length + " renamed");
+            renamed.length === unpinned.length,
+            renamed.length + " of " + unpinned.length + " renamed");
     }
   }
 

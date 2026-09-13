@@ -127,8 +127,11 @@
 
     if (Array.isArray(d.packages) && d.packages.length) {
       // Give each package its download URL before the cards are rebuilt.
+      // A PINNED package carries its own absolute url, because it belongs to
+      // an older release than this feed describes -- templating this feed's
+      // version onto its filename would produce a URL that 404s.
       d.packages.forEach(function (p) {
-        p.download_url = fromTemplate(d.asset_url, d.version, p.file);
+        p.download_url = p.url || fromTemplate(d.asset_url, d.version, p.file);
       });
       packages("linux", d.packages.filter(function (p) { return p.os === "linux"; }));
       packages("windows", d.packages.filter(function (p) { return p.os === "windows"; }));
@@ -190,6 +193,11 @@
            - (a.getAttribute("data-lg-match") || "").length;
     });
     ordered.forEach(function (card) {
+      // A PINNED card names a file from an OLDER release on purpose -- macOS
+      // is pinned at 0.9.4 because 0.9.5 has no macOS build. Resolving it
+      // against the newest release would find nothing and hide its button,
+      // removing the only macOS download the page offers.
+      if (card.hasAttribute("data-lg-pinned")) return;
       // data-lg-match wins where it exists: the format badge is what a reader
       // sees (".zip"), which is not always enough to pick one asset out of a
       // release that publishes two of them.

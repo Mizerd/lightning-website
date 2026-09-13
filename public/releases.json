@@ -79,6 +79,18 @@
       "file": "Lightning-0.9.5-8d5d0ca-windows-x86_64-portable.zip",
       "install": "extract anywhere, run Lightning.exe",
       "remove": "delete the folder"
+    },
+    {
+      "os": "macos",
+      "label": "Apple Silicon, macOS 26 or newer",
+      "format": ".zip",
+      "match": "-macos-arm64.zip",
+      "file": "Lightning-0.9.4-bcea599-macos-arm64.zip",
+      "url": "https://github.com/Mizerd/lightning/releases/download/v0.9.4/Lightning-0.9.4-bcea599-macos-arm64.zip",
+      "pinned": "0.9.4",
+      "install": "unzip, drag Lightning.app to Applications",
+      "remove": "move Lightning.app to the Bin"
     }
-  ]
+  ],
+  "macos_note": "Not available for 0.9.5. Returns in 0.9.6. The most recent macOS build is 0.9.4."
 }

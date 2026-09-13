@@ -303,6 +303,7 @@ html { -webkit-text-size-adjust: 100%; }
 html, body { overflow-x: clip; }
 body {
   margin: 0;
+  position: relative;   /* the containing block for .lg-sky */
   background: var(--page);
   color: var(--text);
   font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -325,16 +326,19 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
    so it inverts with the theme instead of being pale dust on the light three.
    Low enough that you notice it only once you look for it. */
 .lg-sky {
-  /* Taller than the viewport and hung above it, so the parallax drift never
-     runs out of sky at either end. */
-  position: fixed; left: 0; top: -20%; width: 100%; height: 140%;
+  /* ABSOLUTE, not fixed, and stretched over the whole document by top/bottom
+     rather than a percentage height (body's height is auto, so a percentage
+     would not resolve). Being part of the document is what makes the stars
+     move EXACTLY as far as the page does -- a fixed layer dragged along by a
+     scroll handler always lags or leads, and reads as the background being out
+     of sync rather than as depth. It also needs no JavaScript at all. */
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0;
   z-index: 0; pointer-events: none;
   color: var(--text);
   /* Per theme: the light palettes need roughly double. A dark dot at 16% on a
      cream ground is a smudge -- the stars were being swallowed exactly where
      the ground is brightest. */
   opacity: var(--sky-opacity, 0.16);
-  will-change: transform;
 }
 .lg-sky circle { fill: currentColor; }
 .lg-sky line { stroke: currentColor; stroke-width: 0.5; opacity: 0.45; }
@@ -607,23 +611,25 @@ def sky_svg():
     it and nothing explains it.
     """
     rng = random.Random(0x11667)
-    W, H = 1000, 1000
+    # A TALL field, not a viewport-sized one. The layer spans the whole
+    # document now, so the viewBox has to be the document's rough aspect or
+    # `slice` would scale a square field up by five and leave a handful of
+    # enormous stars. 1000x5000 at ~1400px wide is about right for this page,
+    # and the star count scales with the area so the density is unchanged.
+    W, H = 1000, 5000
     stars = []
-    # Scatter, but keep a margin off the centre column where the text lives, so
-    # the field reads as sky around the content rather than noise behind it.
-    while len(stars) < 46:
+    while len(stars) < 230:
         x, y = rng.uniform(0, W), rng.uniform(0, H)
-        if 300 < x < 700 and 120 < y < 880:
+        # Keep off the centre column where the text lives, so the field reads
+        # as sky around the content rather than noise behind it.
+        if 300 < x < 700:
             continue
         stars.append((round(x, 1), round(y, 1), round(rng.uniform(0.7, 1.7), 2)))
 
-    # Three small constellations, each a short path through nearby stars.
-    # Only SHORT hops. The viewBox is sliced to the viewport, so a link between
-    # two stars that are merely "nearest" in a 1000x1000 field can cross the
-    # whole screen and read as a streak rather than a constellation.
+    # Only SHORT hops, or a link reads as a streak across the page.
     MAX2 = 150 ** 2
     lines = []
-    for seed_i in (2, 17, 31, 40):
+    for seed_i in range(4, len(stars), 14):
         a = stars[seed_i]
         near = sorted(stars, key=lambda s: (s[0] - a[0]) ** 2 + (s[1] - a[1]) ** 2)[1:5]
         prev = a
@@ -638,7 +644,8 @@ def sky_svg():
         parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"/>')
     for x, y, r in stars:
         parts.append(f'<circle cx="{x}" cy="{y}" r="{r}"/>')
-    ax, ay, _ = stars[9]
+    # The one accent star, a third of the way down where it will be seen.
+    ax, ay, _ = stars[70]
     parts.append(f'<circle class="lg-sky-mark" cx="{ax}" cy="{ay}" r="2.6"/>')
     parts.append('</svg>')
     return "".join(parts)

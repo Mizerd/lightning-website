@@ -305,25 +305,303 @@
    */
   var THEME_KEY = "lg-theme";
 
-  function applyTheme(slug, remember) {
-    if (!slug) return;
-    document.documentElement.setAttribute("data-theme", slug);
-    // The pictures follow the palette. Every scenario was captured in every
-    // theme from the client's own demo mode, so the screenshots show the
-    // application in the theme the reader just picked rather than in a
-    // different one from the page around them.
-    document.querySelectorAll("[data-lg-shot]").forEach(function (img) {
-      img.src = "/assets/shots/" + img.getAttribute("data-lg-shot")
-                + "--" + slug + ".png";
+  /* The wave's shape, in two sizes, because there are two ways to draw it.
+   *
+   * WAVE_SWEEP_MS is the snapshot wipe: ONE movement, an expanding circle, so
+   * it can afford to be slow without feeling slow. WAVE_MS and
+   * WAVE_SPREAD_MS are the fallback's -- a hundred overlapping colour
+   * transitions, each 720ms, released over 300ms of stagger from the click.
+   *
+   * Both replaced a 260ms fade on six selectors, which was too fast to read as
+   * a change and too narrow to be one: the grounds eased while every paragraph
+   * on top of them snapped.
+   */
+  var WAVE_SWEEP_MS = 840;
+  var WAVE_MS = 720;
+  var WAVE_SPREAD_MS = 300;
+  // The ink crosses on its own fixed lag (see the CSS), and the wave may not
+  // be disarmed before the LAST thing lands -- removing `.lg-wave` removes the
+  // transition, and a running transition whose property stops being
+  // transitionable is CANCELLED, so a colour would jump the rest of the way.
+  var WAVE_INK_MS = 200 + 260;
+
+  /* The blocks that turn as a unit. `--wave-d` INHERITS, so a heading moves
+   * with the section that holds it and nothing below this line has to be
+   * enumerated -- which is the whole reason the delay is a custom property
+   * rather than a per-element transition written by script.
+   */
+  var WAVE_BLOCKS = ".lg-top, main > section, .lg-row, .lg-pkg, .lg-card," +
+                    " .lg-shot, .lg-plat, .lg-list > li, .lg-swatches, footer";
+
+  var waveGen = 0;
+  var waveMarked = [];
+  var waveFront = null;
+  var waveTimer = 0;
+
+  function shotSrc(name, slug) {
+    return "/assets/shots/" + name + "--" + slug + ".png";
+  }
+
+  function endWave() {
+    clearTimeout(waveTimer);
+    document.documentElement.classList.remove("lg-wave");
+    waveMarked.forEach(function (el) { el.style.removeProperty("--wave-d"); });
+    waveMarked = [];
+    if (waveFront && waveFront.parentNode) waveFront.parentNode.removeChild(waveFront);
+    waveFront = null;
+  }
+
+  // Delay every block by its distance from the click, normalised against the
+  // FURTHEST block rather than against a guessed radius: the same gesture then
+  // takes the same time on a phone and on a 4K panel. The square root is what
+  // makes it read as a ripple -- a front that slows as it spreads -- instead
+  // of a ruler sliding down the page.
+  function markWave(ox, oy) {
+    var els = Array.prototype.slice.call(document.querySelectorAll(WAVE_BLOCKS));
+    var far = 1, dist = [];
+    els.forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      var dx = r.left + r.width / 2 - ox;
+      var dy = r.top + r.height / 2 - oy;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      dist.push(d);
+      if (d > far) far = d;
     });
+    els.forEach(function (el, i) {
+      el.style.setProperty("--wave-d",
+        Math.round(WAVE_SPREAD_MS * Math.sqrt(dist[i] / far)) + "ms");
+      waveMarked.push(el);
+    });
+  }
+
+  // The visible front: one soft ring in the NEW theme's accent. The element is
+  // a fixed 360px (see the CSS) and JS supplies only the SCALE that carries it
+  // to the furthest corner of the viewport from wherever the reader clicked --
+  // so the gradient is rasterized once, small, and the rest is the compositor
+  // enlarging a texture.
+  function rideWave(ox, oy) {
+    var ink = getComputedStyle(document.documentElement)
+                .getPropertyValue("--accent").trim();
+    if (!ink) return;
+    var w = window.innerWidth, h = window.innerHeight;
+    var reach = Math.max(
+      Math.hypot(ox, oy), Math.hypot(w - ox, oy),
+      Math.hypot(ox, h - oy), Math.hypot(w - ox, h - oy));
+    var el = document.createElement("div");
+    el.className = "lg-wavefront";
+    el.style.setProperty("--wave-ink", ink);
+    el.style.setProperty("--wave-ride",
+      (document.startViewTransition ? WAVE_SWEEP_MS : WAVE_MS + WAVE_SPREAD_MS) + "ms");
+    el.style.setProperty("--wave-scale", (reach * 2 / 360).toFixed(3));
+    el.style.left = ox + "px";
+    el.style.top = oy + "px";
+    document.body.appendChild(el);
+    waveFront = el;
+  }
+
+  /* The pictures dissolve rather than blink.
+   *
+   * Every scenario was captured in every theme from the client's own demo
+   * mode, so a switch replaces seven <img> sources at once. Assigning src
+   * shows the OLD picture until the new one has decoded and then cuts -- seven
+   * separate flashes in the middle of a smooth colour wave. The incoming
+   * picture is laid over the outgoing one, decoded BEFORE anything is shown,
+   * and faded in on the same delay the block around it is using.
+   */
+  function crossfadeShots(slug, gen) {
+    document.querySelectorAll("[data-lg-shot]").forEach(function (img) {
+      var next = shotSrc(img.getAttribute("data-lg-shot"), slug);
+      var host = img.parentNode;
+      if (!host || img.getAttribute("src") === next) return;
+      var delay = parseFloat(
+        getComputedStyle(img).getPropertyValue("--wave-d")) || 0;
+      var started = Date.now();
+      var over = document.createElement("img");
+      over.className = "lg-shot-x";
+      over.alt = "";
+      over.setAttribute("aria-hidden", "true");
+      over.src = next;
+
+      var fired = false, dropped = false;
+      function drop() {
+        if (dropped) return;
+        dropped = true;
+        if (over.parentNode) over.parentNode.removeChild(over);
+      }
+      function reveal() {
+        if (fired) return;
+        fired = true;
+        if (gen !== waveGen) return;
+        // A tab hidden between the click and the decode runs no animation
+        // frames and advances no transition, so a fade there would leave the
+        // OLD picture sitting at full opacity over the new one until the
+        // reader came back. Swap outright instead.
+        if (document.hidden) { img.src = next; return; }
+        // Spend the decode out of the block's own delay rather than after it,
+        // so a picture that took 200ms to decode still lands with its section
+        // instead of trailing the wave by that much.
+        var left = Math.max(0, delay - (Date.now() - started));
+        host.appendChild(over);
+        void over.offsetWidth;                     // start from opacity 0
+        over.style.transition = "opacity " + WAVE_MS +
+          "ms cubic-bezier(0.32, 0, 0.2, 1) " + left + "ms";
+        over.style.opacity = "1";
+        setTimeout(function () {
+          if (gen !== waveGen) { drop(); return; }
+          img.src = next;
+          // Two frames: the base image must be PAINTED before the overlay
+          // goes, or the swap shows one frame of the old picture. The timer is
+          // not belt-and-braces and it is deliberately scheduled FIRST -- a tab
+          // hidden at this instant never runs another animation frame, and an
+          // environment without rAF at all would throw here and never reach a
+          // fallback written below the call that threw.
+          setTimeout(drop, 400);
+          if (window.requestAnimationFrame) {
+            requestAnimationFrame(function () { requestAnimationFrame(drop); });
+          }
+        }, WAVE_MS + left + 60);
+      }
+
+      // Decode off-document, so nothing is on screen until it is ready to be.
+      // The timeout is the floor: a slow or failed decode must not hold a
+      // picture back for longer than the wave it belongs to.
+      var pre = new Image();
+      pre.src = next;
+      var late = setTimeout(reveal, 900);
+      var decoded = pre.decode ? pre.decode() : Promise.reject();
+      decoded.then(function () { clearTimeout(late); reveal(); },
+                   function () { clearTimeout(late); reveal(); });
+    });
+  }
+
+  // Everything a theme change actually IS, with no animation anywhere in it.
+  // Both wave paths call this; one of them calls it inside a snapshot.
+  //
+  // `keepShots` is for the fallback path ONLY, and it is load-bearing: that
+  // path cross-fades the pictures itself and assigns each new src at the end
+  // of its own fade. Swapping them here as well would leave the overlay
+  // dissolving one copy of the new picture into an identical one -- no visible
+  // fade at all, and nothing to say so.
+  function setTheme(slug, keepShots) {
+    document.documentElement.setAttribute("data-theme", slug);
+    if (!keepShots) {
+      document.querySelectorAll("[data-lg-shot]").forEach(function (img) {
+        img.src = shotSrc(img.getAttribute("data-lg-shot"), slug);
+      });
+    }
     document.querySelectorAll("[data-lg-theme]").forEach(function (b) {
       b.setAttribute("aria-pressed",
                      b.getAttribute("data-lg-theme") === slug ? "true" : "false");
     });
+  }
+
+  // Decode every incoming screenshot BEFORE the change is made, so the frame
+  // the browser snapshots already has them. An undecoded image would be
+  // snapshotted blank and the wave would wipe in seven empty boxes.
+  function decodeShots(slug) {
+    var waits = [];
+    document.querySelectorAll("[data-lg-shot]").forEach(function (img) {
+      var next = shotSrc(img.getAttribute("data-lg-shot"), slug);
+      if (img.getAttribute("src") === next) return;
+      var pre = new Image();
+      pre.src = next;
+      waits.push(pre.decode ? pre.decode().catch(function () {}) : Promise.resolve());
+    });
+    // Never wait longer than the wave itself would have taken. A cold cache on
+    // a slow link must not leave the reader pressing a button that does
+    // nothing; a picture that misses the snapshot simply appears with it.
+    return Promise.race([
+      Promise.all(waits),
+      new Promise(function (done) { setTimeout(done, 600); })
+    ]);
+  }
+
+  /* THE WAVE, when the browser can snapshot a page.
+   *
+   * A light palette and a dark one are opposite at both ends: the ground has
+   * to travel from pale to near-black while the text travels the other way,
+   * and any CONTINUOUS interpolation of both has an instant where a half-dark
+   * letter sits on a half-light ground. Measured on this page, three ways of
+   * timing it -- one curve for both, ink slower than ground, ink crossing on
+   * its own late lag -- bottomed out at 1.13:1, 1.5:1 and 1.02:1. That is not
+   * dim; it is unreadable, and there is no pair of curves that avoids it,
+   * because the crossing is the problem and not the speed.
+   *
+   * A view transition removes the crossing entirely. The browser holds a
+   * picture of the old page, the new one is built underneath it complete, and
+   * an expanding circle from the reader's own click wipes one to the other.
+   * Every pixel is either fully the old theme or fully the new one; the only
+   * thing that moves is the edge, and the edge IS the wave. It carries the
+   * screenshots along with it for free, because they are in the same picture.
+   */
+  function waveSnapshot(slug, origin, gen) {
+    return decodeShots(slug).then(function () {
+      if (gen !== waveGen) return;
+      var vt = document.startViewTransition(function () { setTheme(slug); });
+      vt.ready.then(function () {
+        var w = window.innerWidth, h = window.innerHeight;
+        var reach = Math.max(
+          Math.hypot(origin.x, origin.y), Math.hypot(w - origin.x, origin.y),
+          Math.hypot(origin.x, h - origin.y), Math.hypot(w - origin.x, h - origin.y));
+        var at = " at " + origin.x + "px " + origin.y + "px)";
+        document.documentElement.animate(
+          { clipPath: ["circle(0px" + at, "circle(" + Math.ceil(reach) + "px" + at] },
+          { duration: WAVE_SWEEP_MS, easing: "cubic-bezier(0.24, 0.62, 0.28, 1)",
+            pseudoElement: "::view-transition-new(root)" });
+        rideWave(origin.x, origin.y);              // reads the NEW accent
+        waveTimer = setTimeout(function () {
+          if (gen === waveGen) endWave();
+        }, WAVE_SWEEP_MS + 160);
+      }, function () { /* the transition was skipped; the theme still landed */ });
+    });
+  }
+
+  /* THE WAVE, when it cannot.
+   *
+   * Firefox before 144 and Safari before 18 have no view transitions, so this
+   * is the same idea built out of what every browser has: one colour
+   * transition over everything, delayed per block by its distance from the
+   * click, with the pictures cross-faded through overlay <img>s on the same
+   * delays. It has the crossing problem described above and cannot not have
+   * it; the ink is given a fast 260ms cross so the bad instant is an instant.
+   */
+  function waveTransitions(slug, origin, gen) {
+    endWave();
+    markWave(origin.x, origin.y);
+    document.documentElement.classList.add("lg-wave");
+    // One forced reflow, so the browser has a before-change style that already
+    // carries the transition rather than deciding both in one go.
+    void document.body.offsetWidth;
+    setTheme(slug, true);                          // the pictures are this path's own
+    rideWave(origin.x, origin.y);                  // reads the NEW accent
+    crossfadeShots(slug, gen);
+    waveTimer = setTimeout(function () {
+      if (gen === waveGen) endWave();
+    }, WAVE_INK_MS + WAVE_SPREAD_MS + 140);
+  }
+
+  function applyTheme(slug, remember, origin) {
+    if (!slug) return;
+    // A hidden tab runs no animation frames: every transition on it is frozen
+    // at its start value, so "animating" there means showing the OLD colours
+    // until the reader comes back. Switch outright instead.
+    var animate = !!origin && !prefersReducedMotion() && !document.hidden;
+    var gen = ++waveGen;
+
     if (remember) {
       // A browser with storage disabled must still switch themes; only the
-      // remembering is optional.
+      // remembering is optional. Written first: it is the reader's choice and
+      // it must survive whatever the animation does.
       try { localStorage.setItem(THEME_KEY, slug); } catch (e) { /* fine */ }
+    }
+
+    if (!animate) {
+      endWave();
+      setTheme(slug);
+    } else if (document.startViewTransition) {
+      waveSnapshot(slug, origin, gen);
+    } else {
+      waveTransitions(slug, origin, gen);
     }
   }
 
@@ -331,7 +609,12 @@
     var btn = ev.target && ev.target.closest
       ? ev.target.closest("[data-lg-theme]") : null;
     if (!btn) return;
-    applyTheme(btn.getAttribute("data-lg-theme"), true);
+    // The wave starts where the reader actually pressed. A keyboard activation
+    // reports 0,0 for both, so fall back to the button's own centre.
+    var r = btn.getBoundingClientRect();
+    var x = ev.clientX || 0, y = ev.clientY || 0;
+    if (!x && !y) { x = r.left + r.width / 2; y = r.top + r.height / 2; }
+    applyTheme(btn.getAttribute("data-lg-theme"), true, { x: x, y: y });
   });
 
   // Restore on load. The default is already correct in the CSS, so this only

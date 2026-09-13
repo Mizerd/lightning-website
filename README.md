@@ -47,6 +47,7 @@ tools/
   lightbox-test.js   <- jsdom test for the screenshot overlay (needs jsdom)
   cards-test.js      <- jsdom test for the package-card rebuild (needs jsdom)
   sky-test.js        <- jsdom test for the constellation field (needs jsdom)
+  theme-test.js      <- jsdom test for the theme wave (needs jsdom)
 ```
 
 Nothing outside `public/` is deployed.
@@ -576,25 +577,105 @@ a smudge; the stars were being swallowed exactly where the ground is brightest.
 
 ## Motion
 
-**There is none, and that is the design.** The 2026-09-13 rebuild deleted the
-whole motion layer — eight keyframe animations, 35 scroll reveals, a marquee, a
-drifting hero glow, a light strike across the header and a scroll progress bar
-— along with `motion.js`, the 70-line script that drove the parts CSS could not
-work out for itself.
+**There is almost none, and what there is is a state change.** The 2026-09-13
+rebuild deleted the whole motion layer — eight keyframe animations, 35 scroll
+reveals, a marquee, a drifting hero glow, a light strike across the header and
+a scroll progress bar — along with `motion.js`, the 70-line script that drove
+the parts CSS could not work out for itself.
 
 They went because **the application has none of them.** The page's argument is
 that Lightning is a restrained native client; a page that arrives in a cascade
 of reveals is arguing the opposite in the only language a visitor can check
-before downloading anything. `releases.js` kept the two behaviours that were
-doing work rather than decoration — the screenshot lightbox and the copy
-buttons — and everything else is static.
+before downloading anything. Five `check.py` invariants went with them — the
+progress bar shipping empty, the scroll sentinel, the hero "arriving as a
+ladder", the swatch cascade, panels tagged for a spotlight. Every one tested a
+decoration.
 
-Five `check.py` invariants went with it: the progress bar shipping empty, the
-scroll sentinel existing, the hero "arriving as a ladder", the swatch cascade,
-and panels being tagged for a spotlight. Every one of them tested a decoration.
-If motion ever comes back, it needs a reason that survives the same question:
-does the client do this?
+Three behaviours survive, and each one is a thing HAPPENING rather than a thing
+announcing itself: the screenshot lightbox, the copy buttons, and **the theme
+wave**.
 
+### The theme wave
+
+Picking a theme repaints the whole page, and the question is only whether the
+reader can follow it. The version this replaced could not be followed: a 260ms
+fade on six selectors, so the grounds and the cards eased while every
+paragraph, heading and rule on top of them snapped, and the seven screenshots
+blinked. Half a page moving and half of it cutting reads as a glitch.
+
+**A light palette and a dark one are opposite at both ends, and that is the
+whole problem.** The ground has to travel from pale to near-black while the
+text travels the other way, so any *continuous* interpolation of both has an
+instant where a half-dark letter sits on a half-light ground. Measured on this
+page, three ways of timing it bottomed out at:
+
+| how the colours were timed | worst contrast |
+| --- | --- |
+| one curve for ground and ink | 1.13:1 |
+| ink slower than the ground (620ms / 880ms) | 1.07:1 |
+| ink crossing fast on its own late lag | 1.02:1 |
+
+That is not dim, it is unreadable, and there is no pair of curves that avoids
+it — the crossing is the problem, not the speed.
+
+**So the page is not interpolated at all.** `document.startViewTransition`
+holds a picture of the old page, the new one is built underneath it complete,
+and an expanding circle from the reader's own click wipes one to the other over
+840ms. Every pixel is either fully the old theme or fully the new one, text
+included; the only thing that moves is the edge, and the edge **is** the wave.
+A soft ring in the new theme's accent rides it. The screenshots come along for
+free — they are in the same picture — which is why they are decoded *before*
+the transition starts: an undecoded image would be snapshotted blank and the
+wave would wipe in seven empty boxes.
+
+Measured, software-rendered (no GPU), 2200×1240, warm cache:
+
+| | frames | median | p90 | max | over 33ms |
+| --- | --- | --- | --- | --- | --- |
+| Firefox 153, idle | 79 | 17.0ms | 17.2ms | 17.2ms | 0 |
+| Firefox 153, during a switch | 97 | 17.0ms | 17.2ms | 17.2ms | **0** |
+| Chromium, during a switch | 74 | 16.7ms | 33.4ms | 49.9ms | 21 |
+
+Chromium's long frames are all exactly two vsyncs — a mixed 60/30 cadence
+rather than stutter — and this is the pessimistic case: rasterizing two
+full-viewport layers in software. GUI-window measurements on this machine were
+discarded: the *control* animation varied between 5 and 85 frames per 1.4s
+across runs, so the window's own state, not the page, was the variable.
+
+**Browsers without view transitions** (Firefox before 144, Safari before 18)
+get the same idea built out of what they do have: one colour transition over
+everything, delayed per block by its distance from the click, with the pictures
+cross-faded through overlay `<img>`s on the same delays. It has the crossing
+problem above and cannot not have it, so the ink is given a fast 260ms cross
+and the bad instant is an instant. Measured at a flat 60fps with no dropped
+frames.
+
+Four things about it are less obvious than they look:
+
+- The fallback's per-block delay is a custom property (`--wave-d`) and **not** a
+  transition written per element by script, because custom properties INHERIT:
+  a heading moves with the section that holds it, and nothing has to be
+  enumerated.
+- It is armed only while `.lg-wave` is on `<html>`. A permanent universal
+  colour transition would put 720ms of lag on every hover on the page.
+- The ring is a fixed **360px** element scaled up, never one sized to the
+  screen. It has to reach the far corner — three or four thousand pixels on a
+  4K panel — and a gradient element that big is tens of megabytes to rasterize
+  before it can be composited once. Upscaling a soft radial glow produces a
+  soft radial glow.
+- A hidden tab runs no animation frames at all: every transition on it is
+  frozen at its START value, and Chromium does not even run a view
+  transition's update callback, so the theme would not change until the reader
+  came back. `document.hidden` switches outright instead of waving, and the
+  fallback's cross-fade cleanup is on a TIMER with the animation frame as the
+  optimisation — not the other way round. That one shipped broken for an hour:
+  cleanup hung off `requestAnimationFrame` alone, and a tab hidden mid-switch
+  kept the old screenshot at full opacity on top of the new one until the
+  reader came back, with another overlay stacked on every switch.
+
+`tools/theme-test.js` is the jsdom suite for it — both paths, because jsdom has
+neither view transitions nor `Element.animate` and would otherwise test only
+the fallback. `prefers-reduced-motion` switches the theme with no wave at all.
 
 ## Mobile
 

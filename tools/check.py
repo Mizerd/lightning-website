@@ -406,7 +406,9 @@ check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
 # content with nothing in the bottom half but stars. Both dimensions must be
 # stated explicitly, and nothing in this file can see a layout, so the
 # declaration itself is what is asserted.
-sky_rule = re.search(r"\.lg-sky\s*\{(.*?)\}", html, re.S)
+# Anchored at the start of a line, so it finds the LAYER's own rule and not
+# the `html.lg-wave .lg-sky` transition that shares the class name.
+sky_rule = re.search(r"^\.lg-sky\s*\{(.*?)\}", html, re.S | re.M)
 # Without the comments: this rule's own comment explains the trap in prose, and
 # prose about `width` is not a declaration of it.
 sky_body = re.sub(r"/\*.*?\*/", "", sky_rule.group(1) if sky_rule else "", flags=re.S)

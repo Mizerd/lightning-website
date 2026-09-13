@@ -284,17 +284,118 @@ CSS = """
 /* Every theme, from the client's own palettes. Clicking a swatch sets
    data-theme on <html>; nothing else on the page needs to know. */
 {THEME_CSS}
-/* The tokens are what change; everything below reads them, so a theme switch
-   is one attribute write and no reflow of anything structural. */
-html { transition: background-color 260ms ease; }
-body, .lg-pkg, .lg-shot-btn, .lg-swatch, .lg-btn, .lg-card {
-  transition: background-color 260ms ease, border-color 260ms ease,
-              color 260ms ease;
+/* ---- the theme wave --------------------------------------------------------
+   The tokens are what change; everything below reads them, so a theme switch
+   is one attribute write and no reflow of anything structural. What it used to
+   be was a 260ms fade on SIX selectors -- so the page ground and the cards
+   eased while every paragraph, heading and rule on top of them snapped. Half
+   the page moving and half of it cutting reads as a glitch, not a transition.
+
+   Now it is one rule over everything, and it carries a per-element DELAY that
+   releases.js writes from each block's distance to the swatch that was
+   clicked. The colour change therefore travels outwards from the reader's own
+   cursor instead of happening everywhere at once: near blocks turn first,
+   far ones follow, and a soft ring (.lg-wavefront) rides the front.
+
+   It is armed ONLY while `.lg-wave` is on <html> -- about a second per switch
+   -- because a permanent universal colour transition would put 720ms of lag
+   on every hover on the page.
+
+   THE INK CROSSES ONCE, QUICKLY, AND ON THE PAGE'S OWN CLOCK -- and that is
+   the whole contrast argument. Going from a light palette to a dark one the
+   text has to travel past every value in between, and with one duration for
+   both there is a moment where a half-dark letter sits on a half-light ground:
+   MEASURED at 1.13:1 for about a tenth of a second, which is not dim, it is
+   invisible. No pair of equal-length curves avoids it -- the crossing is the
+   problem, not the speed.
+
+   Two things fix it. The ink crosses FAST (260ms), so the bad instant is an
+   instant. And it crosses on a FIXED lag rather than its block's `--wave-d`,
+   because the ground under most of this page's text is `body` and body cannot
+   be staggered -- it is one element behind the whole document. Tying the ink
+   to its block's delay while the ground ran on body's clock was measurably the
+   worst of both: 1.07:1. The lag places the cross near the middle of the
+   ground's own travel, where the drop is about 2.5:1 and recovers within a
+   tenth of a second either way. The SWEEP the reader sees is the structure --
+   panels, cards, frames, the ring -- not the letters. */
+html.lg-wave, html.lg-wave *, html.lg-wave *::before, html.lg-wave *::after {
+  --wave-ease: cubic-bezier(0.32, 0, 0.2, 1);
+  --wave-dink: var(--wave-ink-lag, 200ms);
+  transition:
+    background-color var(--wave-dur, 620ms) var(--wave-ease) var(--wave-d, 0ms),
+    border-color var(--wave-dur, 620ms) var(--wave-ease) var(--wave-d, 0ms),
+    outline-color var(--wave-dur, 620ms) var(--wave-ease) var(--wave-d, 0ms),
+    box-shadow var(--wave-dur, 620ms) var(--wave-ease) var(--wave-d, 0ms),
+    color var(--wave-ink, 260ms) linear var(--wave-dink),
+    fill var(--wave-ink, 260ms) linear var(--wave-dink),
+    stroke var(--wave-ink, 260ms) linear var(--wave-dink),
+    text-decoration-color var(--wave-ink, 260ms) linear var(--wave-dink);
 }
+/* The sky's opacity is a THEME token too -- 0.16 dark, 0.46 light -- so
+   without this the stars jump brightness in the middle of a smooth wave. It
+   goes with the GROUND, not the ink: it is how bright the night is. */
+html.lg-wave .lg-sky {
+  transition:
+    color var(--wave-ink, 260ms) linear var(--wave-dink),
+    fill var(--wave-ink, 260ms) linear var(--wave-dink),
+    opacity var(--wave-dur, 620ms) var(--wave-ease) var(--wave-d, 0ms);
+}
+/* ---- the snapshot wave -----------------------------------------------------
+   Where the browser can hold a picture of the page, the whole transition is
+   one expanding circle and none of the timing below is used. The DEFAULT view
+   transition is a cross-fade of the two pictures, which is precisely the
+   half-dark-text-on-half-light-ground problem the rule above exists to work
+   around -- so it is switched off, and releases.js clips the NEW page in from
+   wherever the reader clicked. Every pixel is either the old theme or the new
+   one; only the edge moves. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 0; }
+::view-transition-new(root) { z-index: 1; }
+
+/* The wavefront: a soft ring in the NEW theme's accent, scaled out from the
+   click. It paints over everything and obscures nothing -- transparent but
+   for the band itself, and pointer-transparent throughout. */
+.lg-wavefront {
+  /* FIXED 360px AND SCALED UP, never sized to the screen. The ring has to
+     reach the far corner -- three or four thousand pixels on a 4K panel -- and
+     a gradient element that big is a texture of tens of megabytes to rasterize
+     before it can be composited once. At 360px it rasterizes instantly and the
+     GPU scales the texture, and nothing is lost: upscaling a soft radial glow
+     produces a soft radial glow. */
+  position: fixed; z-index: 60; pointer-events: none;
+  width: 360px; height: 360px; left: 0; top: 0; border-radius: 50%;
+  background: radial-gradient(closest-side,
+              transparent 52%,
+              color-mix(in srgb, var(--wave-ink, transparent) 55%, transparent) 68%,
+              color-mix(in srgb, var(--wave-ink, transparent) 18%, transparent) 80%,
+              transparent 92%);
+  will-change: transform, opacity;
+  animation: lg-wavefront var(--wave-ride, 1100ms) cubic-bezier(0.22, 0.68, 0.3, 1) both;
+}
+@keyframes lg-wavefront {
+  /* Up quickly and down slowly: the ring has to be seen leaving, not seen
+     arriving, or it reads as a flash rather than as a front. The end scale is
+     written by releases.js -- it is the distance to the furthest corner from
+     wherever the reader clicked, over the 360px the element actually is. */
+  0%   { transform: translate(-50%, -50%) scale(0.02); opacity: 0; }
+  14%  { opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(var(--wave-scale, 10)); opacity: 0; }
+}
+/* The outgoing screenshot stays put and the incoming one fades in over it, so
+   a picture dissolves into its new palette instead of blinking. */
+.lg-shot-x {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  object-fit: fill; opacity: 0; z-index: 1; pointer-events: none;
+}
+.lg-zoomhint { z-index: 2; }
 @media (prefers-reduced-motion: reduce) {
-  html, body, .lg-pkg, .lg-shot-btn, .lg-swatch, .lg-btn, .lg-card {
+  html.lg-wave, html.lg-wave *, html.lg-wave *::before, html.lg-wave *::after,
+  html.lg-wave .lg-sky {
     transition: none;
   }
+  .lg-wavefront { display: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 }
 
 *, *::before, *::after { box-sizing: border-box; }

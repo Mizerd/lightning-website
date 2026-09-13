@@ -173,10 +173,12 @@ MACOS_LIMIT = (
 LINUX_BLOCK = platform_block(
     "linux", "Linux",
     "AppImage and Flatpak carry their own Qt and run anywhere",
-    '<p class="lg-pkg-note">Lightning needs Qt 6.8 or newer. The <code>.deb</code>'
-    ' will not install on Ubuntu 24.04, Mint 22.x or Pop!_OS 24.04, and the'
-    ' <code>.rpm</code> will not on Fedora 43 \u2014 their Qt is older than that.'
-    ' Use the AppImage or the Flatpak there.</p>')
+    '<p class="lg-pkg-note">Lightning needs Qt 6.8 or newer, and the native'
+    ' packages are built against the Qt their own distribution ships. Neither'
+    ' <code>.deb</code> will install on Ubuntu 24.04, Mint 22.x or Pop!_OS'
+    ' 24.04, and the <code>.rpm</code> will not on Fedora 43 \u2014 their Qt is'
+    ' older than that. Use the AppImage or the Flatpak there; both carry their'
+    ' own.</p>')
 WINDOWS_BLOCK = platform_block(
     "windows", "Windows", "unsigned \u2014 Windows will warn you")
 MACOS_BLOCK = platform_block(

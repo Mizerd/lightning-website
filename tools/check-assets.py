@@ -73,16 +73,31 @@ def main():
                       attr("data-lg-match"), attr("data-lg-file")))
     check("the page has download cards", bool(cards))
 
+    # Mirrors assetFor() in releases.js, INCLUDING its resolution order: the
+    # longest match token goes first and the asset it claims is removed from
+    # the pool. Suffix matching alone cannot separate `lightning_X_amd64.deb`
+    # from `lightning_X_ubuntu2604_amd64.deb` -- every suffix of the first is
+    # also a suffix of the second -- and 0.9.5 is the first release to publish
+    # both. If this file and releases.js ever disagree about the order, this
+    # check stops predicting what a visitor's browser will do, which is its
+    # only job.
+    taken = set()
+
     def asset_for(token):
         low = token.lower()
         for name in assets:
+            if name in taken:
+                continue
             if name.lower().endswith(low):
                 return name
         return None
 
-    for os_key, fmt, match, named in cards:
+    ordered = sorted(cards, key=lambda c: -len(c[2] or ""))
+    for os_key, fmt, match, named in ordered:
         token = match or fmt or ""
         got = asset_for(token)
+        if got is not None:
+            taken.add(got)
         check("%s card (%s) resolves to one asset" % (os_key, token),
               got is not None, "no asset ends with %r" % token)
         if got is not None:
@@ -93,10 +108,38 @@ def main():
             check("%s card agrees with its own filename" % os_key,
                   got == named, "suffix -> %s, card names %s" % (got, named))
 
+    # ---- and the answer must not depend on the order GitHub listed them ----
+    #
+    # This is the half a plain resolution check cannot see. With two .deb
+    # assets the cards resolved correctly at 0.9.5 ONLY because GitHub happened
+    # to list the Debian one first; drop the most-specific-first ordering and
+    # every assertion above still passes. The page "looks perfect while doing
+    # it" -- which is the sentence this whole file was written around.
+    #
+    # So resolve a second time against the REVERSED asset list and require the
+    # same answers. An ordering-dependent result fails here and nowhere else.
+    def resolve(asset_list):
+        seen, out = set(), {}
+        for os_key, fmt, match, named in sorted(cards, key=lambda c: -len(c[2] or "")):
+            token = (match or fmt or "").lower()
+            got = next((n for n in asset_list
+                        if n not in seen and n.lower().endswith(token)), None)
+            if got is not None:
+                seen.add(got)
+            out[(os_key, match or fmt)] = got
+        return out
+
+    forward, backward = resolve(assets), resolve(list(reversed(assets)))
+    flipped = sorted("%s/%s: %s vs %s" % (k[0], k[1], forward[k], backward[k])
+                     for k in forward if forward[k] != backward[k])
+    check("resolution does not depend on the asset listing order", not flipped,
+          "; ".join(flipped))
+
     if errors:
         print("\nFAILED: %s" % ", ".join(errors), file=sys.stderr)
         return 1
-    print("\nall %d cards resolve to their own asset" % len(cards))
+    print("\nall %d cards resolve to their own asset, in either listing order"
+          % len(cards))
     return 0
 
 

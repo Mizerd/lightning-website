@@ -159,19 +159,44 @@
     function assetFor(format) {
       var f = String(format).toLowerCase();
       for (var i = 0; i < d.assets.length; i++) {
+        if (taken[d.assets[i].name]) continue;
         var name = String(d.assets[i].name || "").toLowerCase();
         if (name.slice(-f.length) === f) return d.assets[i];
       }
       return null;
     }
 
-    document.querySelectorAll("[data-lg-format]").forEach(function (card) {
+    // Assets a more specific card has already claimed.
+    var taken = {};
+
+    // MOST SPECIFIC FIRST, AND AN ASSET IS TAKEN ONCE.
+    //
+    // Suffix matching alone cannot separate `lightning_X_amd64.deb` from
+    // `lightning_X_ubuntu2604_amd64.deb` -- every suffix of the first is also
+    // a suffix of the second -- so whichever card ran first took whichever
+    // asset GitHub happened to list first. 0.9.5 is the release that made
+    // that real: it is the first to publish two .deb files.
+    //
+    // Resolving the LONGEST token first and removing the asset it claims
+    // fixes it without embedding a version in any token: the Ubuntu card's
+    // `_ubuntu2604_amd64.deb` is longer, it resolves first, and the Debian
+    // card's `_amd64.deb` then has only one .deb left to find. A card with no
+    // token at all sorts last, which is what you want -- the vaguest card
+    // should never take an asset a specific one named.
+    var ordered = Array.prototype.slice.call(
+      document.querySelectorAll("[data-lg-format]"));
+    ordered.sort(function (a, b) {
+      return (b.getAttribute("data-lg-match") || "").length
+           - (a.getAttribute("data-lg-match") || "").length;
+    });
+    ordered.forEach(function (card) {
       // data-lg-match wins where it exists: the format badge is what a reader
       // sees (".zip"), which is not always enough to pick one asset out of a
       // release that publishes two of them.
       var asset = assetFor(card.getAttribute("data-lg-match")
                            || card.getAttribute("data-lg-format"));
       if (!asset || !asset.url) return;
+      taken[asset.name] = true;
 
       setDownload(card, asset.url, asset.name);
 

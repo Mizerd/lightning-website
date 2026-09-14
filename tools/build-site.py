@@ -214,19 +214,6 @@ _WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
 _n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux")
 LINUX_COUNT_WORD = _WORDS.get(_n_linux, str(_n_linux))
 
-_has_macos = any(p["os"] == "macos" for p in feed["packages"])
-_macos_pinned = next((p.get("pinned") for p in feed["packages"]
-                      if p["os"] == "macos" and p.get("pinned")), "")
-MACOS_LIMIT = (
-    f"<b>macOS is not available for {VERSION}.</b> It returns in 0.9.6; the "
-    f"download above is {_macos_pinned}. It is effectively untested either "
-    "way \u2014 nobody has sat down and used it."
-    if _macos_pinned else
-    "<b>macOS is effectively untested.</b> It builds and it is published. "
-    "Nobody has sat down and used it."
-    if _has_macos else
-    "<b>There is no macOS download in this release.</b>")
-
 LINUX_BLOCK = platform_block(
     "linux", "Linux",
     "AppImage and Flatpak carry their own Qt and run anywhere",
@@ -659,11 +646,6 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-room-join:hover { transform: translateY(-2px); filter: brightness(1.06); }
 @media (max-width: 860px) { .lg-room { gap: 16px; } }
 
-/* ---- limits and privacy --------------------------------------------------- */
-.lg-list { margin: 26px 0 0; padding: 0; list-style: none; }
-.lg-list li { padding-left: 20px; position: relative; margin-top: 14px; color: var(--text-2); }
-.lg-list li::before { content: ""; position: absolute; left: 0; top: 11px; width: 7px; height: 1px; background: var(--bolt); }
-.lg-list b { color: var(--text); font-weight: 600; }
 
 /* ---- footer --------------------------------------------------------------- */
 footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var(--text-3); font-size: 13px; }
@@ -904,7 +886,6 @@ def build():
       <a href="#build">How it works</a>
       <a href="#features">Features</a>
       <a href="#download">Download</a>
-      <a href="#limits">Limits</a>
       <a class="lg-src" href="https://github.com/Mizerd/lightning"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Source</a>
     </nav>
   </div>
@@ -915,7 +896,7 @@ def build():
 <section class="lg-hero" style="border-top:0">
   <div class="wrap lg-hero-grid">
     <div>
-      <p class="lg-chip"><span class="dot"></span>v<span data-lg-bind="version">{VERSION}</span>&nbsp; ·&nbsp; <a href="#limits">alpha</a>&nbsp; ·&nbsp; GPL-3.0-or-later</p>
+      <p class="lg-chip"><span class="dot"></span>v<span data-lg-bind="version">{VERSION}</span>&nbsp; ·&nbsp; alpha&nbsp; ·&nbsp; GPL-3.0-or-later</p>
       <h1>Lightning writes the interface.<span class="l2">The Rust SDK writes the Matrix.</span></h1>
       <p class="lg-sub">A native desktop Matrix client in Qt&nbsp;6 and C++20. Group calls with screen sharing that reach Element Call, real threads, Spaces, and search that works inside encrypted rooms. Linux and NixOS first.</p>
       <div class="lg-cta">
@@ -1037,34 +1018,6 @@ def build():
 
     <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
 {ROOM_CARD}
-  </div>
-</section>
-
-<section id="limits">
-  <div class="wrap">
-    <h2>What it cannot do yet</h2>
-    <p class="lg-lede">Alpha. This is the same list the project keeps for itself.</p>
-    <ul class="lg-list">
-      <li>{MACOS_LIMIT}</li>
-      <li><b>Nobody has listened to a call.</b> Audio provably reaches the far end and the audio engine. No human has confirmed it sounds like anything.</li>
-      <li><b>Recovery and key backup are verified by reading the code, not by using it.</b> Exercising it puts a recovery key on screen. Four known rough edges are in the release notes.</li>
-      <li><b>Screen sharing and the camera are untested on the Snap</b> — no desktop portal on the test machine.</li>
-      <li><b>Some distributions ship a Qt too old for the native packages.</b> Named above.</li>
-    </ul>
-  </div>
-</section>
-
-<section id="privacy">
-  <div class="wrap">
-    <h2>Privacy, checkably</h2>
-    <p class="lg-lede">Each names the thing that implements it, so it can be checked.</p>
-    <ul class="lg-list">
-      <li><b>No telemetry, no analytics, no crash reporting.</b> It talks to your homeserver, and to the release server when checking for updates — a version number, nothing else.</li>
-      <li><b>Message content is stored on your disk unencrypted.</b> Decrypted text sits in the SDK cache and the search index as plain SQLite in your account directory — your user only, deleted with the account. Full-disk encryption is what protects it today. An encrypted store is open work, not a feature.</li>
-      <li><b>Keys, tokens, recovery keys and message bodies never reach the logs.</b> Copyable diagnostics carry hashed identifiers and no paths.</li>
-      <li><b>Access tokens go to your OS secret service</b> — libsecret, Windows Credential Manager — with a flagged insecure fallback where there is none.</li>
-      <li><b>GIF search is the one thing that leaves.</b> Your search term goes to the provider you picked. Nothing else does — no Matrix IDs, no room or event IDs, no message text.</li>
-    </ul>
   </div>
 </section>
 

@@ -517,13 +517,13 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 }
 .lg-stack b { color: var(--text); font-weight: 500; }
 .lg-stack .k { color: var(--link); }
-.lg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px; margin-top: 28px; }
-.lg-cols p { margin: 8px 0 0; color: var(--text-2); font-size: 14px; }
+.lg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px; margin-top: 32px; }
+.lg-cols h3 { font-size: 23px; line-height: 1.25; letter-spacing: -0.01em; }
 
 /* ---- alternating feature rows -------------------------------------------- */
 .lg-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.15fr); gap: 40px; align-items: center; margin-top: 44px; }
 .lg-row:nth-child(even) .lg-row-copy { order: 2; }
-.lg-row p { margin: 10px 0 0; color: var(--text-2); font-size: 15px; }
+.lg-row-copy h3 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; }
 
 /* ---- screenshots ---------------------------------------------------------- */
 .lg-shot { margin: 0; }
@@ -912,7 +912,6 @@ def build():
 <section id="build">
   <div class="wrap">
     <h2>How it is put together</h2>
-    <p class="lg-lede">Most of what a Matrix client gets wrong is cryptography and synchronisation. Lightning writes neither of them.</p>
     <div class="lg-stack">
 <b>Qt 6 / QML</b>          <span class="k">interface, layout, themes, accessibility</span><br>
 <b>C++20</b>              <span class="k">application state, models, routing, policy</span><br>
@@ -921,16 +920,13 @@ def build():
     </div>
     <div class="lg-cols">
       <div>
-        <h3>No cryptography of its own</h3>
-        <p>Olm, Megolm, cross-signing, key backup and verification are the official Rust SDK's, through an FFI bridge. Lightning implements none of it and is not permitted to.</p>
+        <h3>Encryption from the official Rust SDK</h3>
       </div>
       <div>
         <h3>Not a webview</h3>
-        <p>No Electron, no Chromium, no web frontend in a native window. QML compiled into the binary — no JavaScript engine to boot, no browser to host it.</p>
       </div>
       <div>
         <h3>Calls are native</h3>
-        <p>MatrixRTC spoken directly through GStreamer and webrtcbin, not Element Call in a widget. That is what puts a screen share on the GPU.</p>
       </div>
     </div>
   </div>
@@ -939,12 +935,10 @@ def build():
 <section id="features">
   <div class="wrap">
     <h2>Six things that are unusual</h2>
-    <p class="lg-lede">It does the ordinary things too. These are the ones worth a paragraph.</p>
 
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Group calls, with screen sharing</h3>
-        <p>MatrixRTC, interoperable with Element Call. Share a screen or one window, scaled on the GPU. Per-participant volume, raised hands, and a call that survives you reading another room.</p>
       </div>
       {shot("call-grid", "A four-person call in Lightning")}
     </div>
@@ -952,7 +946,6 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Search inside encrypted rooms</h3>
-        <p>A server cannot search what it cannot read, so Lightning keeps a local index. It is the one place decrypted text is stored on purpose, and it is documented rather than glossed over.</p>
       </div>
       {shot("find-in-room", "Searching inside a room in Lightning")}
     </div>
@@ -960,7 +953,6 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Spaces, and a Channels layout</h3>
-        <p>Drag Spaces in the rail, drop one on another to make a folder, edit every setting down to the power-level matrix. Or switch to the Channels layout instead.</p>
       </div>
       {shot("community-overview", "A Space and its rooms in Lightning")}
     </div>
@@ -968,7 +960,6 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Threads that are actually threads</h3>
-        <p>Real <code>m.thread</code> relations on the SDK's own thread timelines, with summary cards and per-thread unread state. Replies never leak into the main timeline — the part most clients get wrong.</p>
       </div>
       {shot("thread-view", "A thread panel open beside a room timeline in Lightning")}
     </div>
@@ -976,7 +967,6 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>A theme editor, not a theme setting</h3>
-        <p>Pick a colour for any part of the window and watch a sample room repaint as you go. Eleven themes ship, all WCAG-AA checked, each one per-account.</p>
       </div>
       {shot("settings-themes", "The appearance settings in Lightning")}
     </div>
@@ -984,7 +974,6 @@ def build():
     <div class="lg-row">
       <div class="lg-row-copy">
         <h3>Pictures, video, audio and files</h3>
-        <p>Inline images, video with a real poster frame, playable voice messages, and attachments that keep their captions. Encrypted rooms included — decrypted through the media bridge, never a bare URL.</p>
       </div>
       {shot("media-gallery", "Images, video and files in a Lightning room")}
     </div>

@@ -854,13 +854,9 @@
   // They are not required to agree star for star -- each rolls its own -- only
   // to build from the same shapes.
   function skyField(W, H, shapes) {
-    // Keep the centre column clear: the page's text sits in a 1080px column
-    // and this layer is behind it. The band narrows on a narrow window rather
-    // than swallowing the whole width.
-    var keep = Math.min(1080, W * 0.72);
-    keep = Math.min(keep, Math.max(0, W - 240));
-    var lo = (W - keep) / 2, hi = (W + keep) / 2;
-
+    // Stars fill the whole field, centre included: the page's text sits in a
+    // 1080px column and this layer is behind it at a low opacity, so the sky
+    // reads through the gaps rather than stopping at the margins.
     var lines = [], circles = [], stars = [], placed = [];
     var nConst = Math.max(5, Math.min(16, Math.round(W * H / 1000000)));
     for (var i = 0; i < nConst; i++) {
@@ -870,14 +866,11 @@
       var squash = 0.78 + Math.random() * 0.47;
       var cos = Math.cos(rot), sin = Math.sin(rot);
 
-      // Centres go in the margins; a figure may spill towards the column,
-      // which reads as sky continuing behind the page rather than stopping at
-      // a line. Rejection-sampled so two figures do not land on each other.
+      // Centres go anywhere across the width, middle included. Rejection-
+      // sampled so two figures do not land on each other and read as noise.
       var cx = 0, cy = 0;
       for (var t = 0; t < 40; t++) {
-        cx = lo <= 60 ? Math.random() * W
-           : (Math.random() < 0.5 ? Math.random() * lo
-                                  : hi + Math.random() * (W - hi));
+        cx = Math.random() * W;
         cy = size * 0.6 + Math.random() * Math.max(1, H - size * 1.2);
         var clear = true;
         for (var q = 0; q < placed.length; q++) {
@@ -910,13 +903,12 @@
     // sits inside a figure rather than floating in the dust.
     var accent = stars.length ? (Math.random() * stars.length) | 0 : -1;
 
-    // Dust: unconnected stars, kept out of the column, at a density that
-    // follows the area rather than a number somebody typed once.
+    // Dust: unconnected stars across the whole field, at a density that follows
+    // the area rather than a number somebody typed once.
     var vertices = stars.length;
     var nDust = Math.round(W * H / 34000);
     for (var tries = 0; stars.length - vertices < nDust && tries < nDust * 12; tries++) {
       var x = Math.random() * W, y = Math.random() * H;
-      if (x > lo && x < hi) continue;
       stars.push([r1(x), r1(y), r2(0.6 + Math.random())]);
     }
 

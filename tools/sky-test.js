@@ -112,16 +112,17 @@ check("nothing is drawn off the edge",
       "x " + Math.min.apply(null, xs).toFixed(0) + ".." + Math.max.apply(null, xs).toFixed(0) +
       "  y " + Math.min.apply(null, ys).toFixed(0) + ".." + Math.max.apply(null, ys).toFixed(0));
 
-// The centre column is where the page's text is. Stars behind a paragraph are
-// noise, so the dust is kept out of it; the FIGURES are allowed to spill in,
-// which is why this counts rather than forbids.
+// Stars now fill the WHOLE field, centre included -- the layer sits behind
+// the text at a low opacity, so the middle must not be an empty lane. The
+// centre column is 72% of the width, so a roughly uniform field puts most
+// stars there; assert it is populated rather than carved out.
 let inColumn = 0;
 svg.querySelectorAll("circle").forEach(function (c) {
   const x = parseFloat(c.getAttribute("cx"));
   if (x > (1400 - 1008) / 2 && x < (1400 + 1008) / 2) inColumn++;
 });
-check("the text column is kept clear", inColumn < stars * 0.25,
-      inColumn + " of " + stars + " stars are behind the column");
+check("the centre is filled, not carved out", inColumn > stars * 0.4,
+      inColumn + " of " + stars + " stars are in the centre column");
 
 // Density follows the area. A quarter of the page must not carry the same
 // number of stars as the whole of it.

@@ -504,7 +504,7 @@ h1 .l2 { display: block; color: var(--text-2); }
 
 /* ---- sections ------------------------------------------------------------- */
 section { padding: 64px 0; border-top: 1px solid var(--hairline); }
-h2 { margin: 0; font-size: 28px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 600; }
+h2 { margin: 0; font-size: 34px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 600; }
 .lg-lede { margin: 14px 0 0; color: var(--text-2); max-width: 62ch; }
 h3 { margin: 0; font-size: 18px; font-weight: 600; }
 
@@ -517,13 +517,13 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 }
 .lg-stack b { color: var(--text); font-weight: 500; }
 .lg-stack .k { color: var(--link); }
-.lg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px; margin-top: 32px; }
-.lg-cols h3 { font-size: 23px; line-height: 1.25; letter-spacing: -0.01em; }
+.lg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px 36px; margin-top: 36px; align-items: center; }
+.lg-cols h3 { font-size: 27px; line-height: 1.2; letter-spacing: -0.015em; text-wrap: balance; }
 
 /* ---- alternating feature rows -------------------------------------------- */
 .lg-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.15fr); gap: 40px; align-items: center; margin-top: 44px; }
 .lg-row:nth-child(even) .lg-row-copy { order: 2; }
-.lg-row-copy h3 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; }
+.lg-row-copy h3 { font-size: 33px; line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
 
 /* ---- screenshots ---------------------------------------------------------- */
 .lg-shot { margin: 0; }
@@ -704,25 +704,16 @@ def sky_field(rng, W, H, shapes):
     dust of unconnected stars fills in around them. That is the difference
     between a sky and a scatter plot: the eye finds figures in it.
 
-    THE CENTRE COLUMN IS KEPT CLEAR. The page's text sits in a 1080px column
-    and the layer is behind it, so anything placed there is noise behind
-    paragraphs. The band narrows on a narrow window rather than swallowing the
-    whole width -- at 700px there would otherwise be nowhere left to put a star.
+    STARS FILL THE WHOLE FIELD, centre included. The page's text sits in a
+    1080px column and the layer is behind it at a low opacity, so the sky reads
+    through the gaps rather than stopping at the margins. Rejection sampling is
+    what keeps it a sky and not a scatter plot.
 
     This is the SHARED algorithm: releases.js runs the same one in JavaScript
     at the document's real size. They are deliberately not required to agree
     byte for byte -- each rolls its own field -- only to build from the same
     shapes.
     """
-    # The clear band: the content column, but never more than leaves 120px of
-    # sky either side.
-    keep = min(1080.0, W * 0.72)
-    keep = min(keep, max(0.0, W - 240.0))
-    lo, hi = (W - keep) / 2.0, (W + keep) / 2.0
-
-    def in_band(x):
-        return lo < x < hi
-
     lines, stars, placed = [], [], []
     n_const = max(5, min(16, round(W * H / 1_000_000)))
     for _ in range(n_const):
@@ -731,18 +722,12 @@ def sky_field(rng, W, H, shapes):
         rot = rng.uniform(0, 2 * math.pi)
         squash = rng.uniform(0.78, 1.25)
         cos, sin = math.cos(rot), math.sin(rot)
-        # Centres go in the margins; a figure may SPILL towards the column,
-        # which reads as sky continuing behind the page rather than stopping
-        # at a line. Rejection-sampled against what is already placed so two
-        # constellations do not land on top of each other and read as noise.
+        # Centres go anywhere across the width, middle included. Rejection-
+        # sampled against what is already placed so two constellations do not
+        # land on top of each other and read as noise.
         cx = cy = 0.0
         for _try in range(40):
-            if lo <= 60:
-                cx = rng.uniform(0, W)          # no margin to speak of
-            elif rng.random() < 0.5:
-                cx = rng.uniform(0, lo)
-            else:
-                cx = rng.uniform(hi, W)
+            cx = rng.uniform(0, W)
             cy = rng.uniform(size * 0.6, H - size * 0.6)
             if all((cx - px) ** 2 + (cy - py) ** 2 > ((size + ps) * 0.6) ** 2
                    for px, py, ps in placed):
@@ -763,16 +748,14 @@ def sky_field(rng, W, H, shapes):
     # sits inside a figure rather than floating in the dust.
     accent = rng.randrange(len(stars)) if stars else -1
 
-    # Dust: unconnected stars, kept out of the column, at a density that
-    # follows the area rather than a number somebody typed once.
+    # Dust: unconnected stars across the whole field, at a density that follows
+    # the area rather than a number somebody typed once.
     vertices = len(stars)
     n_dust = round(W * H / 34_000)
     tries = 0
     while len(stars) - vertices < n_dust and tries < n_dust * 12:
         tries += 1
         x, y = rng.uniform(0, W), rng.uniform(0, H)
-        if in_band(x):
-            continue
         stars.append((round(x, 1), round(y, 1), round(rng.uniform(0.6, 1.6), 2)))
     return lines, stars, accent
 

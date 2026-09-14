@@ -516,7 +516,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
   color: var(--text-2); overflow-x: auto;
 }
 .lg-stack b { color: var(--text); font-weight: 500; }
-.lg-stack .k { color: var(--bolt); }
+.lg-stack .k { color: var(--link); }
 .lg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px; margin-top: 28px; }
 .lg-cols p { margin: 8px 0 0; color: var(--text-2); font-size: 14px; }
 

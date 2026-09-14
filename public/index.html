@@ -747,7 +747,9 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
    One card, not a section: it is an invitation, not a chapter. It renders only
    when releases.json carries a `support` block -- an address is not something
    this generator may invent, and a dead matrix.to link is worse than no card. */
-.lg-split { border: 0; border-top: 1px solid var(--hairline); margin: 48px 0 0; }
+/* Full-bleed, so the line runs edge to edge like the section borders rather
+   than stopping at the 1080px content column it is nested inside. */
+.lg-split { border: 0; border-top: 1px solid var(--hairline); width: 100vw; margin: 48px 0 0; margin-left: calc(50% - 50vw); }
 .lg-room {
   margin-top: 40px; padding: 24px 26px;
   border: 1px solid var(--border); border-radius: var(--r-lg);

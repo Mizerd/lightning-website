@@ -747,6 +747,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
    One card, not a section: it is an invitation, not a chapter. It renders only
    when releases.json carries a `support` block -- an address is not something
    this generator may invent, and a dead matrix.to link is worse than no card. */
+.lg-split { border: 0; border-top: 1px solid var(--hairline); margin: 48px 0 0; }
 .lg-room {
   margin-top: 40px; padding: 24px 26px;
   border: 1px solid var(--border); border-radius: var(--r-lg);
@@ -948,8 +949,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 
 <section id="themes">
   <div class="wrap">
-    <h2>Eleven themes</h2>
-    <p class="lg-lede">Every one is the client's own palette, read from its own theme file. Pick one and the page repaints.</p>
+    <h2>Try the 11 themes</h2>
     <div class="lg-swatches">
   <button type="button" class="lg-swatch" data-lg-theme="indigo-night" aria-pressed="true" style="background:#292632;border-color:#5A5768;color:#A4A6B8;--sw-accent:#4A4EED"><i style="background:#4A4EED"></i>Indigo Night</button>
   <button type="button" class="lg-swatch" data-lg-theme="moss-light" aria-pressed="false" style="background:#DCEEE2;border-color:#A0B2A4;color:#4E5A51;--sw-accent:#007757"><i style="background:#007757"></i>Moss Light</button>
@@ -1088,6 +1088,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
     </div>
 
     <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
+    <hr class="lg-split">
     <div class="lg-room">
       <div class="lg-room-body">
         <h3>Say hello</h3>

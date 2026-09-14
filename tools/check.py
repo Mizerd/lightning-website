@@ -268,11 +268,13 @@ check("every Expand badge ships hidden",
 # The swatches are copied from qml/AppTheme.qml in the client repo, which this
 # repo cannot see. Nothing here can prove they are current -- but it can prove
 # nobody quietly dropped one, which is the failure that would leave the page
-# saying "Eleven themes" above ten swatches.
+# saying "the 11 themes" above ten swatches.
 n_sw = html.count('class="lg-swatch"')
-claimed = re.search(r">Eleven themes", html)
+claimed = re.search(r">Try the (\d+) themes<", html)
 check("eleven theme swatches", n_sw == 11, "%d swatches" % n_sw)
-check("the page still claims eleven", bool(claimed), "heading reworded?")
+check("the heading's count matches the swatches",
+      bool(claimed) and int(claimed.group(1)) == n_sw,
+      "heading says %s, %d swatches" % (claimed.group(1) if claimed else "?", n_sw))
 
 # ---- every weight asked for has a face to answer with ----------------------
 # The fonts are self-hosted, and the subset that shipped carries only SOME

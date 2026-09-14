@@ -622,6 +622,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
    One card, not a section: it is an invitation, not a chapter. It renders only
    when releases.json carries a `support` block -- an address is not something
    this generator may invent, and a dead matrix.to link is worse than no card. */
+.lg-split { border: 0; border-top: 1px solid var(--hairline); margin: 48px 0 0; }
 .lg-room {
   margin-top: 40px; padding: 24px 26px;
   border: 1px solid var(--border); border-radius: var(--r-lg);
@@ -831,7 +832,8 @@ def room_card():
         return ""
     blurb = sup.get("blurb") or ("A chill space. Ask questions, report what broke, "
                                  "or watch the thing get built.")
-    return f'''    <div class="lg-room">
+    return f'''    <hr class="lg-split">
+    <div class="lg-room">
       <div class="lg-room-body">
         <h3>{html.escape(sup.get("title", "The Lightning room"))}</h3>
         <p>{html.escape(blurb)}</p>
@@ -968,8 +970,7 @@ def build():
 
 <section id="themes">
   <div class="wrap">
-    <h2>Eleven themes</h2>
-    <p class="lg-lede">Every one is the client's own palette, read from its own theme file. Pick one and the page repaints.</p>
+    <h2>Try the 11 themes</h2>
     <div class="lg-swatches">
 {swatches}
     </div>

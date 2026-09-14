@@ -780,11 +780,27 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 
 /* ---- lightbox ------------------------------------------------------------- */
 .lg-lightbox {
-  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   background: color-mix(in srgb, var(--page) 94%, #000);
   padding: 28px; cursor: zoom-out;
 }
-.lg-lightbox img { max-width: 100%; max-height: 100%; border-radius: var(--r-md); }
+/* The image is capped in VIEWPORT units so the caption below it always has
+   room; a bare max-height:100% would let a tall shot claim the whole overlay
+   and push the caption off the edge, which is what cropped it to "Lightni". */
+.lg-lightbox img { max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: var(--r-md); }
+.lg-lightbox figcaption {
+  flex: none; max-width: min(720px, 92vw); text-align: center;
+  color: var(--text-2); font-size: 14px; line-height: 1.5;
+}
+.lg-lbclose {
+  position: absolute; top: 18px; right: 20px; z-index: 1;
+  width: 36px; height: 36px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--raised);
+  color: var(--text-2); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.lg-lbclose:hover { color: var(--text); border-color: var(--text-3); }
 
 @media (max-width: 860px) {
   .lg-hero-grid, .lg-row { grid-template-columns: 1fr; gap: 28px; }

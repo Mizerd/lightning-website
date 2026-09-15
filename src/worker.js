@@ -19,6 +19,19 @@
  * env.ASSETS at the bottom, which is what keeps 404.html working.
  */
 
+// Flathub's domain verification. It fetches
+// /.well-known/org.flathub.VerifiedApps.txt from the domain the app id maps to
+// (org.lightning_matrix -> lightning-matrix.org) and expects the app id in it.
+//
+// The file also exists as a real asset at public/.well-known/, and normally
+// THAT is what answers: assets are served before this code runs. This route is
+// the belt to that braces, because a static asset layer skipping paths under a
+// dot-directory is a common and silent behaviour, and the failure mode is not
+// an error -- it is a 404 that reads as "the domain does not claim this app",
+// which is indistinguishable from never having added the file.
+const FLATHUB_VERIFIED_PATH = "/.well-known/org.flathub.VerifiedApps.txt";
+const FLATHUB_APP_ID = "org.lightning_matrix.Lightning";
+
 const REPO = "Mizerd/lightning";
 const UPSTREAM = `https://api.github.com/repos/${REPO}/releases/latest`;
 
@@ -94,8 +107,24 @@ export default {
       }
     }
 
-    // Not an asset and not our one route: hand back to the asset layer so its
-    // not_found_handling serves 404.html.
+    // Only reached when the asset layer did NOT serve the real file (see the
+    // note by FLATHUB_VERIFIED_PATH). Plain text, no caching surprises.
+    if (pathname === FLATHUB_VERIFIED_PATH) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return json({ error: "method not allowed" }, 405, 0);
+      }
+      return new Response(`${FLATHUB_APP_ID}\n`, {
+        status: 200,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "public, max-age=300",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
+
+    // Not an asset and not one of our routes: hand back to the asset layer so
+    // its not_found_handling serves 404.html.
     return env.ASSETS.fetch(request);
   },
 };

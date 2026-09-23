@@ -21,7 +21,11 @@
 
 // Flathub's domain verification. It fetches
 // /.well-known/org.flathub.VerifiedApps.txt from the domain the app id maps to
-// (org.lightning_matrix -> lightning-matrix.org) and expects the app id in it.
+// (org.lightning_matrix -> lightning-matrix.org) and looks for the verification
+// TOKEN its developer portal issued for this app -- not the app id, which is
+// what this file first carried and what verification did not accept. The app
+// id line is kept; Flathub's instruction is to ADD the token to an existing
+// file. Both copies below must carry the same lines.
 //
 // The file also exists as a real asset at public/.well-known/, and normally
 // THAT is what answers: assets are served before this code runs. This route is
@@ -30,7 +34,9 @@
 // an error -- it is a 404 that reads as "the domain does not claim this app",
 // which is indistinguishable from never having added the file.
 const FLATHUB_VERIFIED_PATH = "/.well-known/org.flathub.VerifiedApps.txt";
-const FLATHUB_APP_ID = "org.lightning_matrix.Lightning";
+const FLATHUB_VERIFIED_BODY =
+  "org.lightning_matrix.Lightning\n" +
+  "ad0eb57e-fb3c-4ab1-9fc0-3fb3c7a42e1b\n";
 
 const REPO = "Mizerd/lightning";
 const UPSTREAM = `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -113,7 +119,7 @@ export default {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return json({ error: "method not allowed" }, 405, 0);
       }
-      return new Response(`${FLATHUB_APP_ID}\n`, {
+      return new Response(FLATHUB_VERIFIED_BODY, {
         status: 200,
         headers: {
           "content-type": "text/plain; charset=utf-8",

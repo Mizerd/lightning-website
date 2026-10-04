@@ -897,7 +897,7 @@ def build():
 <section class="lg-hero" style="border-top:0">
   <div class="wrap lg-hero-grid">
     <div>
-      <p class="lg-chip"><span class="dot"></span>v<span data-lg-bind="version">{VERSION}</span>&nbsp; ·&nbsp; alpha&nbsp; ·&nbsp; GPL-3.0-or-later</p>
+      <p class="lg-chip"><span class="dot"></span>v<span data-lg-bind="version">{VERSION}</span>&nbsp; ·&nbsp; beta&nbsp; ·&nbsp; GPL-3.0-or-later</p>
       <h1>Lightning writes the interface.<span class="l2">The Rust SDK writes the Matrix.</span></h1>
       <p class="lg-sub">A native desktop Matrix client in Qt&nbsp;6 and C++20. Group calls with screen sharing that reach Element Call, real threads, Spaces, and search that works inside encrypted rooms. Linux and NixOS first.</p>
       <div class="lg-cta">

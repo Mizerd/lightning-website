@@ -1,255 +1,350 @@
-#!/usr/bin/env python3
-"""Write public/index.html for the Lightning site.
-
-SAME BUILD. The page is made from the application's own design tokens and
-shows nothing but the application, so it is the first piece of evidence for
-its own claims. The test for any element: if it does not exist in the app, it
-does not go on the site. The app has no gradient text, no glow, no marquee,
-no scroll reveals and no uppercase tracked mono eyebrows -- it removed the
-last of those deliberately (qml/MenuSectionLabel.qml) -- so none of them are
-here either.
-
-Colours are read from qml/AppTheme.qml: Indigo Night for the surfaces, the
-Storm bolt for the one accent. The accent discipline is the app's own --
-AppTheme confines bolt to "focus, checked state, ONE primary action, the Home
-tile", so it appears a handful of times on this whole page and never as a
-wash. Links get their own ink because the accent cannot carry AA at body
-size; the app wrote that reasoning down and it holds here.
-"""
-import html
-import json
-import math
-import random
-import os
-import re
-import pathlib
-import struct
-
-HERE = pathlib.Path(__file__).resolve().parent
-ROOT = HERE.parent
-PUB = ROOT / "public"
-# The self-hosted @font-face block, kept beside this script rather than inside
-# it: it is 335 lines of Google-Fonts-shaped unicode-range declarations and
-# nothing here ever edits it. It is the AUTHORITY on which weights exist --
-# check.py compares every font-weight on the page against these rules, because
-# a weight with no face paints as nothing rather than falling back.
-FONTS = (HERE / "fontfaces.css").read_text(encoding="utf-8")
-
-feed = json.loads((PUB / "releases.json").read_text(encoding="utf-8"))
-VERSION = feed["version"]
-RELEASED = feed["released"]
-RELEASES_URL = feed["releases_url"]
-
-# Read from the PNG headers, never written down: check.py asserts that the
-# width/height the page declares are the file's real ones, and a hand-kept
-# table here would be a second copy of that truth waiting to drift from it.
-DEFAULT_THEME = "indigo-night"
-
-
-def _png_size(rel):
-    with open(PUB / "assets" / rel, "rb") as fh:
-        return struct.unpack(">II", fh.read(24)[16:24])
-
-
-# One entry per SCENARIO. Every scenario exists once per theme under
-# assets/shots/<scenario>--<theme>.png, captured from the client's own
-# screenshot-demo mode, so picking a theme changes the pictures too.
-SCENARIOS = ("home-overview", "call-grid", "thread-view", "media-gallery",
-             "find-in-room", "settings-themes", "community-overview")
-SHOTS = {sc: _png_size(f"shots/{sc}--{DEFAULT_THEME}.png") for sc in SCENARIOS}
-
-# The eleven themes, named as the app names them. The swatch colours are each
-# theme's own accent from qml/AppTheme.qml. check.py cannot verify they are
-# current -- it can only prove nobody quietly dropped one.
-# The eleven palettes, extracted from the CLIENT's qml/AppTheme.qml by
-# tools/extract-themes.py. Not a hand-kept table of accents any more: every
-# token the page paints with, for every theme, so clicking a swatch repaints
-# the page the way the application actually looks.
-THEMES_DATA = json.loads((PUB / "themes.json").read_text(encoding="utf-8"))["themes"]
-
-
-def _slug(name):
-    return name.lower().replace(" ", "-")
-
-
-def theme_css():
-    """One [data-theme] block per theme, plus the default on bare :root.
-
-    The default IS Indigo Night, so its block is emitted on `:root` as well --
-    a page that has never been clicked must not depend on JavaScript having run
-    to have colours.
-    """
-    out = []
-    for t in THEMES_DATA:
-        k = t["tokens"]
-        decls = " ".join(
-            f"--{tok}: {k[tok]};" for tok in
-            ("page", "raised", "elevated", "hairline", "border",
-             "text", "text-2", "text-3", "accent", "link"))
-        decls += f" color-scheme: {'dark' if k['dark'] else 'light'};"
-        decls += f" --sky-opacity: {0.16 if k["dark"] else 0.46};"
-        out.append(f'[data-theme="{_slug(t["name"])}"] {{ {decls} }}')
-    return "\n".join(out)
-
-
-THEMES = [(t["name"], t["tokens"]["accent"]) for t in THEMES_DATA]
-
-
-def _tok(name, token):
-    return next(t["tokens"][token] for t in THEMES_DATA if t["name"] == name)
-
-
-def shot(name, alt, cls=""):
-    """One screenshot figure.
-
-    `data-lg-shot` carries the scenario; releases.js rewrites the src when the
-    theme changes, so the pictures follow the palette the reader picked. The
-    baked src is the default theme, so a page without JavaScript still shows
-    real screenshots rather than empty boxes.
-    """
-    w, h = SHOTS[name]
-    extra = f" {cls}" if cls else ""
-    return f'''<figure class="lg-shot{extra}">
-  <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open {alt} full size">
-    <img src="/assets/shots/{name}--{DEFAULT_THEME}.png" data-lg-shot="{name}"
-         alt="{alt}" width="{w}" height="{h}" loading="lazy" decoding="async">
-    <span class="lg-zoomhint" data-lg-zoomhint hidden>Expand</span>
-  </button>
-</figure>'''
-
-
-ASSET = feed["asset_url"]
-
-
-def asset_href(fil, pkg=None):
-    """The download URL, or a PINNED package's own absolute one.
-
-    A pinned package is a deliberate exception: it belongs to an older release
-    than the one this page is about, so the version template must not be
-    applied to it. macOS is pinned at 0.9.4 because 0.9.5 has no macOS build.
-    """
-    if pkg and pkg.get("url"):
-        return pkg["url"]
-    return ASSET.replace("${version}", VERSION).replace("${file}", fil)
-
-
-def pkg_card(p):
-    """One package card, GENERATED FROM THE FEED so the two cannot disagree.
-
-    Hand-writing these is how the page ends up naming a file the feed does
-    not — check.py compares them for exactly that reason, and generating them
-    makes the comparison trivially true instead of a thing somebody has to
-    remember. releases.js then clones card zero per OS at runtime, so every
-    per-card attribute it overwrites has to exist here or the clone keeps card
-    zero's value; that was the bug that once served the .deb from every Linux
-    button.
-    """
-    fil = p.get("file", "")
-    match = f' data-lg-match="{p["match"]}"' if p.get("match") else ""
-    # The AppImage command carries `&&`, so the text is escaped rather than
-    # interpolated raw -- a bare `&` in HTML is a malformed entity reference
-    # that a copy button would hand the reader back verbatim only by luck.
-    install = html.escape(p.get("install", ""))
-    inner = ""
-    if p["os"] == "linux":
-        # data-lg-bind="pkg.install" is LOAD-BEARING and lives on the same
-        # element as data-lg-copy: releases.js rebuilds these cards by cloning
-        # card zero, and a command without the bind keeps card zero's text --
-        # every Linux card then showed the AppImage command. It is also how
-        # pass 2 rewrites the filename inside the command when GitHub's
-        # published asset name differs from the feed's.
-        inner = f"""  <div class="lg-cmdrow">
-    <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">{install}</code>
-    <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
-  </div>"""
-    else:
-        inner = f'  <p class="lg-pkg-note" data-lg-bind="pkg.install">{install}</p>'
-    # A pinned card is excluded from the /api/latest pass: that pass resolves a
-    # card against the NEWEST release's assets, and this one deliberately names
-    # an older release's file. Without the marker it would find no macOS asset
-    # and hide the button -- removing the only macOS download there is.
-    pinned = f' data-lg-pinned="{html.escape(p["pinned"])}"' if p.get("pinned") else ""
-    ver = (f'<span class="lg-pkg-ver">{html.escape(p["pinned"])}</span>'
-           if p.get("pinned") else "")
-    return f'''<div data-lg-pkg="{p["os"]}" data-lg-format="{p["format"]}" data-lg-file="{fil}"{match}{pinned} class="lg-pkg">
-  <div class="lg-pkg-head">
-    <span class="lg-pkg-fmt" data-lg-bind="pkg.format">{html.escape(p["format"])}</span>
-    <span class="lg-pkg-label" data-lg-bind="pkg.label">{html.escape(p["label"])}</span>{ver}
-    <a class="lg-pkg-dl" data-lg-dl href="{asset_href(fil, p)}">Download</a>
-  </div>
-{inner}
-</div>'''
-
-
-def cards_for(os_name):
-    return "\n".join(pkg_card(p) for p in feed["packages"] if p["os"] == os_name)
-
-
-def platform_block(os_name, heading, hint, note=""):
-    """One <div class="lg-plat">, or NOTHING if the feed has no such package.
-
-    macOS is `allow_failure` in the release pipeline -- deliberately, so one
-    sleeping Mac cannot block a release -- and it has already been absent from
-    a release for an unrelated reason (the 413 on the artifact upload). A
-    hard-coded block would then print an empty "macOS" heading over nothing,
-    and its card would link at an asset GitHub never received. The page is
-    generated from the feed; a platform the feed does not list is a platform
-    the page does not claim.
-    """
-    cards = cards_for(os_name)
-    if not cards:
-        return ""
-    tail = "\n      " + note if note else ""
-    return (f'    <div class="lg-plat">\n'
-            f'      <h3>{heading} <span class="hint">{hint}</span></h3>\n'
-            f'{cards}{tail}\n'
-            f'    </div>')
-
-
-# The hero claimed "six Linux formats" over FIVE cards: the pipeline builds two
-# .debs (Debian and Ubuntu) and the page offers one, so the lane count and the
-# download count are different numbers. Counted off the feed, which is what the
-# reader can actually see.
-_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
-          7: "seven", 8: "eight", 9: "nine", 10: "ten"}
-_n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux")
-LINUX_COUNT_WORD = _WORDS.get(_n_linux, str(_n_linux))
-
-LINUX_BLOCK = platform_block(
-    "linux", "Linux",
-    "AppImage and Flatpak carry their own Qt and run anywhere",
-    '<p class="lg-pkg-note">Needs Qt 6.8+. Neither <code>.deb</code> installs on'
-    ' Ubuntu 24.04, Mint 22.x or Pop!_OS 24.04, nor the <code>.rpm</code> on'
-    ' Fedora 43 \u2014 older Qt. Use the AppImage or the Flatpak there; both'
-    ' carry their own.</p>')
-WINDOWS_BLOCK = platform_block(
-    "windows", "Windows", "unsigned \u2014 Windows will warn you")
-_macos_note = feed.get("macos_note", "")
-MACOS_BLOCK = platform_block(
-    "macos", "macOS", "Apple Silicon, macOS 26+, ad-hoc signed",
-    f'<p class="lg-pkg-note">{html.escape(_macos_note)}</p>' if _macos_note else "")
-
-LD = {
-    "@context": "https://schema.org", "@type": "SoftwareApplication",
-    "name": "Lightning", "url": "https://www.lightning-matrix.org/",
-    "applicationCategory": "CommunicationApplication",
-    "applicationSubCategory": "Matrix client",
-    "operatingSystem": "Linux, Windows, macOS",
-    "softwareVersion": VERSION, "softwareRequirements": "Qt 6.8 or later",
-    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
-    "isAccessibleForFree": True,
-    "description": ("A native Matrix desktop client written in Qt 6 on top of "
-                    "the official Rust Matrix SDK, with group calls, threads, "
-                    "Spaces and search inside encrypted rooms."),
-    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-    "sameAs": ["https://github.com/Mizerd/lightning"],
-    "codeRepository": "https://github.com/Mizerd/lightning",
-    "screenshot": [f"https://www.lightning-matrix.org/assets/shots/{n}--{DEFAULT_THEME}.png"
-                   for n in SHOTS],
-    "author": {"@type": "Person", "name": "Rokas Smetonis"},
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy — Lightning</title>
+<meta name="description" content="Lightning collects nothing: no analytics, no telemetry, no crash reporting. What it stores stays on your computer, and what it sends goes to your homeserver or to a service you asked for.">
+<link rel="canonical" href="https://www.lightning-matrix.org/privacy">
+<link rel="icon" href="/assets/lightning-mark.svg">
+<style>
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-CSS = """
 /* ---- tokens, read from qml/AppTheme.qml ---------------------------------
    Surfaces are Indigo Night, the app's flagship dark theme since 2026-08-25.
    The accent is Storm's bolt, which is also the logo's gold -- and it is the
@@ -263,7 +358,18 @@ CSS = """
   /* Indigo Night, the default -- the SAME values theme_css() emits for it, so
      a page whose JavaScript never runs still has the right colours. The two
      are generated from one source; do not edit either by hand. */
-{INDIGO_TOKENS}
+  --page: #1F1D26;
+  --raised: #292632;
+  --elevated: #32303D;
+  --hairline: #423E4E;
+  --border: #5A5768;
+  --text: #E8E8EF;
+  --text-2: #A4A6B8;
+  --text-3: #9E9BA6;
+  --accent: #4A4EED;
+  --link: #93C5FD;
+  color-scheme: dark;
+  --sky-opacity: 0.16;
   --bolt:     #FFD447;   /* _stoBolt -- the brand accent and the logo's gold */
   --bolt-ink: #0A0F24;   /* _stoBoltInk */
   --card:     var(--elevated);
@@ -271,7 +377,17 @@ CSS = """
 }
 /* Every theme, from the client's own palettes. Clicking a swatch sets
    data-theme on <html>; nothing else on the page needs to know. */
-{THEME_CSS}
+[data-theme="indigo-night"] { --page: #1F1D26; --raised: #292632; --elevated: #32303D; --hairline: #423E4E; --border: #5A5768; --text: #E8E8EF; --text-2: #A4A6B8; --text-3: #9E9BA6; --accent: #4A4EED; --link: #93C5FD; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="moss-light"] { --page: #D2E5D6; --raised: #DCEEE2; --elevated: #F6FBF7; --hairline: #D2E2D6; --border: #A0B2A4; --text: #161D18; --text-2: #4E5A51; --text-3: #57625A; --accent: #007757; --link: #00734E; color-scheme: light; --sky-opacity: 0.46; }
+[data-theme="deep-teal"] { --page: #022323; --raised: #0C3031; --elevated: #163D3D; --hairline: #284E4E; --border: #406666; --text: #E6ECEC; --text-2: #B9C8C8; --text-3: #8FA5A8; --accent: #27C2AD; --link: #61C4C7; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="storm"] { --page: #02051D; --raised: #121655; --elevated: #202473; --hairline: #303C80; --border: #434F9D; --text: #F2F4FF; --text-2: #C9D2F2; --text-3: #9CA3D2; --accent: #FFD447; --link: #9295F5; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="lightning-light"] { --page: #D3E1F2; --raised: #DEEBFD; --elevated: #F5F9FE; --hairline: #C4D2E7; --border: #7A94B6; --text: #1E293B; --text-2: #4C5661; --text-3: #525C68; --accent: #1D57FF; --link: #005FB5; color-scheme: light; --sky-opacity: 0.46; }
+[data-theme="lightning-dark"] { --page: #0D1117; --raised: #1B242F; --elevated: #2A3140; --hairline: #4C596D; --border: #5D6B87; --text: #E9EEF6; --text-2: #B7C2D4; --text-3: #98A5BB; --accent: #1D57FF; --link: #9EAAFC; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="graphite"] { --page: #141417; --raised: #1D1E21; --elevated: #27272B; --hairline: #43444A; --border: #5C5C64; --text: #F5F5F7; --text-2: #C7C7CC; --text-3: #9A9AA2; --accent: #2E6EEB; --link: #A8AFF9; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="midnight"] { --page: #09182C; --raised: #1B263B; --elevated: #273246; --hairline: #394859; --border: #526172; --text: #F8FAFC; --text-2: #CBD5E1; --text-3: #94A3B8; --accent: #1D57FF; --link: #8CC3FF; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="nordic"] { --page: #2E3440; --raised: #262C38; --elevated: #3B4252; --hairline: #464F62; --border: #5A6478; --text: #ECEFF4; --text-2: #D8DEE9; --text-3: #ABB2C0; --accent: #5E81AC; --link: #9DE4FF; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="purple-dusk"] { --page: #17142A; --raised: #2B2642; --elevated: #3C3455; --hairline: #5D537E; --border: #716598; --text: #F3EEFF; --text-2: #D6CCF0; --text-3: #B5ABD6; --accent: #8F73E9; --link: #C7B2FC; color-scheme: dark; --sky-opacity: 0.16; }
+[data-theme="warm"] { --page: #EBDCC6; --raised: #F6E6D0; --elevated: #FFFDF8; --hairline: #DCD0B8; --border: #C2B394; --text: #3B3428; --text-2: #675944; --text-3: #6A604D; --accent: #A34C00; --link: #00598B; color-scheme: light; --sky-opacity: 0.46; }
 /* ---- the theme wave --------------------------------------------------------
    The tokens are what change; everything below reads them, so a theme switch
    is one attribute write and no reflow of anything structural. What it used to
@@ -688,164 +804,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
   .lg-hero { padding: 44px 0 40px; }
   section { padding: 48px 0; }
 }
-"""
 
-
-def indigo_tokens():
-    """The default theme's tokens, indented for the :root block."""
-    k = next(t["tokens"] for t in THEMES_DATA if t["name"] == "Indigo Night")
-    pad = "  "
-    lines = [f"{pad}--{tok}: {k[tok]};" for tok in
-             ("page", "raised", "elevated", "hairline", "border",
-              "text", "text-2", "text-3", "accent", "link")]
-    lines.append(f"{pad}color-scheme: {'dark' if k['dark'] else 'light'};")
-    lines.append(f"{pad}--sky-opacity: {0.16 if k["dark"] else 0.46};")
-    return "\n".join(lines)
-
-
-CSS = (CSS.replace("{INDIGO_TOKENS}", indigo_tokens())
-          .replace("{THEME_CSS}", theme_css()))
-
-SKY_SHAPES = json.loads((PUB / "sky-shapes.json").read_text(encoding="utf-8"))["shapes"]
-
-# The baked field's coordinate space. It is in CSS pixels rather than some
-# abstract grid, so a `stroke-width: 0.8` reads the same here as it does in the
-# field releases.js generates at the document's real size.
-SKY_W, SKY_H = 1440, 6800
-
-
-def sky_field(rng, W, H, shapes):
-    """One star field: (lines, stars, accent_index_into_stars).
-
-    Built from SET SHAPES, not from noise. A handful of the constellations in
-    `sky-shapes.json` are scaled, rotated and dropped into the margins, and a
-    dust of unconnected stars fills in around them. That is the difference
-    between a sky and a scatter plot: the eye finds figures in it.
-
-    STARS FILL THE WHOLE FIELD, centre included. The page's text sits in a
-    1080px column and the layer is behind it at a low opacity, so the sky reads
-    through the gaps rather than stopping at the margins. Rejection sampling is
-    what keeps it a sky and not a scatter plot.
-
-    This is the SHARED algorithm: releases.js runs the same one in JavaScript
-    at the document's real size. They are deliberately not required to agree
-    byte for byte -- each rolls its own field -- only to build from the same
-    shapes.
-    """
-    lines, stars, placed = [], [], []
-    n_const = max(5, min(16, round(W * H / 1_000_000)))
-    for _ in range(n_const):
-        shape = shapes[rng.randrange(len(shapes))]
-        size = rng.uniform(90, 210)
-        rot = rng.uniform(0, 2 * math.pi)
-        squash = rng.uniform(0.78, 1.25)
-        cos, sin = math.cos(rot), math.sin(rot)
-        # Centres go anywhere across the width, middle included. Rejection-
-        # sampled against what is already placed so two constellations do not
-        # land on top of each other and read as noise.
-        cx = cy = 0.0
-        for _try in range(40):
-            cx = rng.uniform(0, W)
-            cy = rng.uniform(size * 0.6, H - size * 0.6)
-            if all((cx - px) ** 2 + (cy - py) ** 2 > ((size + ps) * 0.6) ** 2
-                   for px, py, ps in placed):
-                break
-        placed.append((cx, cy, size))
-
-        pts = []
-        for x, y in shape["pts"]:
-            dx, dy = (x - 0.5) * size, (y - 0.5) * size * squash
-            pts.append((round(cx + dx * cos - dy * sin, 1),
-                        round(cy + dx * sin + dy * cos, 1)))
-        for a, b in shape["edges"]:
-            lines.append((pts[a][0], pts[a][1], pts[b][0], pts[b][1]))
-        for x, y in pts:
-            stars.append((x, y, round(rng.uniform(1.2, 2.1), 2)))
-
-    # The accent star is one of a constellation's own vertices, so the detail
-    # sits inside a figure rather than floating in the dust.
-    accent = rng.randrange(len(stars)) if stars else -1
-
-    # Dust: unconnected stars across the whole field, at a density that follows
-    # the area rather than a number somebody typed once.
-    vertices = len(stars)
-    n_dust = round(W * H / 34_000)
-    tries = 0
-    while len(stars) - vertices < n_dust and tries < n_dust * 12:
-        tries += 1
-        x, y = rng.uniform(0, W), rng.uniform(0, H)
-        stars.append((round(x, 1), round(y, 1), round(rng.uniform(0.6, 1.6), 2)))
-    return lines, stars, accent
-
-
-def sky_svg():
-    """The constellation layer, baked for a reader without JavaScript.
-
-    SEEDED, so a rebuild is not a noisy diff of meaningless coordinates and a
-    deliberate change is still visible in one. The LIVE page does not keep this
-    field: releases.js rolls a new one from the same shapes on every load, at
-    the document's real width and height, which is also the only way the star
-    density can be right on a phone and on a 4K panel at once.
-
-    It takes its colour from `currentColor`, which is `--text`, so it inverts
-    with the theme by itself -- pale stars on the dark palettes, faint ink on
-    Warm, Moss Light and Lightning Light.
-
-    The ONE accent star is the barely-noticeable detail: a single point in the
-    theme's own accent, slightly larger. Nothing points at it and nothing
-    explains it.
-    """
-    rng = random.Random(0x11667)
-    lines, stars, accent = sky_field(rng, SKY_W, SKY_H, SKY_SHAPES)
-    parts = [f'<svg class="lg-sky" viewBox="0 0 {SKY_W} {SKY_H}"'
-             f' preserveAspectRatio="xMidYMid slice" aria-hidden="true">']
-    for x1, y1, x2, y2 in lines:
-        parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"/>')
-    for i, (x, y, r) in enumerate(stars):
-        cls = ' class="lg-sky-mark"' if i == accent else ""
-        rr = 2.6 if i == accent else r
-        parts.append(f'<circle{cls} cx="{x}" cy="{y}" r="{rr}"/>')
-    parts.append('</svg>')
-    return "".join(parts)
-
-
-def sky_shape_data():
-    """The shape table, inlined for releases.js to roll its own field from.
-
-    Inlined rather than fetched: it is under 2KB, and a second request for
-    decoration that must be on screen at first paint is a worse trade than the
-    bytes. One source of truth either way -- this is `public/sky-shapes.json`.
-    """
-    compact = json.dumps({"shapes": SKY_SHAPES}, separators=(",", ":"))
-    return ('<script type="application/json" id="lg-sky-shapes">'
-            + compact.replace("<", "\\u003c") + '</script>')
-
-
-def room_card():
-    """The support room, or nothing.
-
-    Driven by a `support` block in releases.json -- alias plus url -- and
-    ABSENT when that block is. The generator has no business inventing a room
-    address, and a Join button that leads nowhere is worse than a page that
-    does not mention a room at all.
-    """
-    sup = feed.get("support") or {}
-    alias, url = sup.get("alias", ""), sup.get("url", "")
-    if not (alias and url):
-        return ""
-    blurb = sup.get("blurb") or ("A chill space. Ask questions, report what broke, "
-                                 "or watch the thing get built.")
-    return f'''    <hr class="lg-split">
-    <div class="lg-room">
-      <div class="lg-room-body">
-        <h3>{html.escape(sup.get("title", "The Lightning room"))}</h3>
-        <p>{html.escape(blurb)}</p>
-        <span class="alias">{html.escape(alias)}</span>
-      </div>
-      <a class="lg-room-join" href="{html.escape(url)}">Join</a>
-    </div>'''
-
-PRIVACY_CSS = """
 .lg-doc { padding: 56px 0 72px; }
 .lg-doc .wrap { max-width: 760px; }
 .lg-doc h1 { margin: 0 0 12px; font-size: 40px; line-height: 1.12; letter-spacing: -0.02em; font-weight: 600; }
@@ -862,83 +821,7 @@ PRIVACY_CSS = """
 .lg-doc h2 a { color: inherit; text-decoration: none; }
 .lg-doc h2 a:hover::after { content: " #"; color: var(--text-3); }
 .lg-doc p a, .lg-doc li a { text-underline-offset: 3px; }
-"""
-
-PRIVACY_BODY = """
-<h1>Privacy</h1>
-<p class="lg-asof">This page summarises <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md">docs/privacy.md</a> in the source repository. That file is the full policy; every claim in it names the source file that implements it.</p>
-
-<p class="lg-lede">Lightning is a desktop Matrix client, not a service. There is no Lightning server, no Lightning account and no backend run by the project. What Lightning stores lives on your computer, and what it sends goes to your homeserver or to a service you asked for.</p>
-
-<h2>In short</h2>
-<ul>
-<li><strong>Lightning collects nothing.</strong> No analytics, no telemetry, no crash reporting, no usage measurement, no advertising identifier. The project receives no personal data from installed clients.</li>
-<li><strong>It checks for updates, and that is on by default.</strong> The check is an anonymous request for two small public files. It carries no account, device or usage information, and you can turn it off in Settings &rarr; Updates.</li>
-<li><strong>Your homeserver</strong> receives normal Matrix traffic, because that is what a Matrix client does.</li>
-<li><strong>Third parties</strong> are contacted only for link previews, the GIF picker, and downloading an update file. All three are under your control.</li>
-<li>Messages in encrypted rooms are end-to-end encrypted by the official Rust Matrix SDK. Lightning implements no cryptography of its own.</li>
-</ul>
-
-<h2>Your homeserver</h2>
-<p>Lightning has no default homeserver. It talks to the one you sign in to, using the official <code>matrix-rust-sdk</code>: sign-in, sync, messages, media, key backup, verification and so on. In an unencrypted room your homeserver can read messages, as with any Matrix client; in an encrypted room it cannot. Its privacy policy is its operator's, not ours.</p>
-
-<h2>Link previews (off by default)</h2>
-<p>Lightning fetches a linked page itself, from your computer, and does not use your homeserver's preview proxy. A preview therefore reveals your IP address and the <code>Lightning/&lt;version&gt;</code> user agent to the linked site, which may have been chosen by whoever sent the message. That is why previews are off by default, both for unencrypted and encrypted rooms. You can turn them on in Settings &rarr; Privacy &amp; security, or load a single one with a per-message action. No cookies, no Matrix identifiers and no referrer are sent. Only HTTPS to public addresses is allowed; SVG is never rendered and no JavaScript is run.</p>
-
-<h2>GIF providers (only when you open the picker)</h2>
-<p>The GIF picker contacts GIPHY or KLIPY, whichever you select. Nothing contacts them before you open the picker. The request carries the provider's API key, your search term (up to 50 characters), a result limit and the safe-search rating. No Matrix data of any kind is sent: no user, room, event, homeserver or message. The provider sees your IP address, as any website does. Saved GIFs from a chat are stored on your device and load without a network request.</p>
-
-<h2>Links you click</h2>
-<p>Clicking a link hands the address to your default browser. Authenticated Matrix media addresses are never given to another program; media is fetched and decrypted inside Lightning.</p>
-
-<h2>Update checks and downloads</h2>
-<p>At most once every 24 hours, and never within the first 30 seconds after launch, Lightning fetches two small public files from the project&#39;s own package server: the update manifest and its signature. The only thing sent is the address and the user agent <code>Lightning/&lt;version&gt;</code>. No account, device, room or installation identifier exists to send.</p>
-<p>If you choose to install an update, the file is downloaded from the project's read-only GitHub mirror, falling back to the project&#39;s own server. GitHub sees an anonymous download and your IP address. Every download is checked against an Ed25519 signature and a SHA-256 hash before anything is installed, wherever it came from. Flatpak and Snap installs are updated by their own package managers.</p>
-
-<h2>What is stored on your device</h2>
-<ul>
-<li><strong>Sign-in tokens</strong> go in your system keyring where there is one. Without a keyring Lightning says so and uses a plain fallback file.</li>
-<li><strong>Message content is not encrypted at rest.</strong> The Matrix SDK's event cache and room state, and Lightning's local search index, hold messages in plain SQLite files once they have been decrypted, encrypted rooms included. The files are readable only by your user and are deleted with the account. Anything that can already read your home directory, such as another program of yours, a backup or a stolen unencrypted disk, can read them. Full-disk encryption is the answer today.</li>
-<li><strong>Downloaded media</strong> is kept so it opens again without downloading. Media from encrypted rooms is kept encrypted, with a per-account key held in the keyring, and is not kept at all where no secure keyring exists. Settings &rarr; Privacy &amp; security lets you stop keeping media and clear it.</li>
-<li><strong>Attachments you send</strong> are held by the SDK's send queue until uploaded, then for up to 60 days, in the encrypted media store.</li>
-<li><strong>Settings, saved GIFs and recent emoji</strong> stay local. Saved GIFs are deleted on sign-out and can be cleared from Settings.</li>
-</ul>
-<p>Signing out or removing an account deletes that account's store.</p>
-
-<h2>Logs and diagnostics</h2>
-<p>Local debug logs may include a short account identifier and account-scoped paths, and stay on your machine. Call diagnostics name the other participant's Matrix ID and device ID in the local log. Tokens, recovery keys, room and session keys, passwords and decrypted message bodies are never logged. The optional support-diagnostics export carries hashed account identifiers and no paths, is written locally, and is never uploaded by Lightning.</p>
-
-<h2>Installers</h2>
-<p>The Windows installers copy files and register an uninstall entry and shortcuts under your user profile. They contact no network service and need no administrator rights. Uninstalling does not delete your Matrix session or message store; sign out inside Lightning first, or delete the application data directory.</p>
-
-<h2>Children</h2>
-<p>Lightning is a general-purpose messaging client and is not directed at children.</p>
-
-<h2>Changes and contact</h2>
-<p>The policy is versioned in the repository beside the code it describes. Questions: Rokas Smetonis, <a href="mailto:antrasrokas@gmail.com">antrasrokas@gmail.com</a>, or the <a href="https://github.com/Mizerd/lightning">source repository</a>.</p>
-"""
-
-
-def _anchor_h2(body):
-    def rep(m):
-        slug = re.sub(r"[^a-z0-9]+", "-", re.sub(r"<[^>]+>", "", m.group(1)).lower()).strip("-")
-        return f'<h2 id="{slug}"><a href="#{slug}">{m.group(1)}</a></h2>'
-    return re.sub(r"<h2>(.*?)</h2>", rep, body)
-
-
-def build_privacy(footer_html):
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy — Lightning</title>
-<meta name="description" content="Lightning collects nothing: no analytics, no telemetry, no crash reporting. What it stores stays on your computer, and what it sends goes to your homeserver or to a service you asked for.">
-<link rel="canonical" href="https://www.lightning-matrix.org/privacy">
-<link rel="icon" href="/assets/lightning-mark.svg">
-<style>
-{FONTS}
-{CSS}{PRIVACY_CSS}</style>
+</style>
 </head>
 <body>
 <header class="lg-top">
@@ -952,179 +835,66 @@ def build_privacy(footer_html):
 </header>
 <main class="lg-doc">
   <div class="wrap">
-{_anchor_h2(PRIVACY_BODY)}
+
+<h1>Privacy</h1>
+<p class="lg-asof">This page summarises <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md">docs/privacy.md</a> in the source repository. That file is the full policy; every claim in it names the source file that implements it.</p>
+
+<p class="lg-lede">Lightning is a desktop Matrix client, not a service. There is no Lightning server, no Lightning account and no backend run by the project. What Lightning stores lives on your computer, and what it sends goes to your homeserver or to a service you asked for.</p>
+
+<h2 id="in-short"><a href="#in-short">In short</a></h2>
+<ul>
+<li><strong>Lightning collects nothing.</strong> No analytics, no telemetry, no crash reporting, no usage measurement, no advertising identifier. The project receives no personal data from installed clients.</li>
+<li><strong>It checks for updates, and that is on by default.</strong> The check is an anonymous request for two small public files. It carries no account, device or usage information, and you can turn it off in Settings &rarr; Updates.</li>
+<li><strong>Your homeserver</strong> receives normal Matrix traffic, because that is what a Matrix client does.</li>
+<li><strong>Third parties</strong> are contacted only for link previews, the GIF picker, and downloading an update file. All three are under your control.</li>
+<li>Messages in encrypted rooms are end-to-end encrypted by the official Rust Matrix SDK. Lightning implements no cryptography of its own.</li>
+</ul>
+
+<h2 id="your-homeserver"><a href="#your-homeserver">Your homeserver</a></h2>
+<p>Lightning has no default homeserver. It talks to the one you sign in to, using the official <code>matrix-rust-sdk</code>: sign-in, sync, messages, media, key backup, verification and so on. In an unencrypted room your homeserver can read messages, as with any Matrix client; in an encrypted room it cannot. Its privacy policy is its operator's, not ours.</p>
+
+<h2 id="link-previews-off-by-default"><a href="#link-previews-off-by-default">Link previews (off by default)</a></h2>
+<p>Lightning fetches a linked page itself, from your computer, and does not use your homeserver's preview proxy. A preview therefore reveals your IP address and the <code>Lightning/&lt;version&gt;</code> user agent to the linked site, which may have been chosen by whoever sent the message. That is why previews are off by default, both for unencrypted and encrypted rooms. You can turn them on in Settings &rarr; Privacy &amp; security, or load a single one with a per-message action. No cookies, no Matrix identifiers and no referrer are sent. Only HTTPS to public addresses is allowed; SVG is never rendered and no JavaScript is run.</p>
+
+<h2 id="gif-providers-only-when-you-open-the-picker"><a href="#gif-providers-only-when-you-open-the-picker">GIF providers (only when you open the picker)</a></h2>
+<p>The GIF picker contacts GIPHY or KLIPY, whichever you select. Nothing contacts them before you open the picker. The request carries the provider's API key, your search term (up to 50 characters), a result limit and the safe-search rating. No Matrix data of any kind is sent: no user, room, event, homeserver or message. The provider sees your IP address, as any website does. Saved GIFs from a chat are stored on your device and load without a network request.</p>
+
+<h2 id="links-you-click"><a href="#links-you-click">Links you click</a></h2>
+<p>Clicking a link hands the address to your default browser. Authenticated Matrix media addresses are never given to another program; media is fetched and decrypted inside Lightning.</p>
+
+<h2 id="update-checks-and-downloads"><a href="#update-checks-and-downloads">Update checks and downloads</a></h2>
+<p>At most once every 24 hours, and never within the first 30 seconds after launch, Lightning fetches two small public files from the project&#39;s own package server: the update manifest and its signature. The only thing sent is the address and the user agent <code>Lightning/&lt;version&gt;</code>. No account, device, room or installation identifier exists to send.</p>
+<p>If you choose to install an update, the file is downloaded from the project's read-only GitHub mirror, falling back to the project&#39;s own server. GitHub sees an anonymous download and your IP address. Every download is checked against an Ed25519 signature and a SHA-256 hash before anything is installed, wherever it came from. Flatpak and Snap installs are updated by their own package managers.</p>
+
+<h2 id="what-is-stored-on-your-device"><a href="#what-is-stored-on-your-device">What is stored on your device</a></h2>
+<ul>
+<li><strong>Sign-in tokens</strong> go in your system keyring where there is one. Without a keyring Lightning says so and uses a plain fallback file.</li>
+<li><strong>Message content is not encrypted at rest.</strong> The Matrix SDK's event cache and room state, and Lightning's local search index, hold messages in plain SQLite files once they have been decrypted, encrypted rooms included. The files are readable only by your user and are deleted with the account. Anything that can already read your home directory, such as another program of yours, a backup or a stolen unencrypted disk, can read them. Full-disk encryption is the answer today.</li>
+<li><strong>Downloaded media</strong> is kept so it opens again without downloading. Media from encrypted rooms is kept encrypted, with a per-account key held in the keyring, and is not kept at all where no secure keyring exists. Settings &rarr; Privacy &amp; security lets you stop keeping media and clear it.</li>
+<li><strong>Attachments you send</strong> are held by the SDK's send queue until uploaded, then for up to 60 days, in the encrypted media store.</li>
+<li><strong>Settings, saved GIFs and recent emoji</strong> stay local. Saved GIFs are deleted on sign-out and can be cleared from Settings.</li>
+</ul>
+<p>Signing out or removing an account deletes that account's store.</p>
+
+<h2 id="logs-and-diagnostics"><a href="#logs-and-diagnostics">Logs and diagnostics</a></h2>
+<p>Local debug logs may include a short account identifier and account-scoped paths, and stay on your machine. Call diagnostics name the other participant's Matrix ID and device ID in the local log. Tokens, recovery keys, room and session keys, passwords and decrypted message bodies are never logged. The optional support-diagnostics export carries hashed account identifiers and no paths, is written locally, and is never uploaded by Lightning.</p>
+
+<h2 id="installers"><a href="#installers">Installers</a></h2>
+<p>The Windows installers copy files and register an uninstall entry and shortcuts under your user profile. They contact no network service and need no administrator rights. Uninstalling does not delete your Matrix session or message store; sign out inside Lightning first, or delete the application data directory.</p>
+
+<h2 id="children"><a href="#children">Children</a></h2>
+<p>Lightning is a general-purpose messaging client and is not directed at children.</p>
+
+<h2 id="changes-and-contact"><a href="#changes-and-contact">Changes and contact</a></h2>
+<p>The policy is versioned in the repository beside the code it describes. Questions: Rokas Smetonis, <a href="mailto:antrasrokas@gmail.com">antrasrokas@gmail.com</a>, or the <a href="https://github.com/Mizerd/lightning">source repository</a>.</p>
+
   </div>
 </main>
-{footer_html}
-</body>
-</html>
-"""
-    (PUB / "privacy.html").write_text(html, encoding="utf-8")
-    print("wrote", (PUB / "privacy.html"), len(html.splitlines()), "lines")
-
-
-def build():
-    nl = "\n"
-    swatches = nl.join(
-        f'  <button type="button" class="lg-swatch" data-lg-theme="{_slug(n)}"'
-        f' aria-pressed="{str(_slug(n) == "indigo-night").lower()}"'
-        f' style="background:{_tok(n, "raised")};border-color:{_tok(n, "border")};'
-        f'color:{_tok(n, "text-2")};--sw-accent:{c}">'
-        f'<i style="background:{c}"></i>{n}</button>'
-        for n, c in THEMES)
-
-    SKY = sky_svg() + sky_shape_data()
-    ROOM_CARD = room_card()
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lightning — a native Matrix client for the desktop</title>
-<meta name="description" content="A native desktop Matrix client in Qt 6 and C++20, built on the official Rust Matrix SDK. Group calls with screen sharing, real threads, Spaces, and search inside encrypted rooms. Linux and NixOS first. GPL-3.0-or-later.">
-<meta property="og:title" content="Lightning — a native Matrix client for the desktop">
-<meta property="og:description" content="Lightning writes the interface. The Rust SDK writes the Matrix. Qt 6, C++20, real end-to-end encryption, group calls that reach Element Call. Linux and NixOS first.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://www.lightning-matrix.org/">
-<meta property="og:site_name" content="Lightning">
-<meta property="og:image" content="https://www.lightning-matrix.org/assets/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="canonical" href="https://www.lightning-matrix.org/">
-<link rel="icon" href="/assets/lightning-mark.svg">
-<script type="application/ld+json">{json.dumps(LD, separators=(",", ":"))}</script>
-<style>
-{FONTS}
-{CSS}</style>
-</head>
-<body>
-{SKY}
-
-<header class="lg-top">
-  <div class="wrap">
-    <a class="lg-brand" href="/"><img src="/assets/lightning-mark.svg" alt="">Lightning</a>
-    <nav class="lg-nav">
-      <a href="#build">How it works</a>
-      <a href="#features">Features</a>
-      <a href="#download">Download</a>
-      <a class="lg-src" href="https://github.com/Mizerd/lightning"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Source</a>
-    </nav>
-  </div>
-</header>
-
-<main>
-
-<section class="lg-hero" style="border-top:0">
-  <div class="wrap lg-hero-grid">
-    <div>
-      <p class="lg-chip"><span class="dot"></span>v<span data-lg-bind="version">{VERSION}</span>&nbsp; ·&nbsp; beta&nbsp; ·&nbsp; GPL-3.0-or-later</p>
-      <h1>Lightning writes the interface.<span class="l2">The Rust SDK writes the Matrix.</span></h1>
-      <p class="lg-sub">A native desktop Matrix client in Qt&nbsp;6 and C++20. Group calls with screen sharing that reach Element Call, real threads, Spaces, and search that works inside encrypted rooms. Linux and NixOS first.</p>
-      <div class="lg-cta">
-        <a class="lg-btn primary" href="#download">Download <span data-lg-bind="version">{VERSION}</span></a>
-        <a class="lg-btn" href="https://github.com/Mizerd/lightning">Read the source</a>
-      </div>
-      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats</p>
-    </div>
-    {shot("home-overview", "Lightning showing a room timeline, direct messages and an invite")}
-  </div>
-</section>
-
-<section id="build">
-  <div class="wrap">
-    <h2>How it is put together</h2>
-    <div class="lg-stack">
-<b>Qt 6 / QML</b>          <span class="k">interface, layout, themes, accessibility</span><br>
-<b>C++20</b>              <span class="k">application state, models, routing, policy</span><br>
-<b>matrix-rust-sdk</b>    <span class="k">Matrix, E2EE, sync, threads, media</span><br>
-<b>GStreamer</b>          <span class="k">voice, video, screen capture</span>
-    </div>
-  </div>
-</section>
-
-<section id="features">
-  <div class="wrap">
-    <h2>Six things that are unusual</h2>
-
-    <div class="lg-row">
-      <div class="lg-row-copy">
-        <h3>Group calls, with screen sharing</h3>
-      </div>
-      {shot("call-grid", "A four-person call in Lightning")}
-    </div>
-
-    <div class="lg-row">
-      <div class="lg-row-copy">
-        <h3>Search inside encrypted rooms</h3>
-      </div>
-      {shot("find-in-room", "Searching inside a room in Lightning")}
-    </div>
-
-    <div class="lg-row">
-      <div class="lg-row-copy">
-        <h3>Spaces, and a Channels layout</h3>
-      </div>
-      {shot("community-overview", "A Space and its rooms in Lightning")}
-    </div>
-
-    <div class="lg-row">
-      <div class="lg-row-copy">
-        <h3>Threads that are actually threads</h3>
-      </div>
-      {shot("thread-view", "A thread panel open beside a room timeline in Lightning")}
-    </div>
-
-    <div class="lg-row">
-      <div class="lg-row-copy">
-        <h3>A theme editor, not a theme setting</h3>
-      </div>
-      {shot("settings-themes", "The appearance settings in Lightning")}
-    </div>
-
-    <div class="lg-row">
-      <div class="lg-row-copy">
-        <h3>Pictures, video, audio and files</h3>
-      </div>
-      {shot("media-gallery", "Images, video and files in a Lightning room")}
-    </div>
-  </div>
-</section>
-
-<section id="themes">
-  <div class="wrap">
-    <h2>Try the 11 themes</h2>
-    <div class="lg-swatches">
-{swatches}
-    </div>
-  </div>
-</section>
-
-<section id="download">
-  <div class="wrap">
-    <h2>Download</h2>
-    <p class="lg-relhead">
-      <span class="v">{VERSION}</span>
-      <span data-lg-bind="released">{RELEASED}</span>
-      <a href="{RELEASES_URL}" data-lg-href="releasesUrl">Release notes →</a>
-    </p>
-
-{LINUX_BLOCK}
-
-{WINDOWS_BLOCK}
-
-{MACOS_BLOCK}
-
-    <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
-{ROOM_CARD}
-  </div>
-</section>
-
-</main>
-
 <footer>
   <div class="wrap">
     <div class="lg-flinks">
       <a href="https://github.com/Mizerd/lightning">Source</a>
-      <a href="{RELEASES_URL}">Releases</a>
+      <a href="https://github.com/Mizerd/lightning/releases">Releases</a>
       <a href="/privacy">Privacy</a>
       <a href="https://github.com/Mizerd/lightning/issues">Issues</a>
       <a href="https://matrix.org/">What is Matrix?</a>
@@ -1132,17 +902,5 @@ def build():
     <p class="lg-colophon">Set in Manrope and JetBrains Mono, the same faces the application bundles. Colours are Indigo Night and Storm, read from <code>qml/AppTheme.qml</code>. Screenshots come from Lightning's own demo mode, generated from fictional <code>*.example</code> accounts so they cannot drift from the client. GPL-3.0-or-later.</p>
   </div>
 </footer>
-
-<script src="/releases.js" defer></script>
 </body>
 </html>
-"""
-    (PUB / "index.html").write_text(html, encoding="utf-8")
-    print("wrote", (PUB / "index.html"), len(html.splitlines()), "lines")
-    fa = html.index("<footer>")
-    fb = html.index("</footer>") + len("</footer>")
-    build_privacy(html[fa:fb])
-
-
-if __name__ == "__main__":
-    build()

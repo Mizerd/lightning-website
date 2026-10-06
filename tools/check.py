@@ -50,7 +50,11 @@ headers = open(os.path.join(PUB, "_headers"), encoding="utf-8").read()
 # ---- local references resolve ---------------------------------------------
 refs = set(re.findall(r'(?:src|href)="(/[^"]*)"', html))
 refs |= {"/" + u for u in re.findall(r'url\("/([^"]*)"\)', html)}
-missing = sorted(r for r in refs if not os.path.exists(PUB + r))
+# Cloudflare serves public/privacy.html at /privacy, so a clean URL resolves
+# to its .html file.
+missing = sorted(r for r in refs
+                 if not os.path.exists(PUB + r)
+                 and not os.path.exists(PUB + r.split("#")[0] + ".html"))
 check("local references resolve", not missing, ", ".join(missing))
 
 # ---- one download button per package, each pointing somewhere different ----

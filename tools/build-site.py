@@ -158,10 +158,16 @@ def pkg_card(p):
         # every Linux card then showed the AppImage command. It is also how
         # pass 2 rewrites the filename inside the command when GitHub's
         # published asset name differs from the feed's.
+        # The optional per-card note (data-lg-bind="pkg.note") is on every
+        # Linux card, hidden when empty, for the same clone-of-card-zero
+        # reason as the install command.
+        note = p.get("note", "")
+        hid = "" if note else " hidden"
         inner = f"""  <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">{install}</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
-  </div>"""
+  </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note"{hid}>{html.escape(note)}</p>"""
     else:
         inner = f'  <p class="lg-pkg-note" data-lg-bind="pkg.install">{install}</p>'
     # A pinned card is excluded from the /api/latest pass: that pass resolves a
@@ -171,11 +177,18 @@ def pkg_card(p):
     pinned = f' data-lg-pinned="{html.escape(p["pinned"])}"' if p.get("pinned") else ""
     ver = (f'<span class="lg-pkg-ver">{html.escape(p["pinned"])}</span>'
            if p.get("pinned") else "")
-    return f'''<div data-lg-pkg="{p["os"]}" data-lg-format="{p["format"]}" data-lg-file="{fil}"{match}{pinned} class="lg-pkg">
+    # A STORE card links to a store or project page (Flathub, COPR), not to a
+    # release asset. It carries its own absolute url, names no file, and is
+    # excluded from the /api/latest pass exactly like a pinned card.
+    store = " data-lg-store" if p.get("store") else ""
+    action = html.escape(p.get("action") or "Download")
+    label_attr = (f' aria-label="Open {html.escape(p["format"])} page"'
+                  if p.get("store") else "")
+    return f'''<div data-lg-pkg="{p["os"]}" data-lg-format="{p["format"]}" data-lg-file="{fil}"{match}{pinned}{store} class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">{html.escape(p["format"])}</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">{html.escape(p["label"])}</span>{ver}
-    <a class="lg-pkg-dl" data-lg-dl href="{asset_href(fil, p)}">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action"{label_attr} href="{asset_href(fil, p)}">{action}</a>
   </div>
 {inner}
 </div>'''
@@ -592,6 +605,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-pkg-dl { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--link); white-space: nowrap; }
 .lg-pkg-dl:hover { color: var(--text); }
 .lg-pkg-note { margin: 10px 0 0; color: var(--text-3); font-size: 13px; }
+.lg-pkg-note[hidden] { display: none; }
 .lg-cmdrow { display: flex; align-items: stretch; gap: 8px; margin-top: 12px; }
 .lg-cmd {
   flex: 1; min-width: 0; overflow-x: auto; white-space: pre;

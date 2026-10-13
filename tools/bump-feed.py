@@ -111,6 +111,10 @@ def main():
 
     kept, dropped, unpinned = [], [], []
     for pkg in feed["packages"]:
+        # A store card (Flathub, COPR) is not a release asset: keep it as is.
+        if pkg.get("store"):
+            kept.append(dict(pkg))
+            continue
         name = asset_for(pkg, names)
         if not name:
             # A PINNED package is not dropped: it deliberately names an older

@@ -88,6 +88,23 @@
       // unconditionally so a missing URL hides the button rather than leaving
       // it pointing at the wrong file.
       setDownload(card, pkg.download_url, pkg.file);
+      // A STORE card (Flathub, COPR) links to a store page rather than a
+      // release asset: it has its own url, no file, and a button that does
+      // not say "Download". Like every other per-card state this must be
+      // written unconditionally or the clone keeps card zero's.
+      var dl = card.querySelector("[data-lg-dl]");
+      if (dl) {
+        dl.textContent = pkg.action || "Download";
+        if (pkg.store) dl.setAttribute("aria-label", "Open " + pkg.format + " page");
+        else if (!pkg.file) dl.removeAttribute("aria-label");
+      }
+      if (pkg.store) card.setAttribute("data-lg-store", "");
+      else card.removeAttribute("data-lg-store");
+      var noteEl = card.querySelector('[data-lg-bind="pkg.note"]');
+      if (noteEl) {
+        noteEl.textContent = pkg.note || "";
+        noteEl.hidden = !pkg.note;
+      }
       card.setAttribute("data-lg-format", pkg.format || "");
       // The suffix pass 2 matches on, when the displayed format is ambiguous.
       // Two cards ship a ".zip" -- the Windows portable and the macOS bundle --
@@ -198,6 +215,9 @@
       // against the newest release would find nothing and hide its button,
       // removing the only macOS download the page offers.
       if (card.hasAttribute("data-lg-pinned")) return;
+      // A STORE card points at Flathub or COPR, which no GitHub release asset
+      // can stand in for. Never match it to one, never overwrite its link.
+      if (card.hasAttribute("data-lg-store")) return;
       // data-lg-match wins where it exists: the format badge is what a reader
       // sees (".zip"), which is not always enough to pick one asset out of a
       // release that publishes two of them.

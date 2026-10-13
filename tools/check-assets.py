@@ -55,7 +55,7 @@ def main():
     feed = json.load(open(os.path.join(PUB, "releases.json"), encoding="utf-8"))
     if "--feed" in args:
         tag = "v" + feed["version"]
-        assets = [p["file"] for p in feed["packages"]] + ["SHA256SUMS"]
+        assets = [p["file"] for p in feed["packages"] if p.get("file")] + ["SHA256SUMS"]
         print("release %s (from releases.json), %d assets" % (tag, len(assets)))
     else:
         tag = next((a for a in args if a.startswith("v")), "")
@@ -73,6 +73,10 @@ def main():
         # pinned at 0.9.4), so it must not be resolved against this release's
         # assets -- it would fail, correctly, and tell nobody anything useful.
         if attr("data-lg-pinned"):
+            continue
+        # A store card (Flathub, COPR) links to a store page and has no
+        # release asset to resolve.
+        if "data-lg-store" in tag_html:
             continue
         cards.append((attr("data-lg-pkg"), attr("data-lg-format"),
                       attr("data-lg-match"), attr("data-lg-file")))

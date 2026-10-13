@@ -716,6 +716,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-pkg-dl { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--link); white-space: nowrap; }
 .lg-pkg-dl:hover { color: var(--text); }
 .lg-pkg-note { margin: 10px 0 0; color: var(--text-3); font-size: 13px; }
+.lg-pkg-note[hidden] { display: none; }
 .lg-cmdrow { display: flex; align-items: stretch; gap: 8px; margin-top: 12px; }
 .lg-cmd {
   flex: 1; min-width: 0; overflow-x: auto; white-space: pre;
@@ -841,7 +842,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
         <a class="lg-btn primary" href="#download">Download <span data-lg-bind="version">0.10.1</span></a>
         <a class="lg-btn" href="https://github.com/Mizerd/lightning">Read the source</a>
       </div>
-      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; six&nbsp;Linux&nbsp;formats</p>
+      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; eight&nbsp;Linux&nbsp;formats</p>
     </div>
     <figure class="lg-shot">
   <button class="lg-shot-btn" data-lg-zoom type="button" aria-label="Open Lightning showing a room timeline, direct messages and an invite full size">
@@ -979,71 +980,101 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 
     <div class="lg-plat">
       <h3>Linux <span class="hint">AppImage and Flatpak carry their own Qt and run anywhere</span></h3>
+<div data-lg-pkg="linux" data-lg-format="Flathub" data-lg-file="" data-lg-store class="lg-pkg">
+  <div class="lg-pkg-head">
+    <span class="lg-pkg-fmt" data-lg-bind="pkg.format">Flathub</span>
+    <span class="lg-pkg-label" data-lg-bind="pkg.label">Flathub, recommended for most users</span>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" aria-label="Open Flathub page" href="https://flathub.org/apps/org.lightning_matrix.Lightning">Flathub</a>
+  </div>
+  <div class="lg-cmdrow">
+    <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">flatpak install flathub org.lightning_matrix.Lightning</code>
+    <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
+  </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note">Updates arrive through your software centre or flatpak update.</p>
+</div>
 <div data-lg-pkg="linux" data-lg-format="AppImage" data-lg-file="Lightning-0.10.1-x86_64.AppImage" class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">AppImage</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Any distribution, nothing installed</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-x86_64.AppImage">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-x86_64.AppImage">Download</a>
   </div>
   <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">chmod +x Lightning-0.10.1-x86_64.*pp[Ii]mage &amp;&amp; ./Lightning-0.10.1-x86_64.*pp[Ii]mage</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
   </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note" hidden></p>
 </div>
 <div data-lg-pkg="linux" data-lg-format=".flatpak" data-lg-file="lightning_0.10.1_amd64.flatpak" class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.flatpak</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Flatpak (KDE Platform 6.11 runtime)</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_amd64.flatpak">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_amd64.flatpak">Download</a>
   </div>
   <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">flatpak install --user ./lightning_0.10.1_amd64.flatpak</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
   </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note">Manual file: no automatic updates. Flathub is better for most people.</p>
 </div>
 <div data-lg-pkg="linux" data-lg-format=".deb" data-lg-file="lightning_0.10.1_amd64.deb" data-lg-match="_amd64.deb" class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.deb</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Debian 13+</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_amd64.deb">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_amd64.deb">Download</a>
   </div>
   <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">sudo apt install ./lightning_0.10.1_amd64.deb</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
   </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note" hidden></p>
 </div>
 <div data-lg-pkg="linux" data-lg-format=".deb" data-lg-file="lightning_0.10.1_ubuntu2604_amd64.deb" data-lg-match="_ubuntu2604_amd64.deb" class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.deb</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Ubuntu 26.04+ / Mint / Pop!_OS</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_ubuntu2604_amd64.deb">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_ubuntu2604_amd64.deb">Download</a>
   </div>
   <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">sudo apt install ./lightning_0.10.1_ubuntu2604_amd64.deb</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
   </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note" hidden></p>
+</div>
+<div data-lg-pkg="linux" data-lg-format="COPR" data-lg-file="" data-lg-store class="lg-pkg">
+  <div class="lg-pkg-head">
+    <span class="lg-pkg-fmt" data-lg-bind="pkg.format">COPR</span>
+    <span class="lg-pkg-label" data-lg-bind="pkg.label">Fedora COPR, recommended for Fedora 44 and 45 (x86_64)</span>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" aria-label="Open COPR page" href="https://copr.fedorainfracloud.org/coprs/mizerd/lightning-matrix/">COPR</a>
+  </div>
+  <div class="lg-cmdrow">
+    <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">sudo dnf copr enable mizerd/lightning-matrix &amp;&amp; sudo dnf install lightning-matrix</code>
+    <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
+  </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note">Updates arrive with dnf upgrade. Replaces the old lightning rpm package.</p>
 </div>
 <div data-lg-pkg="linux" data-lg-format=".rpm" data-lg-file="lightning-0.10.1-1.x86_64.rpm" class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.rpm</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Fedora / RHEL / openSUSE</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning-0.10.1-1.x86_64.rpm">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning-0.10.1-1.x86_64.rpm">Download</a>
   </div>
   <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">sudo dnf install ./lightning-0.10.1-1.x86_64.rpm</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
   </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note">Manual file: no automatic updates. On Fedora 44 or 45, use COPR above.</p>
 </div>
 <div data-lg-pkg="linux" data-lg-format=".snap" data-lg-file="lightning_0.10.1_amd64.snap" class="lg-pkg">
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.snap</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Snap, strict confinement, local file</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_amd64.snap">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/lightning_0.10.1_amd64.snap">Download</a>
   </div>
   <div class="lg-cmdrow">
     <code class="lg-cmd" data-lg-copy data-lg-bind="pkg.install">sudo snap install --dangerous ./lightning_0.10.1_amd64.snap</code>
     <button class="lg-copy" data-lg-copybtn hidden type="button" aria-label="Copy command">Copy</button>
   </div>
+  <p class="lg-pkg-note" data-lg-bind="pkg.note" hidden></p>
 </div>
       <p class="lg-pkg-note">Needs Qt 6.8+. Neither <code>.deb</code> installs on Ubuntu 24.04, Mint 22.x or Pop!_OS 24.04, nor the <code>.rpm</code> on Fedora 43 — older Qt. Use the AppImage or the Flatpak there; both carry their own.</p>
     </div>
@@ -1054,7 +1085,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.msi</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">MSI installer, per-user</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-windows-x86_64.msi">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-windows-x86_64.msi">Download</a>
   </div>
   <p class="lg-pkg-note" data-lg-bind="pkg.install">double-click Lightning-0.10.1-712ed6d-windows-x86_64.msi</p>
 </div>
@@ -1062,7 +1093,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.exe</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Setup EXE, per-user</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-windows-x86_64-setup.exe">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-windows-x86_64-setup.exe">Download</a>
   </div>
   <p class="lg-pkg-note" data-lg-bind="pkg.install">run the installer</p>
 </div>
@@ -1070,7 +1101,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.zip</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Portable ZIP, installs nothing</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-windows-x86_64-portable.zip">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-windows-x86_64-portable.zip">Download</a>
   </div>
   <p class="lg-pkg-note" data-lg-bind="pkg.install">extract anywhere, run Lightning.exe</p>
 </div>
@@ -1082,7 +1113,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
   <div class="lg-pkg-head">
     <span class="lg-pkg-fmt" data-lg-bind="pkg.format">.zip</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">Apple Silicon, macOS 26 or newer</span>
-    <a class="lg-pkg-dl" data-lg-dl href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-macos-arm64.zip">Download</a>
+    <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action" href="https://github.com/Mizerd/lightning/releases/download/v0.10.1/Lightning-0.10.1-712ed6d-macos-arm64.zip">Download</a>
   </div>
   <p class="lg-pkg-note" data-lg-bind="pkg.install">unzip, drag Lightning.app to Applications</p>
 </div>

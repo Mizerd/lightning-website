@@ -56,12 +56,16 @@ function latestPayload() {
   // Pinned packages are NOT in the release being published -- that is why they
   // are pinned -- so the stub must not offer one, or the "left alone" path
   // would never be exercised.
-  const assets = feed.packages.filter(p => !p.pinned).map(function (p) {
+  const assets = feed.packages.filter(p => !p.pinned && !p.store).map(function (p) {
     let name = p.file
       .replace(feed.version, LATEST_VERSION)
       .replace(/-[0-9a-f]{7}-/, "-" + LATEST_SHA + "-");
     return { name: name, url: "https://example.invalid/dl/" + name };
   });
+  // Decoys whose names end in a store card's format badge: were pass 2 to
+  // match a store card by suffix, it would take one of these.
+  assets.push({ name: "decoy-Flathub", url: "https://example.invalid/dl/decoy-Flathub" });
+  assets.push({ name: "decoy-COPR", url: "https://example.invalid/dl/decoy-COPR" });
   assets.push({ name: "SHA256SUMS", url: "https://example.invalid/dl/SHA256SUMS" });
   return { version: LATEST_VERSION, released: "2099-01-01", assets: assets,
            release_url: "https://example.invalid/rel" };
@@ -119,6 +123,28 @@ async function main() {
       // A pinned card is deliberately left alone by pass 2 (it names an older
       // release's file), so under "feed + /api/latest" its filename must NOT
       // have been rewritten and its button must still point at its own url.
+      if (pkg.store) {
+        // A store card must keep its own link, label, and no file, under both
+        // passes -- pass 2 offers no asset it could be (wrongly) matched to,
+        // and must not hide or rewrite the button either.
+        const a = card.querySelector("[data-lg-dl]");
+        if (!card.hasAttribute("data-lg-store"))
+          wrong.push(pkg.format + ": store card lost data-lg-store");
+        if (!a || a.hidden || a.getAttribute("href") !== pkg.url)
+          wrong.push(pkg.format + ": store card lost its own url");
+        if (!a || a.textContent !== pkg.action)
+          wrong.push(pkg.format + ": store button says " + (a && a.textContent));
+        if (card.getAttribute("data-lg-file") !== "")
+          wrong.push(pkg.format + ": store card gained a file");
+      }
+      if (pkg.note) {
+        const n = card.querySelector('[data-lg-bind="pkg.note"]');
+        if (!n || n.hidden || n.textContent !== pkg.note)
+          wrong.push(pkg.format + ": note missing or wrong");
+      } else {
+        const n = card.querySelector('[data-lg-bind="pkg.note"]');
+        if (n && !n.hidden) wrong.push(pkg.format + ": stray note shown");
+      }
       if (pkg.pinned) {
         const a = card.querySelector("[data-lg-dl]");
         if (card.getAttribute("data-lg-file") !== pkg.file)
@@ -197,7 +223,7 @@ async function main() {
       check("the page follows the published version",
             shown.length > 0 && shown.every(v => v === LATEST_VERSION),
             JSON.stringify(shown));
-      const unpinned = els.filter(c => !c.hasAttribute("data-lg-pinned"));
+      const unpinned = els.filter(c => !c.hasAttribute("data-lg-pinned") && !c.hasAttribute("data-lg-store"));
       const renamed = unpinned.filter(function (c) {
         return String(c.getAttribute("data-lg-file")).indexOf(LATEST_VERSION) >= 0;
       });

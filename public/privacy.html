@@ -586,7 +586,9 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-nav a.lg-src:hover { border-color: var(--text-3); }
 .lg-nav a.lg-src svg { width: 15px; height: 15px; fill: currentColor; display: block; }
 .lg-srcs { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.lg-btn.star svg { fill: var(--bolt); }
+.lg-btn.star svg { fill: transparent; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; overflow: visible; transition: fill .16s ease-out, transform .16s ease-out; }
+.lg-btn.star:hover svg, .lg-btn.star:focus-visible svg { fill: var(--bolt); transform: scale(1.18) rotate(-8deg); }
+@media (prefers-reduced-motion: reduce) { .lg-btn.star svg { transition: none; } .lg-btn.star:hover svg, .lg-btn.star:focus-visible svg { transform: none; } }
 .lg-cta .lg-srcs { flex-basis: 100%; }
 .lg-mirror { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
 

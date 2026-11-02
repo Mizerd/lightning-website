@@ -491,6 +491,8 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-nav a.lg-src:hover { border-color: var(--text-3); }
 .lg-nav a.lg-src svg { width: 15px; height: 15px; fill: currentColor; display: block; }
 .lg-srcs { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lg-meta a.lg-star { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
+.lg-meta a.lg-star:hover { color: var(--text); }
 .lg-mirror { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
 
 /* ---- hero: copy left, product right, same scroll position ---------------- */
@@ -1015,7 +1017,11 @@ def build():
 <meta property="og:url" content="https://www.lightning-matrix.org/">
 <meta property="og:site_name" content="Lightning">
 <meta property="og:image" content="https://www.lightning-matrix.org/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Lightning, a native Matrix client for the desktop">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.lightning-matrix.org/assets/og-card.png">
 <link rel="canonical" href="https://www.lightning-matrix.org/">
 <link rel="icon" href="/assets/lightning-mark.svg">
 <script type="application/ld+json">{json.dumps(LD, separators=(",", ":"))}</script>
@@ -1050,7 +1056,7 @@ def build():
         <a class="lg-btn primary" href="#download">Download <span data-lg-bind="version">{VERSION}</span></a>
         <span class="lg-srcs"><a class="lg-btn" href="{GITHUB_URL}">{GITHUB_SVG}GitHub</a><a class="lg-btn" href="{GITLAB_URL}">{GITLAB_SVG}GitLab</a><span class="lg-mirror">mirrors</span></span>
       </div>
-      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats</p>
+      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats&nbsp; ·&nbsp; <a class="lg-star" href="{GITHUB_URL}">Star on GitHub</a></p>
     </div>
     {shot("home-overview", "Lightning showing a room timeline, direct messages and an invite")}
   </div>

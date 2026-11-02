@@ -491,8 +491,8 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-nav a.lg-src:hover { border-color: var(--text-3); }
 .lg-nav a.lg-src svg { width: 15px; height: 15px; fill: currentColor; display: block; }
 .lg-srcs { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.lg-meta a.lg-star { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
-.lg-meta a.lg-star:hover { color: var(--text); }
+.lg-btn.star svg { fill: var(--bolt); }
+.lg-cta .lg-srcs { flex-basis: 100%; }
 .lg-mirror { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
 
 /* ---- hero: copy left, product right, same scroll position ---------------- */
@@ -1054,9 +1054,10 @@ def build():
       <p class="lg-sub">A native desktop Matrix client in Qt&nbsp;6 and C++20. Group calls with screen sharing that reach Element Call, real threads, Spaces, and search that works inside encrypted rooms. Linux and NixOS first.</p>
       <div class="lg-cta">
         <a class="lg-btn primary" href="#download">Download <span data-lg-bind="version">{VERSION}</span></a>
+        <a class="lg-btn star" href="{GITHUB_URL}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 16.5l-5.8 3 1.1-6.5L2.6 9.4l6.5-.9z"/></svg>Star on GitHub</a>
         <span class="lg-srcs"><a class="lg-btn" href="{GITHUB_URL}">{GITHUB_SVG}GitHub</a><a class="lg-btn" href="{GITLAB_URL}">{GITLAB_SVG}GitLab</a><span class="lg-mirror">mirrors</span></span>
       </div>
-      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats&nbsp; ·&nbsp; <a class="lg-star" href="{GITHUB_URL}">Star on GitHub</a></p>
+      <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats</p>
     </div>
     {shot("home-overview", "Lightning showing a room timeline, direct messages and an invite")}
   </div>

@@ -40,6 +40,14 @@ VERSION = feed["version"]
 RELEASED = feed["released"]
 RELEASES_URL = feed["releases_url"]
 
+GITHUB_URL = "https://github.com/Mizerd/lightning"
+GITLAB_URL = "https://gitlab.com/lightning-matrix/lightning"
+GITHUB_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>'
+GITLAB_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m23.6004 9.5927-.0337-.0862L20.3.9814a.851.851 0 0 0-.3362-.405.8748.8748 0 0 0-.9997.0539.8748.8748 0 0 0-.29.4399l-2.2055 6.748H7.5375l-2.2057-6.748a.8573.8573 0 0 0-.29-.4412.8748.8748 0 0 0-.9997-.0537.8585.8585 0 0 0-.3362.4049L.4332 9.5015l-.0325.0862a6.0657 6.0657 0 0 0 2.0119 7.0105l.0113.0087.03.0213 4.976 3.7264 2.462 1.8633 1.4995 1.1321a1.0085 1.0085 0 0 0 1.2197 0l1.4995-1.1321 2.4619-1.8633 5.006-3.7489.0125-.01a6.0682 6.0682 0 0 0 2.0094-7.003z"/></svg>'
+SOURCE_LINKS = (f'<span class="lg-srcs"><a class="lg-src" href="{GITHUB_URL}">{GITHUB_SVG}GitHub</a>'
+                f'<a class="lg-src" href="{GITLAB_URL}">{GITLAB_SVG}GitLab</a>'
+                '<span class="lg-mirror">mirrors</span></span>')
+
 # Read from the PNG headers, never written down: check.py asserts that the
 # width/height the page declares are the file's real ones, and a hand-kept
 # table here would be a second copy of that truth waiting to drift from it.
@@ -255,7 +263,7 @@ LD = {
                     "the official Rust Matrix SDK, with group calls, threads, "
                     "Spaces and search inside encrypted rooms."),
     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-    "sameAs": ["https://github.com/Mizerd/lightning"],
+    "sameAs": [GITHUB_URL, GITLAB_URL],
     "codeRepository": "https://github.com/Mizerd/lightning",
     "screenshot": [f"https://www.lightning-matrix.org/assets/shots/{n}--{DEFAULT_THEME}.png"
                    for n in SHOTS],
@@ -471,8 +479,8 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .lg-nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
 .lg-nav a { color: var(--text-2); text-decoration: none; font-size: 14px; font-weight: 500; }
 .lg-nav a:hover { color: var(--text); }
-/* Source is the only item here that LEAVES the site -- the other four are
-   in-page anchors -- and nothing said so. The mark names the destination
+/* The source links are the only items here that LEAVE the site -- the others
+   are in-page anchors -- and nothing said so. The mark names the destination
    rather than decorating the word; the negative margin keeps the pill from
    changing the header's height. */
 .lg-nav a.lg-src {
@@ -482,6 +490,8 @@ code, kbd, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 }
 .lg-nav a.lg-src:hover { border-color: var(--text-3); }
 .lg-nav a.lg-src svg { width: 15px; height: 15px; fill: currentColor; display: block; }
+.lg-srcs { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lg-mirror { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
 
 /* ---- hero: copy left, product right, same scroll position ---------------- */
 .lg-hero { padding: 72px 0 64px; }
@@ -512,6 +522,8 @@ h1 .l2 { display: block; color: var(--text-2); }
 }
 .lg-btn:hover { border-color: var(--text-3); color: var(--text); }
 /* The ONE primary action on the page carries the accent. */
+.lg-btn svg { width: 16px; height: 16px; fill: currentColor; display: block; flex: none; }
+.lg-cta .lg-srcs { gap: 12px; }
 .lg-btn.primary { background: var(--bolt); border-color: var(--bolt); color: var(--bolt-ink); }
 .lg-btn.primary:hover { background: #FFDE6E; border-color: #FFDE6E; color: var(--bolt-ink); }
 .lg-meta { margin-top: 22px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-3); }
@@ -666,6 +678,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 /* ---- footer --------------------------------------------------------------- */
 footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var(--text-3); font-size: 13px; }
 .lg-flinks { display: flex; flex-wrap: wrap; gap: 20px; }
+.lg-flinks .lg-srcs { gap: 14px; }
 .lg-colophon { margin: 26px 0 0; max-width: 66ch; line-height: 1.75; }
 .lg-colophon code { font-size: 12px; color: var(--text-2); }
 
@@ -880,7 +893,7 @@ PRIVACY_CSS = """
 
 PRIVACY_BODY = """
 <h1>Privacy</h1>
-<p class="lg-asof">This page summarises <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md">docs/privacy.md</a> in the source repository. That file is the full policy; every claim in it names the source file that implements it.</p>
+<p class="lg-asof">This page summarises docs/privacy.md in the source repository, mirrored on <a href="https://github.com/Mizerd/lightning/blob/main/docs/privacy.md">GitHub</a> and <a href="https://gitlab.com/lightning-matrix/lightning/-/blob/main/docs/privacy.md">GitLab</a>. That file is the full policy; every claim in it names the source file that implements it.</p>
 
 <p class="lg-lede">Lightning is a desktop Matrix client, not a service. There is no Lightning server, no Lightning account and no backend run by the project. What Lightning stores lives on your computer, and what it sends goes to your homeserver or to a service you asked for.</p>
 
@@ -929,7 +942,7 @@ PRIVACY_BODY = """
 <p>Lightning is a general-purpose messaging client and is not directed at children.</p>
 
 <h2>Changes and contact</h2>
-<p>The policy is versioned in the repository beside the code it describes. Questions: Rokas Smetonis, <a href="mailto:antrasrokas@gmail.com">antrasrokas@gmail.com</a>, or the <a href="https://github.com/Mizerd/lightning">source repository</a>.</p>
+<p>The policy is versioned in the repository beside the code it describes. Questions: Rokas Smetonis, <a href="mailto:antrasrokas@gmail.com">antrasrokas@gmail.com</a>, or the source repository on <a href="https://github.com/Mizerd/lightning">GitHub</a> or <a href="https://gitlab.com/lightning-matrix/lightning">GitLab</a>.</p>
 """
 
 
@@ -960,7 +973,7 @@ def build_privacy(footer_html):
     <a class="lg-brand" href="/"><img src="/assets/lightning-mark.svg" alt="">Lightning</a>
     <nav class="lg-nav">
       <a href="/#download">Download</a>
-      <a class="lg-src" href="https://github.com/Mizerd/lightning">Source</a>
+      {SOURCE_LINKS}
     </nav>
   </div>
 </header>
@@ -1020,7 +1033,7 @@ def build():
       <a href="#build">How it works</a>
       <a href="#features">Features</a>
       <a href="#download">Download</a>
-      <a class="lg-src" href="https://github.com/Mizerd/lightning"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Source</a>
+      {SOURCE_LINKS}
     </nav>
   </div>
 </header>
@@ -1035,7 +1048,7 @@ def build():
       <p class="lg-sub">A native desktop Matrix client in Qt&nbsp;6 and C++20. Group calls with screen sharing that reach Element Call, real threads, Spaces, and search that works inside encrypted rooms. Linux and NixOS first.</p>
       <div class="lg-cta">
         <a class="lg-btn primary" href="#download">Download <span data-lg-bind="version">{VERSION}</span></a>
-        <a class="lg-btn" href="https://github.com/Mizerd/lightning">Read the source</a>
+        <span class="lg-srcs"><a class="lg-btn" href="{GITHUB_URL}">{GITHUB_SVG}GitHub</a><a class="lg-btn" href="{GITLAB_URL}">{GITLAB_SVG}GitLab</a><span class="lg-mirror">mirrors</span></span>
       </div>
       <p class="lg-meta">no telemetry&nbsp; ·&nbsp; no server of ours&nbsp; ·&nbsp; {LINUX_COUNT_WORD}&nbsp;Linux&nbsp;formats</p>
     </div>
@@ -1137,7 +1150,7 @@ def build():
 <footer>
   <div class="wrap">
     <div class="lg-flinks">
-      <a href="https://github.com/Mizerd/lightning">Source</a>
+      <span class="lg-srcs"><a href="{GITHUB_URL}">GitHub</a><a href="{GITLAB_URL}">GitLab</a><span class="lg-mirror">mirrors</span></span>
       <a href="{RELEASES_URL}">Releases</a>
       <a href="/privacy">Privacy</a>
       <a href="https://github.com/Mizerd/lightning/issues">Issues</a>

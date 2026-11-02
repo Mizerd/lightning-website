@@ -12,7 +12,8 @@ These are the things that have actually broken, not a general test suite:
     says what the feed says (the "every Linux card shows the AppImage command"
     bug: releases.js clones card zero, so a missing slot keeps card zero's text)
   * the page's baked-in version agrees with releases.json
-  * nothing served mentions GitLab -- the site points at GitHub only
+  * nothing served mentions the old self-hosted GitLab -- the site points at
+    the GitHub and gitlab.com mirrors
   * the Linux commands have copy buttons, and they ship hidden
   * releases.js is not cacheable for longer than the HTML that it rewrites
     (the cache skew that caused that bug to reach a browser)
@@ -375,18 +376,20 @@ for prop in ("og:image",):
     check("%s resolves" % prop, bool(m) and os.path.exists(PUB + path),
           m.group(1) if m else "absent")
 
-# ---- GitHub only ----------------------------------------------------------
-# The site must not link to GitLab or name it. unbundle.py asserts this while
-# building; this repeats the check against what is actually on disk, which is
-# what gets deployed.
+# ---- no old self-hosted GitLab --------------------------------------------
+# The site points at the public GitHub and gitlab.com mirrors. The self-hosted
+# GitLab the artifact was written against must not come back; unbundle.py
+# asserts that while building, this repeats it against what is on disk.
 gitlab = sorted(
     os.path.relpath(os.path.join(dirpath, f), ROOT)
     for dirpath, _dirs, files in os.walk(PUB)
     for f in files
     if f.rsplit(".", 1)[-1] in ("html", "json", "js", "txt", "xml")
-    and "gitlab" in open(os.path.join(dirpath, f), encoding="utf-8",
-                         errors="ignore").read().lower())
-check("no GitLab reference in public/", not gitlab, ", ".join(gitlab))
+    and "gitlab.smetonis.net" in open(os.path.join(dirpath, f), encoding="utf-8",
+                                      errors="ignore").read().lower())
+check("no self-hosted GitLab reference in public/", not gitlab, ", ".join(gitlab))
+check("the GitLab mirror is linked beside GitHub",
+      "https://gitlab.com/lightning-matrix/lightning" in html)
 
 # ---- motion ---------------------------------------------------------------
 # THE MOTION LAYER IS GONE, and so are the five invariants that tested it.

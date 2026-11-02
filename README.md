@@ -225,7 +225,7 @@ version agrees with `releases.json`, every screenshot declares the size the
 file actually is and is openable, no orphaned screenshot is left in
 `public/assets/`, every screenshot URL in the JSON-LD resolves, the theme strip
 still has eleven swatches, the canonical and the JSON-LD agree with the page,
-nothing served mentions GitLab, and `releases.js` is not cacheable for longer
+nothing served mentions the old self-hosted GitLab, and `releases.js` is not cacheable for longer
 than the HTML it rewrites. Exits non-zero, so it works in a pre-push hook.
 
 Nothing here counts screenshots against a fixed number. It used to say four,
@@ -328,13 +328,16 @@ width. Scroll-driven `lgRise` animations also sit at their `from` state
 images never arrive at all — strip it before measuring anything below the
 fold.
 
-## GitHub only
+## Source mirrors
 
-The site links to GitHub and names no other host. The project was on a
-self-hosted GitLab when the artifact was written, so `unbundle.py` rewrote
-every link, button and sentence that referred to it (correction 1) and failed
-the build if any survived. `build-site.py` names GitHub and nothing else, and
-`check.py` repeats the check against what is on disk.
+The site links to the two public mirrors of the source, GitHub
+(`Mizerd/lightning`) and gitlab.com (`lightning-matrix/lightning`), side by
+side wherever it points at the source. Releases, downloads and issues stay on
+GitHub. The project was on a self-hosted GitLab when the artifact was written,
+so `unbundle.py` rewrote every link, button and sentence that referred to it
+(correction 1) and failed the build if any survived; `check.py` still fails if
+that host comes back. The URLs and marks are `GITHUB_*`/`GITLAB_*` at the top
+of `build-site.py`.
 
 If the repository ever moves again, change it in `build-site.py` — editing
 `public/index.html` alone means the next rebuild reinstates the old URL.

@@ -52,6 +52,25 @@ def github_release(tag):
         return json.load(fh)
 
 
+def resolve_all(pkgs, names):
+    """Every package's asset, as releases.js resolves them: longest token first,
+    an asset taken once, and cards sharing a token sharing its asset. Without
+    this `_arm64.deb` could take `..._ubuntu2604_arm64.deb` if listed first."""
+    taken, by_token, out = set(), {}, {}
+    order = sorted(range(len(pkgs)), key=lambda i: -len(pkgs[i].get("match") or ""))
+    for i in order:
+        pkg = pkgs[i]
+        token = (pkg.get("match") or pkg.get("format") or "").lower()
+        if pkg.get("store") or pkg.get("soon") or not token:
+            continue
+        got = by_token.get(token) or asset_for(pkg, [n for n in names if n not in taken])
+        if got:
+            taken.add(got)
+            by_token[token] = got
+        out[i] = got
+    return out
+
+
 def asset_for(pkg, names):
     """The published asset this card names, by the same rule releases.js uses.
 
@@ -110,14 +129,15 @@ def main():
     print("%s -> %s   (%d assets on GitHub)" % (old_version, version, len(names)))
 
     kept, dropped, unpinned = [], [], []
-    for pkg in feed["packages"]:
+    resolved = resolve_all(feed["packages"], names)
+    for i, pkg in enumerate(feed["packages"]):
         # A store card (Flathub, COPR) is not a release asset: keep it as is.
         # A "soon" placeholder names no asset yet; it goes live when its
         # "soon" line is deleted, and the next run fills in its file.
         if pkg.get("store") or pkg.get("soon"):
             kept.append(dict(pkg))
             continue
-        name = asset_for(pkg, names)
+        name = resolved.get(i)
         if not name:
             # A PINNED package is not dropped: it deliberately names an older
             # release's file (macOS is pinned at 0.9.4 because 0.9.5 has none),

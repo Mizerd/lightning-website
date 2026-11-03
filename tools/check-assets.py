@@ -101,12 +101,15 @@ def main():
                 return name
         return None
 
+    # Cards sharing a token share its asset (the openSUSE row is Fedora's .rpm).
+    by_token = {}
     ordered = sorted(cards, key=lambda c: -len(c[2] or ""))
     for os_key, fmt, match, named in ordered:
         token = match or fmt or ""
-        got = asset_for(token)
+        got = by_token.get(token.lower()) or asset_for(token)
         if got is not None:
             taken.add(got)
+            by_token[token.lower()] = got
         check("%s card (%s) resolves to one asset" % (os_key, token),
               got is not None, "no asset ends with %r" % token)
         if got is not None:
@@ -128,13 +131,14 @@ def main():
     # So resolve a second time against the REVERSED asset list and require the
     # same answers. An ordering-dependent result fails here and nowhere else.
     def resolve(asset_list):
-        seen, out = set(), {}
+        seen, out, tok = set(), {}, {}
         for os_key, fmt, match, named in sorted(cards, key=lambda c: -len(c[2] or "")):
             token = (match or fmt or "").lower()
-            got = next((n for n in asset_list
+            got = tok.get(token) or next((n for n in asset_list
                         if n not in seen and n.lower().endswith(token)), None)
             if got is not None:
                 seen.add(got)
+                tok[token] = got
             out[(os_key, match or fmt)] = got
         return out
 

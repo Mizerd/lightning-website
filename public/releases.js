@@ -159,6 +159,37 @@
     return card;
   }
 
+  function logoSvg(name) {
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "lg-os-logo");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    var use = document.createElementNS(NS, "use");
+    use.setAttribute("href", "#lg-logo-" + name);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  // One headed block per group of a family that spans two (Fedora / openSUSE),
+  // the same markup build-site.py bakes. Its logo must already be in the sprite.
+  function groupBlock(famId, g, rows) {
+    var block = el("div", "lg-group");
+    block.setAttribute("data-lg-group", g.id);
+    if (g.id !== famId) block.id = "download-" + g.id;
+    var head = el("div", "lg-group-head");
+    head.appendChild(logoSvg(g.logo));
+    head.appendChild(el("h4", null, g.name));
+    block.appendChild(head);
+    var note = el("p", "lg-os-note", g.note || "");
+    note.setAttribute("data-lg-group-note", "");
+    note.hidden = !g.note;
+    block.appendChild(note);
+    rows.forEach(function (p) { block.appendChild(variantRow(p)); });
+    return block;
+  }
+
   // A family the feed has no panel for needs a rebuild (its logo is baked);
   // a panel the feed gives no live rows is hidden with its tile.
   function families(d) {
@@ -181,7 +212,15 @@
       var box = panel.querySelector("[data-lg-variants]");
       if (box) {
         box.textContent = "";
-        pkgs.forEach(function (p) { box.appendChild(variantRow(p)); });
+        var groups = fam && Array.isArray(fam.groups) ? fam.groups : null;
+        if (groups) {
+          groups.forEach(function (g) {
+            var rows = pkgs.filter(function (p) { return p.group === g.id; });
+            if (rows.length) box.appendChild(groupBlock(id, g, rows));
+          });
+        } else {
+          pkgs.forEach(function (p) { box.appendChild(variantRow(p)); });
+        }
       }
       var note = panel.querySelector("[data-lg-family-note]");
       if (note && fam) {
@@ -264,7 +303,12 @@
 
   function hashFamily() {
     var m = /^#download-([a-z0-9-]+)$/.exec(location.hash || "");
-    return m && document.querySelector('[data-lg-tile="' + m[1] + '"]') ? m[1] : null;
+    if (!m) return null;
+    if (document.querySelector('[data-lg-tile="' + m[1] + '"]')) return m[1];
+    // #download-opensuse names a group inside the Fedora / openSUSE panel.
+    var g = document.querySelector('[data-lg-group="' + m[1] + '"]');
+    var panel = g && g.closest("[data-lg-family]");
+    return panel ? panel.getAttribute("data-lg-family") : null;
   }
 
   function detectFamily() {
@@ -276,7 +320,7 @@
     if (/Mac/i.test(plat) || /Macintosh/.test(ua)) return nav.maxTouchPoints > 1 ? null : "macos";
     if (/Linux|X11|CrOS/i.test(plat + " " + ua)) {
       if (/Ubuntu/i.test(ua)) return "ubuntu";
-      if (/Fedora/i.test(ua)) return "fedora";
+      if (/Fedora|SUSE/i.test(ua)) return "fedora";
       if (/Debian/i.test(ua)) return "debian";
       return "linux";
     }
@@ -297,12 +341,16 @@
     if (mineTile && !mineTile.hidden) {
       var badge = mineTile.querySelector("[data-lg-mine]");
       if (badge) badge.hidden = false;
+      // Moved in the DOM, not with CSS order, so Tab and screen readers meet it
+      // first too. Runs before the feed passes; the baked no-JS order is untouched.
+      var grid = mineTile.parentNode;
+      if (grid && grid.firstElementChild !== mineTile) grid.insertBefore(mineTile, grid.firstElementChild);
     } else {
       mine = null;
     }
     var fromHash = hashFamily();
     setOpen(fromHash || mine, false);
-    if (fromHash) revealPanel(fromHash, "start");
+    if (fromHash) revealHash(fromHash);
   }
 
   function toggleTile(tile) {
@@ -342,9 +390,19 @@
     if (owner) owner.focus();
   });
 
+  // A group's own anchor scrolls to that group, the family's to its panel.
+  function revealHash(id) {
+    var g = document.getElementById((location.hash || "").slice(1));
+    if (g && g.hasAttribute("data-lg-group") && g.scrollIntoView) {
+      g.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
+    } else {
+      revealPanel(id, "start");
+    }
+  }
+
   window.addEventListener("hashchange", function () {
     var id = hashFamily();
-    if (id && id !== openId && setOpen(id, true)) revealPanel(id, "start");
+    if (id && (id !== openId || location.hash !== "#download-" + id) && setOpen(id, true)) revealHash(id);
   });
 
   // "https://.../download/v${version}/${file}" -> a real URL.
@@ -408,6 +466,8 @@
 
     // Assets a more specific card has already claimed.
     var taken = {};
+    // Cards that share a token share the asset: the openSUSE row is Fedora's .rpm.
+    var byToken = {};
 
     // MOST SPECIFIC FIRST, AND AN ASSET IS TAKEN ONCE.
     //
@@ -441,10 +501,12 @@
       // data-lg-match wins where it exists: the format badge is what a reader
       // sees (".zip"), which is not always enough to pick one asset out of a
       // release that publishes two of them.
-      var asset = assetFor(card.getAttribute("data-lg-match")
-                           || card.getAttribute("data-lg-format"));
+      var token = String(card.getAttribute("data-lg-match")
+                         || card.getAttribute("data-lg-format")).toLowerCase();
+      var asset = byToken[token] || assetFor(token);
       if (!asset || !asset.url) return;
       taken[asset.name] = true;
+      byToken[token] = asset;
 
       setDownload(card, asset.url, asset.name);
 

@@ -220,17 +220,32 @@ def _arches(pkgs):
     return seen
 
 
+def fam_logos(fam):
+    """A family's marks: one name, or a list for a family that spans two."""
+    lg = fam.get("logo") or []
+    return lg if isinstance(lg, list) else [lg]
+
+
 def logo_svg(name, cls):
     return (f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
             f'<use href="#lg-logo-{name}"/></svg>')
 
 
+def logos_html(fam):
+    marks = fam_logos(fam)
+    if len(marks) == 1:
+        return logo_svg(marks[0], "lg-os-logo")
+    return ('<span class="lg-os-logos">'
+            + "".join(logo_svg(m, "lg-os-logo") for m in marks) + '</span>')
+
+
 def logo_sprite():
-    """Each mark once, referenced by every tile and panel that shows it."""
+    """Each mark once, referenced by every tile, panel and group that shows it."""
     used = []
     for fam in FAMILIES:
-        if fam["logo"] not in used:
-            used.append(fam["logo"])
+        for n in fam_logos(fam) + [g["logo"] for g in fam.get("groups", [])]:
+            if n not in used:
+                used.append(n)
     syms = "".join(f'<symbol id="lg-logo-{n}" viewBox="0 0 24 24"><path d="{OS_LOGOS[n]}"/></symbol>'
                    for n in used)
     return f'<svg class="lg-sprite" aria-hidden="true" focusable="false">{syms}</svg>'
@@ -254,6 +269,39 @@ def tile_meta(pkgs):
     return " · ".join(html.escape(f) for f in fmts), "".join(chips)
 
 
+def family_rows(fam, pkgs):
+    """The panel's rows; a family with `groups` gets one headed block per group
+    (Fedora and openSUSE share a card), in the feed's own row order."""
+    groups = fam.get("groups")
+    if not groups:
+        return "\n".join(pkg_card(p) for p in pkgs)
+    ids = [g["id"] for g in groups]
+    seen = [p.get("group") for p in pkgs]
+    for p, g in zip(pkgs, seen):
+        if g not in ids:
+            raise SystemExit(f"build-site: {p['format']} in {fam['id']} names no group of {ids}")
+    order = [g for i, g in enumerate(seen) if g not in seen[:i]]
+    if order != [g for g in ids if g in seen]:
+        raise SystemExit(f"build-site: {fam['id']} rows must follow its group order {ids}")
+    out = []
+    for g in groups:
+        rows = [p for p in pkgs if p.get("group") == g["id"]]
+        if not rows:
+            continue
+        gid = f' id="download-{g["id"]}"' if g["id"] != fam["id"] else ""
+        note = g.get("note", "")
+        hid = "" if note else " hidden"
+        out.append(f'''<div class="lg-group" data-lg-group="{g["id"]}"{gid}>
+  <div class="lg-group-head">
+    {logo_svg(g["logo"], "lg-os-logo")}
+    <h4>{html.escape(g["name"])}</h4>
+  </div>
+  <p class="lg-os-note" data-lg-group-note{hid}>{html.escape(note)}</p>
+{chr(10).join(pkg_card(p) for p in rows)}
+</div>''')
+    return "\n".join(out)
+
+
 def download_grid():
     """The OS tiles and their panels. A family the feed gives no rows is not
     drawn at all, so a release without a macOS build claims none."""
@@ -266,7 +314,7 @@ def download_grid():
         fmts, chips = tile_meta(pkgs)
         name = html.escape(fam["name"])
         tiles.append(f'''  <a class="lg-os" href="#download-{fid}" data-lg-tile="{fid}" aria-controls="download-{fid}">
-    {logo_svg(fam["logo"], "lg-os-logo")}
+    {logos_html(fam)}
     <span class="lg-os-name">{name}</span>
     <span class="lg-os-blurb" data-lg-tile-blurb>{html.escape(fam.get("blurb", ""))}</span>
     <span class="lg-os-fmts" data-lg-tile-fmts>{fmts}</span>
@@ -277,12 +325,12 @@ def download_grid():
         hid = "" if note else " hidden"
         panels.append(f'''<div class="lg-os-panel" id="download-{fid}" data-lg-family="{fid}" role="region" aria-labelledby="download-{fid}-h" tabindex="-1">
   <div class="lg-os-panel-head">
-    {logo_svg(fam["logo"], "lg-os-logo")}
+    {logos_html(fam)}
     <h3 id="download-{fid}-h">{name}</h3>
   </div>
   <p class="lg-os-note" data-lg-family-note{hid}>{html.escape(note)}</p>
   <div class="lg-variants" data-lg-variants>
-{chr(10).join(pkg_card(p) for p in pkgs)}
+{family_rows(fam, pkgs)}
   </div>
 </div>''')
     return (logo_sprite() + '\n<div class="lg-os-grid">\n' + "\n".join(tiles) + '\n</div>\n'
@@ -291,7 +339,9 @@ def download_grid():
 
 _WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
           7: "seven", 8: "eight", 9: "nine", 10: "ten"}
-_n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux" and not p.get("soon"))
+# Distinct downloads, so the openSUSE row (Fedora's .rpm again) is not a format.
+_n_linux = len({p.get("file") or p.get("url") for p in feed["packages"]
+                if p["os"] == "linux" and not p.get("soon")})
 LINUX_COUNT_WORD = _WORDS.get(_n_linux, str(_n_linux))
 DOWNLOAD_GRID = download_grid()
 SHA_HREF = asset_href("SHA256SUMS")
@@ -664,7 +714,8 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
   transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1), border-color 120ms ease, box-shadow 120ms ease;
 }
 .lg-os > * { grid-column: 2; min-width: 0; }
-.lg-os > .lg-os-logo { grid-column: 1; grid-row: 1 / span 4; }
+.lg-os > .lg-os-logo, .lg-os > .lg-os-logos { grid-column: 1; grid-row: 1 / span 4; }
+.lg-os-logos { display: flex; flex-direction: column; gap: 8px; }
 .lg-os-logo { width: 32px; height: 32px; fill: currentColor; display: block; }
 .lg-os:hover { border-color: var(--text-3); transform: translateY(-2px); }
 .lg-os:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
@@ -684,6 +735,11 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-os-panel:focus { outline: none; }
 .lg-os-panel-head { display: flex; align-items: center; gap: 12px; }
 .lg-os-panel-head .lg-os-logo { width: 26px; height: 26px; }
+.lg-os-panel-head .lg-os-logos { flex-direction: row; }
+.lg-group-head { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.lg-group-head .lg-os-logo { width: 20px; height: 20px; }
+.lg-group-head h4 { margin: 0; font-size: 15px; font-weight: 600; }
+.lg-group + .lg-group { margin-top: 26px; border-top: 1px solid var(--border); }
 .lg-os-note { margin: 10px 0 0; color: var(--text-2); font-size: 13.5px; max-width: 72ch; }
 .lg-os-note[hidden] { display: none; }
 .lg-osjs .lg-os-panel.lg-opening { animation: lgPanelIn 180ms ease-out; }
@@ -811,7 +867,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
 @media (max-width: 520px) {
   .lg-os { grid-template-columns: 1fr; padding: 14px; }
   .lg-os > * { grid-column: 1; }
-  .lg-os > .lg-os-logo { grid-row: auto; width: 28px; height: 28px; margin-bottom: 6px; }
+  .lg-os > .lg-os-logo, .lg-os > .lg-os-logos { grid-row: auto; margin-bottom: 6px; }
+  .lg-os .lg-os-logo { width: 28px; height: 28px; }
+  .lg-os-logos { flex-direction: row; }
   .lg-os-name { padding-right: 0; font-size: 16px; }
   .lg-os-mine { position: static; justify-self: start; margin-top: 8px; }
   .lg-os-panel { padding: 16px 14px 18px; }

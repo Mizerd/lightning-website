@@ -133,10 +133,21 @@ because its logo is baked from `tools/os-logos.json` (monochrome Simple Icons
 paths, painted in `currentColor` so they follow every theme). A family with no
 live package is not drawn.
 
+A family can span two distributions: `logo` may be a list (the tile and panel
+show every mark), and `groups` (id, name, `logo`, optional `note`) splits its
+panel into headed blocks, each package naming its `group`. Fedora / openSUSE is
+one: openSUSE Tumbleweed gets its own block, mark and zypper row for the same
+`.rpm` Fedora's row offers. Two cards may share a `match` token only when they
+name the same file; they then share one asset in `releases.js`, `bump-feed.py`
+and `check-assets.py`, and `check.py` refuses a shared token over two files.
+`#download-opensuse` opens the shared panel at that block.
+
 Without JavaScript the tiles are anchors and every panel is on the page. With
 it, the tiles become disclosure buttons (`aria-expanded`, Space/Enter, Escape
 closes and returns focus), one panel shows under the grid, the visitor's OS
-opens on its own, and `#download-<family>` deep-links a panel. A panel rather
+opens on its own and its tile moves to the front of the grid (a DOM move, so
+Tab and screen readers follow it; the no-JavaScript order is the baked one),
+and `#download-<family>` deep-links a panel. A panel rather
 than an in-place expansion keeps the tiles from reflowing under the pointer.
 
 `"soon": true` marks a placeholder for a build that does not exist yet: it

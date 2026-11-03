@@ -27,10 +27,26 @@
     },
     {
       "id": "fedora",
-      "name": "Fedora",
-      "logo": "fedora",
-      "blurb": "Also RHEL and openSUSE",
-      "note": "The .rpm needs Qt 6.8 or newer, so it does not install on Fedora 43. Use Flathub or the AppImage there, under Linux."
+      "name": "Fedora / openSUSE",
+      "logo": [
+        "fedora",
+        "opensuse"
+      ],
+      "blurb": "Fedora 44+, openSUSE Tumbleweed",
+      "groups": [
+        {
+          "id": "fedora",
+          "name": "Fedora",
+          "logo": "fedora",
+          "note": "The .rpm needs Qt 6.11 or newer, so it does not install on Fedora 43. Use Flathub or the AppImage there, under Linux."
+        },
+        {
+          "id": "opensuse",
+          "name": "openSUSE",
+          "logo": "opensuse",
+          "note": "The same .rpm as Fedora's, installed with zypper. It is unsigned, which is why the command allows that: check it against SHA256SUMS first. Leap 16.0 refuses it (its Qt is older): use Flathub there, under Linux."
+        }
+      ]
     },
     {
       "id": "windows",
@@ -111,6 +127,17 @@
     },
     {
       "os": "linux",
+      "family": "linux",
+      "arch": "aarch64",
+      "soon": true,
+      "format": ".snap",
+      "label": "Snap, strict confinement, local file",
+      "match": "_arm64.snap",
+      "install": "sudo snap install --dangerous ./${file}",
+      "remove": "sudo snap remove lightning"
+    },
+    {
+      "os": "linux",
       "family": "debian",
       "arch": "x86_64",
       "label": "Debian 13+",
@@ -144,6 +171,17 @@
     },
     {
       "os": "linux",
+      "family": "ubuntu",
+      "arch": "aarch64",
+      "soon": true,
+      "format": ".deb",
+      "label": "Ubuntu 26.04+ / Mint / Pop!_OS",
+      "match": "_ubuntu2604_arm64.deb",
+      "install": "sudo apt install ./${file}",
+      "remove": "sudo apt remove lightning"
+    },
+    {
+      "os": "linux",
       "family": "fedora",
       "arch": "x86_64",
       "label": "Fedora COPR, recommended for Fedora 44 and 45 (x86_64)",
@@ -153,19 +191,58 @@
       "url": "https://copr.fedorainfracloud.org/coprs/mizerd/lightning-matrix/",
       "install": "sudo dnf copr enable mizerd/lightning-matrix && sudo dnf install lightning-matrix",
       "remove": "sudo dnf remove lightning-matrix",
-      "note": "Updates arrive with dnf upgrade. Replaces the old lightning rpm package."
+      "note": "Updates arrive with dnf upgrade. Replaces the old lightning rpm package.",
+      "group": "fedora"
     },
     {
       "os": "linux",
       "family": "fedora",
       "arch": "x86_64",
-      "label": "Fedora / RHEL / openSUSE",
+      "label": "Fedora 44 and newer",
       "format": ".rpm",
       "file": "lightning-0.10.4-1.x86_64.rpm",
       "install": "sudo dnf install ./lightning-0.10.4-1.x86_64.rpm",
-      "remove": "sudo dnf remove lightning",
+      "remove": "sudo dnf remove lightning-matrix",
       "note": "Manual file: no automatic updates. On Fedora 44 or 45, use COPR above.",
+      "match": ".x86_64.rpm",
+      "group": "fedora"
+    },
+    {
+      "os": "linux",
+      "family": "fedora",
+      "group": "fedora",
+      "arch": "aarch64",
+      "soon": true,
+      "format": ".rpm",
+      "label": "Fedora 44 and newer",
+      "match": ".aarch64.rpm",
+      "install": "sudo dnf install ./${file}",
+      "remove": "sudo dnf remove lightning-matrix"
+    },
+    {
+      "os": "linux",
+      "family": "fedora",
+      "group": "opensuse",
+      "arch": "x86_64",
+      "label": "openSUSE Tumbleweed",
+      "format": ".rpm",
+      "file": "lightning-0.10.4-1.x86_64.rpm",
+      "install": "sudo zypper install --allow-unsigned-rpm ./lightning-0.10.4-1.x86_64.rpm",
+      "remove": "sudo zypper remove lightning-matrix",
+      "note": "Manual file: no automatic updates.",
       "match": ".x86_64.rpm"
+    },
+    {
+      "os": "linux",
+      "family": "fedora",
+      "group": "opensuse",
+      "arch": "aarch64",
+      "soon": true,
+      "format": ".rpm",
+      "label": "openSUSE Tumbleweed",
+      "match": ".aarch64.rpm",
+      "install": "sudo zypper install --allow-unsigned-rpm ./${file}",
+      "remove": "sudo zypper remove lightning-matrix"
     },
     {
       "os": "windows",

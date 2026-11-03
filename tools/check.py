@@ -79,8 +79,13 @@ for fmt, fil, body in cards:
     if fil and not m.group(1).endswith(fil):
         bad.append("%s button -> %s" % (fmt, m.group(1).rsplit("/", 1)[-1]))
 check("each button points at its own asset", not bad, "; ".join(bad))
-check("every button URL is distinct", len(hrefs) == len(set(hrefs)),
-      "%d buttons, %d distinct" % (len(hrefs), len(set(hrefs))))
+# Cards sharing a match token share one asset on purpose (the openSUSE row is
+# Fedora's .rpm), so a URL may repeat only within such a token.
+_tok = lambda b: (re.search(r'data-lg-match="([^"]*)"', b) or
+                  re.search(r'data-lg-format="([^"]*)"', b)).group(1).lower()
+_card_tokens = [_tok(fmt_tag) for fmt_tag in re.findall(r'<div data-lg-pkg="[^"]*"[^>]*>', html)]
+check("every button URL is distinct", len(set(hrefs)) == len(set(_card_tokens)),
+      "%d buttons, %d distinct, %d tokens" % (len(hrefs), len(set(hrefs)), len(set(_card_tokens))))
 
 # ---- every card resolves to exactly one asset -----------------------------
 # /api/latest matches a card to a GitHub asset by SUFFIX. Two cards that share
@@ -96,8 +101,14 @@ tokens = []
 for block in re.findall(r'<div data-lg-pkg="[^"]*"[^>]*>', html):
     fmt = re.search(r'data-lg-format="([^"]*)"', block)
     mat = re.search(r'data-lg-match="([^"]*)"', block)
-    tokens.append((mat or fmt).group(1).lower() if (mat or fmt) else "")
-dupes = sorted({t for t in tokens if tokens.count(t) > 1})
+    fil = re.search(r'data-lg-file="([^"]*)"', block)
+    tokens.append(((mat or fmt).group(1).lower() if (mat or fmt) else "",
+                   fil.group(1) if fil else ""))
+# A token may be shared only by cards naming the SAME file: the openSUSE row
+# deliberately offers Fedora's .rpm. Two different files behind one token is
+# the 0.7.5 hazard.
+dupes = sorted({t for t, f in tokens
+                if len({f2 for t2, f2 in tokens if t2 == t}) > 1})
 check("no two cards match the same asset suffix", not dupes,
       "shared: " + ", ".join(dupes))
 # ...and a match token, where present, must actually be a suffix of the file
@@ -148,6 +159,47 @@ check("every card carries the slots releases.js rewrites", not slot_missing,
       "; ".join(slot_missing))
 check("every card slot agrees with the feed", not slot_wrong,
       "; ".join(slot_wrong))
+
+# ---- families that span two distributions (Fedora / openSUSE) -------------
+# Every row of a grouped family names one of its groups, every group's logo is
+# in the sprite, and each group with rows is drawn with its own heading.
+logos = json.load(open(os.path.join(ROOT, "tools", "os-logos.json"), encoding="utf-8"))
+grp_bad = []
+for fam in feed.get("families", []):
+    marks = fam.get("logo") if isinstance(fam.get("logo"), list) else [fam.get("logo")]
+    for g in fam.get("groups", []):
+        marks.append(g.get("logo"))
+    for m in marks:
+        if m not in logos:
+            grp_bad.append("%s: logo %r not in os-logos.json" % (fam["id"], m))
+        elif '<symbol id="lg-logo-%s"' % m not in html:
+            grp_bad.append("%s: logo %r not in the sprite" % (fam["id"], m))
+    if not fam.get("groups"):
+        continue
+    ids = [g["id"] for g in fam["groups"]]
+    rows = [p for p in feed["packages"] if p.get("family") == fam["id"]]
+    for p in rows:
+        if p.get("group") not in ids:
+            grp_bad.append("%s %s names group %r" % (fam["id"], p["format"], p.get("group")))
+    for g in fam["groups"]:
+        live_n = sum(1 for p in rows if p.get("group") == g["id"] and not p.get("soon"))
+        soon_n = sum(1 for p in rows if p.get("group") == g["id"] and p.get("soon"))
+        m = re.search(r'<div class="lg-group" data-lg-group="%s"[^>]*>(.*?)(?=<div class="lg-group"|</div>\s*</div>\s*(?:<div class="lg-os-panel"|</div>))'
+                      % re.escape(g["id"]), html, re.S)
+        if not (live_n or soon_n):
+            continue
+        if not m:
+            grp_bad.append("%s/%s has no block" % (fam["id"], g["id"]))
+            continue
+        body = m.group(1)
+        if '<use href="#lg-logo-%s"/>' % g["logo"] not in body:
+            grp_bad.append("%s/%s block has no %s logo" % (fam["id"], g["id"], g["logo"]))
+        if body.count("<div data-lg-pkg=") != live_n or body.count("data-lg-soon") != soon_n:
+            grp_bad.append("%s/%s block has %d live + %d soon rows, feed %d + %d"
+                           % (fam["id"], g["id"], body.count("<div data-lg-pkg="),
+                              body.count("data-lg-soon"), live_n, soon_n))
+check("grouped families draw each group with its own logo and rows", not grp_bad,
+      "; ".join(grp_bad))
 
 # ---- version agreement ----------------------------------------------------
 baked = set(re.findall(r'data-lg-bind="version">([^<]*)<', html))

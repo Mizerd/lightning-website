@@ -311,22 +311,6 @@
     return panel ? panel.getAttribute("data-lg-family") : null;
   }
 
-  function detectFamily() {
-    var nav = window.navigator || {};
-    var ua = nav.userAgent || "";
-    var plat = (nav.userAgentData && nav.userAgentData.platform) || nav.platform || "";
-    if (/Android|iPhone|iPad|iPod/i.test(ua)) return null;
-    if (/Win/i.test(plat) || /Windows/.test(ua)) return "windows";
-    if (/Mac/i.test(plat) || /Macintosh/.test(ua)) return nav.maxTouchPoints > 1 ? null : "macos";
-    if (/Linux|X11|CrOS/i.test(plat + " " + ua)) {
-      if (/Ubuntu/i.test(ua)) return "ubuntu";
-      if (/Fedora|SUSE/i.test(ua)) return "fedora";
-      if (/Debian/i.test(ua)) return "debian";
-      return "linux";
-    }
-    return null;
-  }
-
   function initDownloads() {
     var tiles = tileEls();
     if (!tiles.length) return;
@@ -336,7 +320,9 @@
       t.setAttribute("role", "button");
       t.setAttribute("aria-expanded", "false");
     });
-    var mine = detectFamily();
+    // The head's boot script detected it and drew it first before the first
+    // paint; here the DOM catches up so Tab follows the order on screen.
+    var mine = document.documentElement.getAttribute("data-lg-os");
     var mineTile = mine && document.querySelector('[data-lg-tile="' + mine + '"]');
     if (mineTile && !mineTile.hidden) {
       var badge = mineTile.querySelector("[data-lg-mine]");
@@ -350,6 +336,7 @@
     }
     var fromHash = hashFamily();
     setOpen(fromHash || mine, false);
+    document.documentElement.classList.remove("lg-boot");
     if (fromHash) revealHash(fromHash);
   }
 
@@ -920,12 +907,18 @@
 
   // Restore on load. The default is already correct in the CSS, so this only
   // ever has to act when a previous visit chose something else.
+  // The head's boot script already set data-theme before the first paint (the
+  // saved choice, else the system's light preference); this only brings the
+  // swatches and screenshots in line with it.
   try {
     var saved = localStorage.getItem(THEME_KEY);
-    if (saved && document.querySelector('[data-lg-theme="' + saved + '"]')) {
+    if (saved && saved !== document.documentElement.getAttribute("data-theme")
+        && document.querySelector('[data-lg-theme="' + saved + '"]')) {
       applyTheme(saved, false);
     }
   } catch (e) { /* no storage, no restore, still a working page */ }
+  var current = document.documentElement.getAttribute("data-theme");
+  if (current && document.querySelector('[data-lg-theme="' + current + '"]')) setTheme(current);
 
   /* ---- full-screen screenshots ------------------------------------------
    *

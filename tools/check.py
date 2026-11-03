@@ -48,6 +48,31 @@ html = open(os.path.join(PUB, "index.html"), encoding="utf-8").read()
 feed = json.load(open(os.path.join(PUB, "releases.json"), encoding="utf-8"))
 headers = open(os.path.join(PUB, "_headers"), encoding="utf-8").read()
 
+# ---- the head's boot script runs, before any style, on both pages ---------
+# It is the only inline script, allowed by its hash: a stale hash in _headers
+# means the browser silently refuses it and every visit flashes the default
+# theme with the panels jumping, which no other check here would notice.
+import base64, hashlib
+csp = re.search(r"Content-Security-Policy:([^\n]*)", headers).group(1)
+allowed = set(re.findall(r"'(sha256-[A-Za-z0-9+/=]+)'", csp))
+boot_bad = []
+for page in ("index.html", "privacy.html"):
+    body = open(os.path.join(PUB, page), encoding="utf-8").read()
+    head = body[:body.index("</head>")]
+    inline = re.findall(r"<script>([\s\S]*?)</script>", head)
+    if len(inline) != 1:
+        boot_bad.append("%s has %d inline scripts" % (page, len(inline)))
+        continue
+    digest = "sha256-" + base64.b64encode(hashlib.sha256(inline[0].encode("utf-8")).digest()).decode()
+    if digest not in allowed:
+        boot_bad.append("%s boot script %s not in the CSP" % (page, digest))
+    if head.index("<script>") > head.index("<style>"):
+        boot_bad.append("%s boot script after the stylesheet" % page)
+    if len(re.findall(r"<script>", body)) != 1:
+        boot_bad.append("%s has inline scripts outside <head>" % page)
+check("the boot script is in <head>, before the CSS, and allowed by its CSP hash",
+      not boot_bad, "; ".join(boot_bad))
+
 # ---- local references resolve ---------------------------------------------
 refs = set(re.findall(r'(?:src|href)="(/[^"]*)"', html))
 refs |= {"/" + u for u in re.findall(r'url\("/([^"]*)"\)', html)}

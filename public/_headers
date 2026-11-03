@@ -2,7 +2,8 @@
 # https://developers.cloudflare.com/pages/configuration/headers/
 
 /*
-  # The page is entirely self-hosted: one same-origin script, same-origin
+  # The page is entirely self-hosted: one same-origin script plus the inline
+  # boot script allowed by its hash (written by tools/build-site.py), same-origin
   # fonts and images, no third-party anything. The only loosening is
   # style-src 'unsafe-inline'. The artifact needed it for 347 inline
   # style="..." attributes; the generated page is down to one <style> block
@@ -10,7 +11,7 @@
   # but an inline <style> element needs 'unsafe-inline' just as much as an
   # attribute does. Tightening it means a nonce, which needs the request to
   # enter the Worker -- and run_worker_first is deliberately off.
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'sha256-C8/tqE0NuFOnjyX0I3QLHG6R1AgPb7K64a05JAodxxQ='; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()

@@ -16,6 +16,8 @@ tile", so it appears a handful of times on this whole page and never as a
 wash. Links get their own ink because the accent cannot carry AA at body
 size; the app wrote that reasoning down and it holds here.
 """
+import base64
+import hashlib
 import html
 import json
 import math
@@ -87,17 +89,19 @@ def theme_css():
     a page that has never been clicked must not depend on JavaScript having run
     to have colours.
     """
-    out = []
-    for t in THEMES_DATA:
-        k = t["tokens"]
-        decls = " ".join(
-            f"--{tok}: {k[tok]};" for tok in
-            ("page", "raised", "elevated", "hairline", "border",
-             "text", "text-2", "text-3", "accent", "link"))
-        decls += f" color-scheme: {'dark' if k['dark'] else 'light'};"
-        decls += f" --sky-opacity: {0.16 if k["dark"] else 0.46};"
-        out.append(f'[data-theme="{_slug(t["name"])}"] {{ {decls} }}')
-    return "\n".join(out)
+    return "\n".join(f'[data-theme="{_slug(t["name"])}"] {{ {theme_decls(_slug(t["name"]))} }}'
+                     for t in THEMES_DATA)
+
+
+def theme_decls(slug):
+    k = next(t["tokens"] for t in THEMES_DATA if _slug(t["name"]) == slug)
+    decls = " ".join(
+        f"--{tok}: {k[tok]};" for tok in
+        ("page", "raised", "elevated", "hairline", "border",
+         "text", "text-2", "text-3", "accent", "link"))
+    decls += f" color-scheme: {'dark' if k['dark'] else 'light'};"
+    decls += f" --sky-opacity: {0.16 if k["dark"] else 0.46};"
+    return decls
 
 
 THEMES = [(t["name"], t["tokens"]["accent"]) for t in THEMES_DATA]
@@ -672,7 +676,11 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 }
 
 /* ---- themes --------------------------------------------------------------- */
-.lg-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+/* A grid, not wrapping flex: column widths and the fixed line-height owe
+   nothing to the label font, so the strip cannot re-wrap (and shove the
+   download section) when the webfont lands. */
+.lg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  gap: 10px; margin-top: 26px; }
 /* Each swatch is painted in ITS OWN theme's colours, so the row reads as
    eleven miniature themes rather than eleven labels. That is the affordance:
    you can see they are different things and that one of them is currently on,
@@ -681,7 +689,8 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 12px 7px 8px; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--raised);
-  font-size: 13px; color: var(--text-2); font-family: inherit;
+  font-size: 13px; line-height: 20px; color: var(--text-2); font-family: inherit;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   cursor: pointer; position: relative;
   transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1),
               box-shadow 160ms ease, border-color 160ms ease;
@@ -891,6 +900,64 @@ def indigo_tokens():
 
 CSS = (CSS.replace("{INDIGO_TOKENS}", indigo_tokens())
           .replace("{THEME_CSS}", theme_css()))
+
+
+# ---- first paint: tools/boot.js decides, the CSS draws --------------------
+DRAWN = [f["id"] for f in FAMILIES if any(not p.get("soon") for p in family_pkgs(f["id"]))]
+_GROUPS = {g["id"]: f["id"] for f in FAMILIES if f["id"] in DRAWN
+           for g in f.get("groups", []) if g["id"] != f["id"]}
+_SLUGS = [_slug(t["name"]) for t in THEMES_DATA]
+_LIGHT = "lightning-light"
+assert DEFAULT_THEME in _SLUGS and _LIGHT in _SLUGS
+# Every weight the fonts file declares, so boot.js waits for all of them.
+_FACES = sorted({f"{w} 16px '{fam}'" for fam, w in
+                 re.findall(r"font-family: '([^']+)';\s*font-style: normal;\s*font-weight: (\d+);", FONTS)})
+assert _FACES, "no faces parsed from fontfaces.css"
+BOOT_CONFIG = {"themes": _SLUGS, "def": DEFAULT_THEME, "light": _LIGHT,
+               "families": DRAWN, "groups": _GROUPS, "faces": _FACES}
+BOOT = ((HERE / "boot.js").read_text(encoding="utf-8")
+        .replace("/*@CONFIG@*/null", json.dumps(BOOT_CONFIG, separators=(",", ":"))))
+BOOT_HASH = "sha256-" + base64.b64encode(hashlib.sha256(BOOT.encode("utf-8")).digest()).decode()
+
+
+def boot_css():
+    """What boot.js decided, drawn before releases.js runs: the detected tile
+    first and badged, the panel it will open already open, the others shut."""
+    out = [
+        "/* Before releases.js: lg-boot is removed once it owns the panels. */",
+        "html.lg-boot .lg-os-panel { display: none; }",
+        "html.lg-boot .lg-os-panel:target { display: block; }",
+        "/* !important: the page-wide [hidden] rule is !important too. */",
+        "html.lg-js .lg-copy[hidden] { display: block !important; }",
+        "html.lg-fontwait { background: var(--page); }",
+        "html.lg-fontwait body { visibility: hidden; }",
+        "/* No preference stored and none taken by script: follow the system. */",
+        "@media (prefers-color-scheme: light) { html:not([data-theme]) {" +
+        theme_decls(_LIGHT) + "} }",
+    ]
+    for f in DRAWN:
+        out.append(f'html[data-lg-os="{f}"] .lg-os[data-lg-tile="{f}"] {{ order: -1; }}')
+        out.append(f'html[data-lg-os="{f}"] .lg-os[data-lg-tile="{f}"] .lg-os-mine[hidden] {{ display: block !important; }}')
+        out.append(f'html.lg-boot[data-lg-open="{f}"] #download-{f} {{ display: block; }}')
+        out.append(f'html.lg-boot[data-lg-open="{f}"] .lg-os[data-lg-tile="{f}"] {{ border-color: var(--accent);'
+                   ' box-shadow: 0 0 0 1px var(--accent) inset; background: var(--elevated); transform: none; }')
+    return "\n".join(out) + "\n"
+
+
+CSS = CSS + boot_css()
+
+# Preloaded and font-display: optional, so text is never re-laid-out by a font swap.
+FONT_PRELOADS = ('<link rel="preload" href="/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
+                 '<link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>')
+
+
+def write_csp_hash():
+    """_headers allows exactly this boot script, so it follows every rebuild."""
+    hp = PUB / "_headers"
+    h = hp.read_text(encoding="utf-8")
+    new = re.sub(r"script-src 'self'( 'sha256-[A-Za-z0-9+/=]+')?", f"script-src 'self' '{BOOT_HASH}'", h, count=1)
+    if new != h:
+        hp.write_text(new, encoding="utf-8")
 
 SKY_SHAPES = json.loads((PUB / "sky-shapes.json").read_text(encoding="utf-8"))["shapes"]
 
@@ -1118,6 +1185,8 @@ def build_privacy(footer_html):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>{BOOT}</script>
+{FONT_PRELOADS}
 <title>Privacy — Lightning</title>
 <meta name="description" content="Lightning collects nothing: no analytics, no telemetry, no crash reporting. What it stores stays on your computer, and what it sends goes to your homeserver or to a service you asked for.">
 <link rel="canonical" href="https://www.lightning-matrix.org/privacy">
@@ -1166,6 +1235,8 @@ def build():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>{BOOT}</script>
+{FONT_PRELOADS}
 <title>Lightning — a native Matrix client for the desktop</title>
 <meta name="description" content="A native desktop Matrix client in Qt 6 and C++20, built on the official Rust Matrix SDK. Group calls with screen sharing, real threads, Spaces, and search inside encrypted rooms. Linux and NixOS first. GPL-3.0-or-later.">
 <meta property="og:title" content="Lightning — a native Matrix client for the desktop">
@@ -1325,6 +1396,7 @@ def build():
 </html>
 """
     (PUB / "index.html").write_text(html, encoding="utf-8")
+    write_csp_hash()
     print("wrote", (PUB / "index.html"), len(html.splitlines()), "lines")
     fa = html.index("<footer>")
     fb = html.index("</footer>") + len("</footer>")

@@ -158,6 +158,23 @@ in `file`; an `install` written with `${file}` gets the real name. The build
 refuses a non-store package without a `file`, so a placeholder cannot go live
 pointing nowhere.
 
+### The first paint: theme, grid and fonts
+
+`tools/boot.js` is inlined at the top of `<head>` on both pages and runs before
+the stylesheet. It puts the saved theme (or, with none saved, the light theme
+for a system that prefers light) on `<html>`, marks the visitor's OS
+(`data-lg-os`) and the panel to open (`data-lg-open`, from the hash or the OS),
+and points the screenshots at the chosen theme as the parser creates them. The
+CSS draws all of that, so the first frame is already right; `releases.js` only
+takes over (and moves the detected tile in the DOM). The CSP allows it by its
+sha256, which `build-site.py` rewrites in `_headers` on every build and
+`check.py` verifies, because a stale hash makes the browser drop the script
+silently. Fonts are preloaded and `font-display: optional`, and `boot.js`
+holds the paint until every declared weight is ready or 100 ms pass, so the
+page is laid out once in its final font. The theme swatches are a grid with a
+fixed line height for the same reason. Without JavaScript none of this runs:
+the default theme (or the light one, by the CSS media query) and every panel.
+
 ### Download buttons
 
 Every package card has a button pointing straight at its release asset. The URL

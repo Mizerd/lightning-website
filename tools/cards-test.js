@@ -38,6 +38,9 @@ const ROOT = path.dirname(__dirname);
 const html = fs.readFileSync(ROOT + "/public/index.html", "utf8")
   .replace(/<script src="\/releases\.js" defer><\/script>/, "");
 const js = fs.readFileSync(ROOT + "/public/releases.js", "utf8");
+// The head's inline boot script (theme, detected OS, open panel) runs before
+// releases.js in a browser, so it runs first here too.
+const boot = /<script>([\s\S]*?)<\/script>/.exec(html)[1];
 const feed = JSON.parse(fs.readFileSync(ROOT + "/public/releases.json", "utf8"));
 // "soon" packages render as muted placeholder rows with no data-lg-pkg.
 const live = feed.packages.filter(p => !p.soon);
@@ -94,6 +97,11 @@ function run(withLatest, opts) {
     }
     return Promise.reject(new Error("unexpected fetch " + url));
   };
+  if (opts.theme) win.localStorage.setItem("lg-theme", opts.theme);
+  if (opts.prefersLight != null) win.matchMedia = function (q) {
+    return { matches: /light/.test(q) ? opts.prefersLight : false, addListener: function () {}, addEventListener: function () {} };
+  };
+  win.eval(boot);
   win.eval(js);
   // Both passes are promise chains off fetch; three macrotask turns is ample
   // and does not depend on how many links the chain has.
@@ -330,9 +338,60 @@ async function gridChecks() {
   check("Linux visitors get the any-distribution card", JSON.stringify(openIds(doc)) === '["linux"]',
         JSON.stringify(openIds(doc)));
 
+  await bootChecks();
   await detectionChecks();
   await placeholderChecks();
   await opensuseChecks();
+}
+
+// ---- the head's boot script: theme and grid state before the first paint --
+async function bootChecks() {
+  console.log("\nBoot script (before the first paint)");
+  // Run the boot script ALONE, as the browser does before any paint.
+  function bootOnly(opts) {
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://www.lightning-matrix.org/" + (opts.hash || "") });
+    const win = dom.window;
+    if (opts.ua) Object.defineProperty(win.navigator, "userAgent", { value: opts.ua });
+    if (opts.blockStorage) Object.defineProperty(win, "localStorage", { get: function () { throw new Error("blocked"); } });
+    else if (opts.theme) win.localStorage.setItem("lg-theme", opts.theme);
+    win.matchMedia = function (q) { return { matches: /light/.test(q) ? !!opts.prefersLight : false }; };
+    win.eval(boot);
+    return win.document.documentElement;
+  }
+  let d = bootOnly({ theme: "storm" });
+  check("a stored theme is on <html> before releases.js", d.getAttribute("data-theme") === "storm", d.getAttribute("data-theme"));
+  d = bootOnly({ theme: "storm", prefersLight: true });
+  check("a stored theme beats the system preference", d.getAttribute("data-theme") === "storm", d.getAttribute("data-theme"));
+  d = bootOnly({ prefersLight: true });
+  check("nothing stored + system light -> the light theme", d.getAttribute("data-theme") === "lightning-light", d.getAttribute("data-theme"));
+  d = bootOnly({});
+  check("nothing stored + system dark -> the CSS default, no attribute", !d.hasAttribute("data-theme"), d.getAttribute("data-theme"));
+  d = bootOnly({ theme: "\"><img src=x>" });
+  check("an unknown stored value is ignored", !d.hasAttribute("data-theme"), d.getAttribute("data-theme"));
+  d = bootOnly({ blockStorage: true, prefersLight: true });
+  check("blocked storage still boots (system preference)", d.getAttribute("data-theme") === "lightning-light" && /lg-boot/.test(d.className));
+  d = bootOnly({ ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0" });
+  check("the detected OS and its open panel are set before paint",
+        d.getAttribute("data-lg-os") === "windows" && d.getAttribute("data-lg-open") === "windows" && /\blg-boot\b/.test(d.className),
+        d.getAttribute("data-lg-os") + "/" + d.getAttribute("data-lg-open") + "/" + d.className);
+  d = bootOnly({ ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0", hash: "#download-opensuse" });
+  check("a group deep link opens its family before paint", d.getAttribute("data-lg-open") === "fedora", d.getAttribute("data-lg-open"));
+
+  const doc = await run(false, { theme: "storm", ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0" });
+  const de = doc.documentElement;
+  check("after releases.js: theme kept, its swatch pressed",
+        de.getAttribute("data-theme") === "storm"
+        && doc.querySelector('[data-lg-theme="storm"]').getAttribute("aria-pressed") === "true"
+        && doc.querySelector('[data-lg-theme="indigo-night"]').getAttribute("aria-pressed") === "false");
+  check("after releases.js: screenshots follow the theme",
+        Array.from(doc.querySelectorAll("img[data-lg-shot]")).every(i => /--storm\.png$/.test(i.getAttribute("src"))));
+  check("after releases.js: lg-boot is gone and the panels are its own",
+        !/\blg-boot\b/.test(de.className) && /\blg-js\b/.test(de.className)
+        && Array.from(doc.querySelectorAll("[data-lg-family]")).filter(p => !p.hidden).length === 1);
+  const d2 = await run(false, { prefersLight: true });
+  check("system-light visitors get the light swatch pressed",
+        d2.documentElement.getAttribute("data-theme") === "lightning-light"
+        && d2.querySelector('[data-lg-theme="lightning-light"]').getAttribute("aria-pressed") === "true");
 }
 
 // ---- "Your system": detected, marked, opened and moved to the front --------

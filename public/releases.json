@@ -4,9 +4,57 @@
   "releases_url": "https://github.com/Mizerd/lightning/releases",
   "donate_url": "",
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
+  "families": [
+    {
+      "id": "linux",
+      "name": "Linux",
+      "logo": "linux",
+      "blurb": "Any distribution",
+      "note": "AppImage and Flatpak carry their own Qt and run anywhere."
+    },
+    {
+      "id": "debian",
+      "name": "Debian",
+      "logo": "debian",
+      "blurb": "Debian 13 or newer"
+    },
+    {
+      "id": "ubuntu",
+      "name": "Ubuntu",
+      "logo": "ubuntu",
+      "blurb": "26.04+, Mint, Pop!_OS",
+      "note": "Needs Qt 6.8 or newer, so it does not install on Ubuntu 24.04, Mint 22.x or Pop!_OS 24.04. Use Flathub or the AppImage there, under Linux: both carry their own Qt."
+    },
+    {
+      "id": "fedora",
+      "name": "Fedora",
+      "logo": "fedora",
+      "blurb": "Also RHEL and openSUSE",
+      "note": "The .rpm needs Qt 6.8 or newer, so it does not install on Fedora 43. Use Flathub or the AppImage there, under Linux."
+    },
+    {
+      "id": "windows",
+      "name": "Windows",
+      "logo": "windows",
+      "blurb": "Installer or portable",
+      "note": "Unsigned, so Windows will warn you before it runs. Download it from here or the GitHub release page and nowhere else."
+    },
+    {
+      "id": "macos",
+      "name": "macOS",
+      "logo": "apple",
+      "blurb": "Apple Silicon, macOS 26+",
+      "note": "Ad-hoc signed and not notarised, so macOS refuses the first open. Try to open it once, then System Settings → Privacy & Security → Open Anyway, and confirm. It does not update itself."
+    }
+  ],
   "packages": [
     {
       "os": "linux",
+      "family": "linux",
+      "arch": [
+        "x86_64",
+        "aarch64"
+      ],
       "label": "Flathub, recommended for most users",
       "format": "Flathub",
       "store": true,
@@ -18,23 +66,53 @@
     },
     {
       "os": "linux",
+      "family": "linux",
+      "arch": "x86_64",
       "label": "Any distribution, nothing installed",
       "format": "AppImage",
       "file": "Lightning-0.10.4-x86_64.AppImage",
       "install": "chmod +x Lightning-0.10.4-x86_64.*pp[Ii]mage && ./Lightning-0.10.4-x86_64.*pp[Ii]mage",
-      "remove": "delete the file"
+      "remove": "delete the file",
+      "match": "-x86_64.AppImage"
     },
     {
       "os": "linux",
+      "family": "linux",
+      "arch": "x86_64",
       "label": "Flatpak (KDE Platform 6.11 runtime)",
       "format": ".flatpak",
       "file": "lightning_0.10.4_amd64.flatpak",
       "install": "flatpak install --user ./lightning_0.10.4_amd64.flatpak",
       "remove": "flatpak uninstall --user org.lightning_matrix.Lightning",
-      "note": "Manual file: no automatic updates. Flathub is better for most people."
+      "note": "Manual file: no automatic updates. Flathub is better for most people.",
+      "match": "_amd64.flatpak"
     },
     {
       "os": "linux",
+      "family": "linux",
+      "arch": "x86_64",
+      "label": "Snap, strict confinement, local file",
+      "format": ".snap",
+      "file": "lightning_0.10.4_amd64.snap",
+      "install": "sudo snap install --dangerous ./lightning_0.10.4_amd64.snap",
+      "remove": "sudo snap remove lightning",
+      "match": "_amd64.snap"
+    },
+    {
+      "os": "linux",
+      "family": "linux",
+      "arch": "aarch64",
+      "soon": true,
+      "format": "AppImage",
+      "label": "Any distribution, nothing installed",
+      "match": "-aarch64.AppImage",
+      "install": "chmod +x ./${file} && ./${file}",
+      "remove": "delete the file"
+    },
+    {
+      "os": "linux",
+      "family": "debian",
+      "arch": "x86_64",
       "label": "Debian 13+",
       "format": ".deb",
       "file": "lightning_0.10.4_amd64.deb",
@@ -44,6 +122,19 @@
     },
     {
       "os": "linux",
+      "family": "debian",
+      "arch": "aarch64",
+      "soon": true,
+      "format": ".deb",
+      "label": "Debian 13+",
+      "match": "_arm64.deb",
+      "install": "sudo apt install ./${file}",
+      "remove": "sudo apt remove lightning"
+    },
+    {
+      "os": "linux",
+      "family": "ubuntu",
+      "arch": "x86_64",
       "label": "Ubuntu 26.04+ / Mint / Pop!_OS",
       "format": ".deb",
       "file": "lightning_0.10.4_ubuntu2604_amd64.deb",
@@ -53,6 +144,8 @@
     },
     {
       "os": "linux",
+      "family": "fedora",
+      "arch": "x86_64",
       "label": "Fedora COPR, recommended for Fedora 44 and 45 (x86_64)",
       "format": "COPR",
       "store": true,
@@ -64,39 +157,42 @@
     },
     {
       "os": "linux",
+      "family": "fedora",
+      "arch": "x86_64",
       "label": "Fedora / RHEL / openSUSE",
       "format": ".rpm",
       "file": "lightning-0.10.4-1.x86_64.rpm",
       "install": "sudo dnf install ./lightning-0.10.4-1.x86_64.rpm",
       "remove": "sudo dnf remove lightning",
-      "note": "Manual file: no automatic updates. On Fedora 44 or 45, use COPR above."
-    },
-    {
-      "os": "linux",
-      "label": "Snap, strict confinement, local file",
-      "format": ".snap",
-      "file": "lightning_0.10.4_amd64.snap",
-      "install": "sudo snap install --dangerous ./lightning_0.10.4_amd64.snap",
-      "remove": "sudo snap remove lightning"
+      "note": "Manual file: no automatic updates. On Fedora 44 or 45, use COPR above.",
+      "match": ".x86_64.rpm"
     },
     {
       "os": "windows",
+      "family": "windows",
+      "arch": "x86_64",
       "label": "MSI installer, per-user",
       "format": ".msi",
       "file": "Lightning-0.10.4-fd5aedf-windows-x86_64.msi",
       "install": "double-click Lightning-0.10.4-fd5aedf-windows-x86_64.msi",
-      "remove": "Settings → Apps → Installed apps"
+      "remove": "Settings → Apps → Installed apps",
+      "match": "-x86_64.msi"
     },
     {
       "os": "windows",
+      "family": "windows",
+      "arch": "x86_64",
       "label": "Setup EXE, per-user",
       "format": ".exe",
       "file": "Lightning-0.10.4-fd5aedf-windows-x86_64-setup.exe",
       "install": "run the installer",
-      "remove": "Uninstall Lightning shortcut"
+      "remove": "Uninstall Lightning shortcut",
+      "match": "-x86_64-setup.exe"
     },
     {
       "os": "windows",
+      "family": "windows",
+      "arch": "x86_64",
       "label": "Portable ZIP, installs nothing",
       "format": ".zip",
       "match": "-portable.zip",
@@ -106,6 +202,8 @@
     },
     {
       "os": "macos",
+      "family": "macos",
+      "arch": "aarch64",
       "label": "Apple Silicon, macOS 26 or newer",
       "format": ".zip",
       "match": "-macos-arm64.zip",

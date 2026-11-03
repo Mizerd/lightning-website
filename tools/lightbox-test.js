@@ -207,7 +207,7 @@ async function run(apiUp) {
   // said `=== 6` while the feed listed five Linux packages, which is a number
   // that went stale the moment the card set changed and told nobody.
   const copy = [...doc.querySelectorAll("[data-lg-copybtn]")];
-  const nLinux = feedObj.packages.filter((p) => p.os === "linux").length;
+  const nLinux = feedObj.packages.filter((p) => p.os === "linux" && !p.soon).length;
   ok(tag + " a copy button per Linux package",
      copy.length === nLinux,
      copy.length + " buttons, " + nLinux + " Linux packages");

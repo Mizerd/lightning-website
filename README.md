@@ -122,6 +122,31 @@ before `releases.js` runs and stays correct if it never does. Those baked-in
 values only refresh when the page is rebuilt (below) — for a normal release,
 editing `releases.json` alone is enough and the live page follows.
 
+### The download grid
+
+The section is a grid of OS tiles (Linux, Debian, Ubuntu, Fedora, Windows,
+macOS), one panel per tile. Both come from `releases.json`: `families` lists
+the tiles (id, name, `logo`, `blurb`, optional `note`) and each package names
+its `family` and `arch` (`"x86_64"`, `"aarch64"`, or a list of both, as for
+Flathub). A new format is a new package entry; a new family needs a rebuild,
+because its logo is baked from `tools/os-logos.json` (monochrome Simple Icons
+paths, painted in `currentColor` so they follow every theme). A family with no
+live package is not drawn.
+
+Without JavaScript the tiles are anchors and every panel is on the page. With
+it, the tiles become disclosure buttons (`aria-expanded`, Space/Enter, Escape
+closes and returns focus), one panel shows under the grid, the visitor's OS
+opens on its own, and `#download-<family>` deep-links a panel. A panel rather
+than an in-place expansion keeps the tiles from reflowing under the pointer.
+
+`"soon": true` marks a placeholder for a build that does not exist yet: it
+shows as a muted "Coming soon" row and a dashed chip, with no link and no
+command, and `bump-feed.py` leaves it alone. To go live, delete that one line
+and run `bump-feed.py`, which finds the asset by its `match` token and fills
+in `file`; an `install` written with `${file}` gets the real name. The build
+refuses a non-store package without a `file`, so a placeholder cannot go live
+pointing nowhere.
+
 ### Download buttons
 
 Every package card has a button pointing straight at its release asset. The URL

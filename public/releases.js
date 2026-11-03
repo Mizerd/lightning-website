@@ -68,63 +68,284 @@
     }
   }
 
-  function packages(osName, list) {
-    var cards = document.querySelectorAll('[data-lg-pkg="' + osName + '"]');
-    if (!cards.length || !list.length) return;
+  // ---- the download grid ---------------------------------------------------
+  // Each family panel's rows are REBUILT from the feed with createElement, in
+  // the same markup build-site.py bakes, never cloned from a neighbour: a clone
+  // keeps whatever per-card state nobody remembered to overwrite, which is how
+  // every Linux button once served the .deb.
+  var ARCH_NAMES = { x86_64: "x86_64", aarch64: "ARM64" };
 
-    var parent = cards[0].parentNode;
-    var proto = cards[0].cloneNode(true);
+  function archList(p) {
+    var a = p.arch || "x86_64";
+    return Array.isArray(a) ? a : [a];
+  }
 
-    var built = list.map(function (pkg) {
-      var card = proto.cloneNode(true);
-      card.querySelectorAll("[data-lg-bind]").forEach(function (slot) {
-        var field = slot.getAttribute("data-lg-bind").split(".")[1];
-        if (pkg[field] != null) slot.textContent = pkg[field];
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function archChips(p, attr) {
+    var box = el("span", "lg-pkg-arches");
+    if (attr) box.setAttribute(attr, "");
+    archList(p).forEach(function (a) { box.appendChild(el("span", "lg-arch", ARCH_NAMES[a] || a)); });
+    return box;
+  }
+
+  function installText(p) {
+    return String(p.install || "").split("${file}").join(p.file || "");
+  }
+
+  function variantRow(pkg) {
+    var head = el("div", "lg-pkg-head");
+    if (pkg.soon) {
+      var soon = el("div", "lg-pkg lg-soon");
+      soon.setAttribute("data-lg-soon", "");
+      head.appendChild(el("span", "lg-pkg-fmt", pkg.format));
+      head.appendChild(archChips(pkg));
+      head.appendChild(el("span", "lg-pkg-label", pkg.label));
+      head.appendChild(el("span", "lg-soon-tag", "Coming soon"));
+      soon.appendChild(head);
+      return soon;
+    }
+    var card = el("div", "lg-pkg");
+    card.setAttribute("data-lg-pkg", pkg.os);
+    card.setAttribute("data-lg-format", pkg.format || "");
+    card.setAttribute("data-lg-file", pkg.file || "");
+    if (pkg.match) card.setAttribute("data-lg-match", pkg.match);
+    if (pkg.pinned) card.setAttribute("data-lg-pinned", pkg.pinned);
+    if (pkg.store) card.setAttribute("data-lg-store", "");
+
+    var fmt = el("span", "lg-pkg-fmt", pkg.format);
+    fmt.setAttribute("data-lg-bind", "pkg.format");
+    var label = el("span", "lg-pkg-label", pkg.label);
+    label.setAttribute("data-lg-bind", "pkg.label");
+    var dl = el("a", "lg-pkg-dl", pkg.action || "Download");
+    dl.setAttribute("data-lg-dl", "");
+    dl.setAttribute("data-lg-bind", "pkg.action");
+    head.appendChild(fmt);
+    head.appendChild(archChips(pkg, "data-lg-arches"));
+    head.appendChild(label);
+    if (pkg.pinned) head.appendChild(el("span", "lg-pkg-ver", pkg.pinned));
+    head.appendChild(dl);
+    card.appendChild(head);
+    setDownload(card, pkg.download_url, pkg.file);
+    if (pkg.store) dl.setAttribute("aria-label", "Open " + pkg.format + " page");
+
+    if (pkg.os === "linux") {
+      var row = el("div", "lg-cmdrow");
+      var cmd = el("code", "lg-cmd", installText(pkg));
+      cmd.setAttribute("data-lg-copy", "");
+      cmd.setAttribute("data-lg-bind", "pkg.install");
+      var btn = el("button", "lg-copy", "Copy");
+      btn.setAttribute("data-lg-copybtn", "");
+      btn.type = "button";
+      btn.hidden = true;
+      btn.setAttribute("aria-label", "Copy command");
+      row.appendChild(cmd);
+      row.appendChild(btn);
+      card.appendChild(row);
+      var note = el("p", "lg-pkg-note", pkg.note || "");
+      note.setAttribute("data-lg-bind", "pkg.note");
+      note.hidden = !pkg.note;
+      card.appendChild(note);
+    } else {
+      var how = el("p", "lg-pkg-note", installText(pkg));
+      how.setAttribute("data-lg-bind", "pkg.install");
+      card.appendChild(how);
+    }
+    return card;
+  }
+
+  // A family the feed has no panel for needs a rebuild (its logo is baked);
+  // a panel the feed gives no live rows is hidden with its tile.
+  function families(d) {
+    var famList = Array.isArray(d.families) ? d.families : [];
+    document.querySelectorAll("[data-lg-family]").forEach(function (panel) {
+      var id = panel.getAttribute("data-lg-family");
+      var fam = famList.filter(function (f) { return f.id === id; })[0];
+      var tile = document.querySelector('[data-lg-tile="' + id + '"]');
+      var pkgs = d.packages.filter(function (p) { return (p.family || p.os) === id; });
+      var live = pkgs.filter(function (p) { return !p.soon; });
+      if (!live.length) {
+        panel.setAttribute("data-lg-empty", "");
+        panel.hidden = true;
+        if (tile) tile.hidden = true;
+        return;
+      }
+      panel.removeAttribute("data-lg-empty");
+      if (tile) tile.hidden = false;
+
+      var box = panel.querySelector("[data-lg-variants]");
+      if (box) {
+        box.textContent = "";
+        pkgs.forEach(function (p) { box.appendChild(variantRow(p)); });
+      }
+      var note = panel.querySelector("[data-lg-family-note]");
+      if (note && fam) {
+        note.textContent = fam.note || "";
+        note.hidden = !fam.note;
+      }
+      if (!tile) return;
+      var blurb = tile.querySelector("[data-lg-tile-blurb]");
+      if (blurb && fam) blurb.textContent = fam.blurb || "";
+      var fmts = [], all = [], liveArch = [];
+      pkgs.forEach(function (p) {
+        if (!p.soon && fmts.indexOf(p.format) < 0) fmts.push(p.format);
+        archList(p).forEach(function (a) {
+          if (all.indexOf(a) < 0) all.push(a);
+          if (!p.soon && liveArch.indexOf(a) < 0) liveArch.push(a);
+        });
       });
-      // Everything below is per-card state inherited from the prototype, which
-      // is card zero. Each one must be overwritten or the clone silently keeps
-      // card zero's value -- the bug that made every Linux button serve the
-      // .deb and every Windows button the .msi. setDownload is called
-      // unconditionally so a missing URL hides the button rather than leaving
-      // it pointing at the wrong file.
-      setDownload(card, pkg.download_url, pkg.file);
-      // A STORE card (Flathub, COPR) links to a store page rather than a
-      // release asset: it has its own url, no file, and a button that does
-      // not say "Download". Like every other per-card state this must be
-      // written unconditionally or the clone keeps card zero's.
-      var dl = card.querySelector("[data-lg-dl]");
-      if (dl) {
-        dl.textContent = pkg.action || "Download";
-        if (pkg.store) dl.setAttribute("aria-label", "Open " + pkg.format + " page");
-        else if (!pkg.file) dl.removeAttribute("aria-label");
+      var fmtEl = tile.querySelector("[data-lg-tile-fmts]");
+      if (fmtEl) fmtEl.textContent = fmts.join(" · ");
+      var archEl = tile.querySelector("[data-lg-tile-arch]");
+      if (archEl) {
+        archEl.textContent = "";
+        all.forEach(function (a) {
+          var on = liveArch.indexOf(a) >= 0;
+          archEl.appendChild(el("span", on ? "lg-arch" : "lg-arch soon",
+                                (ARCH_NAMES[a] || a) + (on ? "" : " soon")));
+        });
       }
-      if (pkg.store) card.setAttribute("data-lg-store", "");
-      else card.removeAttribute("data-lg-store");
-      var noteEl = card.querySelector('[data-lg-bind="pkg.note"]');
-      if (noteEl) {
-        noteEl.textContent = pkg.note || "";
-        noteEl.hidden = !pkg.note;
-      }
-      card.setAttribute("data-lg-format", pkg.format || "");
-      // The suffix pass 2 matches on, when the displayed format is ambiguous.
-      // Two cards ship a ".zip" -- the Windows portable and the macOS bundle --
-      // and matching on the badge text alone would hand both of them whichever
-      // .zip GitHub happened to list first.
-      if (pkg.match) card.setAttribute("data-lg-match", pkg.match);
-      else card.removeAttribute("data-lg-match");
-      card.setAttribute("data-lg-file", pkg.file || "");
-      return card;
     });
+  }
 
-    // Swap in place: replace the first card, drop the rest. Doing it in this
-    // order keeps the new cards at the original position among their siblings
-    // rather than appending them to the end of the column.
-    parent.replaceChild(built[0], cards[0]);
-    for (var i = 1; i < cards.length; i++) parent.removeChild(cards[i]);
-    for (var j = built.length - 1; j >= 1; j--) {
-      built[0].parentNode.insertBefore(built[j], built[0].nextSibling);
+  // ---- opening a family ----------------------------------------------------
+  // The tiles are anchors to their panels, so without JavaScript every panel
+  // is on the page and every tile scrolls to its own. With it, one panel shows
+  // at a time under the grid, the tiles act as disclosure buttons, and the
+  // URL fragment names the open one so #download-linux deep-links.
+  var openId = null;
+
+  function tileEls() {
+    return Array.prototype.slice.call(document.querySelectorAll("[data-lg-tile]"));
+  }
+
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  function setOpen(id, animate) {
+    openId = null;
+    tileEls().forEach(function (t) {
+      var tid = t.getAttribute("data-lg-tile");
+      var panel = document.getElementById("download-" + tid);
+      var on = tid === id && !t.hidden && !!panel && !panel.hasAttribute("data-lg-empty");
+      t.setAttribute("aria-expanded", on ? "true" : "false");
+      if (!panel) return;
+      var was = panel.hidden;
+      panel.hidden = !on;
+      if (on) {
+        openId = tid;
+        panel.classList.remove("lg-opening");
+        if (was && animate) {
+          void panel.offsetWidth;
+          panel.classList.add("lg-opening");
+        }
+      }
+    });
+    return openId;
+  }
+
+  function setHash(hash) {
+    try { history.replaceState(null, "", hash); } catch (err) { /* file:// and friends */ }
+  }
+
+  function revealPanel(id, align) {
+    var panel = document.getElementById("download-" + id);
+    if (!panel || !panel.scrollIntoView) return;
+    var r = panel.getBoundingClientRect();
+    if (align !== "start" && r.top >= 0 && r.top < window.innerHeight * 0.6) return;
+    panel.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
+  }
+
+  function hashFamily() {
+    var m = /^#download-([a-z0-9-]+)$/.exec(location.hash || "");
+    return m && document.querySelector('[data-lg-tile="' + m[1] + '"]') ? m[1] : null;
+  }
+
+  function detectFamily() {
+    var nav = window.navigator || {};
+    var ua = nav.userAgent || "";
+    var plat = (nav.userAgentData && nav.userAgentData.platform) || nav.platform || "";
+    if (/Android|iPhone|iPad|iPod/i.test(ua)) return null;
+    if (/Win/i.test(plat) || /Windows/.test(ua)) return "windows";
+    if (/Mac/i.test(plat) || /Macintosh/.test(ua)) return nav.maxTouchPoints > 1 ? null : "macos";
+    if (/Linux|X11|CrOS/i.test(plat + " " + ua)) {
+      if (/Ubuntu/i.test(ua)) return "ubuntu";
+      if (/Fedora/i.test(ua)) return "fedora";
+      if (/Debian/i.test(ua)) return "debian";
+      return "linux";
+    }
+    return null;
+  }
+
+  function initDownloads() {
+    var tiles = tileEls();
+    if (!tiles.length) return;
+    var section = document.getElementById("download");
+    if (section) section.classList.add("lg-osjs");
+    tiles.forEach(function (t) {
+      t.setAttribute("role", "button");
+      t.setAttribute("aria-expanded", "false");
+    });
+    var mine = detectFamily();
+    var mineTile = mine && document.querySelector('[data-lg-tile="' + mine + '"]');
+    if (mineTile && !mineTile.hidden) {
+      var badge = mineTile.querySelector("[data-lg-mine]");
+      if (badge) badge.hidden = false;
+    } else {
+      mine = null;
+    }
+    var fromHash = hashFamily();
+    setOpen(fromHash || mine, false);
+    if (fromHash) revealPanel(fromHash, "start");
+  }
+
+  function toggleTile(tile) {
+    var id = tile.getAttribute("data-lg-tile");
+    if (openId === id) {
+      setOpen(null, false);
+      setHash("#download");
+      return;
+    }
+    if (setOpen(id, true)) {
+      setHash("#download-" + id);
+      revealPanel(id);
     }
   }
+
+  document.addEventListener("click", function (ev) {
+    var tile = ev.target && ev.target.closest ? ev.target.closest("[data-lg-tile]") : null;
+    if (!tile || ev.button || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+    ev.preventDefault();
+    toggleTile(tile);
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    var t = ev.target;
+    var tile = t && t.closest ? t.closest("[data-lg-tile]") : null;
+    if (tile && (ev.key === " " || ev.key === "Spacebar")) {
+      ev.preventDefault();
+      toggleTile(tile);
+      return;
+    }
+    if (ev.key !== "Escape" || !openId) return;
+    var panel = document.getElementById("download-" + openId);
+    if (!tile && !(panel && panel.contains(t))) return;
+    var owner = document.querySelector('[data-lg-tile="' + openId + '"]');
+    setOpen(null, false);
+    setHash("#download");
+    if (owner) owner.focus();
+  });
+
+  window.addEventListener("hashchange", function () {
+    var id = hashFamily();
+    if (id && id !== openId && setOpen(id, true)) revealPanel(id, "start");
+  });
 
   // "https://.../download/v${version}/${file}" -> a real URL.
   function fromTemplate(tpl, version, file) {
@@ -150,9 +371,8 @@
       d.packages.forEach(function (p) {
         p.download_url = p.url || fromTemplate(d.asset_url, d.version, p.file);
       });
-      packages("linux", d.packages.filter(function (p) { return p.os === "linux"; }));
-      packages("windows", d.packages.filter(function (p) { return p.os === "windows"; }));
-      packages("macos", d.packages.filter(function (p) { return p.os === "macos"; }));
+      families(d);
+      if (openId) setOpen(openId, false);
     }
 
     var sha = document.querySelector("[data-lg-dl-sha]");
@@ -253,9 +473,8 @@
 
   // ---- copy buttons on the install commands -------------------------------
   // The buttons ship `hidden` so a reader without JavaScript never sees one
-  // that cannot work. Clicks are handled by delegation because packages()
-  // rebuilds these cards with cloneNode, which does not copy event listeners
-  // -- a listener bound per button would die on every clone.
+  // that cannot work. Clicks are handled by delegation because families()
+  // rebuilds every row, and a listener bound per button would die with it.
 
   function copyText(value) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -351,7 +570,7 @@
    * rather than a per-element transition written by script.
    */
   var WAVE_BLOCKS = ".lg-top, main > section, .lg-row, .lg-pkg, .lg-card," +
-                    " .lg-shot, .lg-plat, .lg-list > li, .lg-swatches, footer";
+                    " .lg-shot, .lg-os, .lg-os-panel, .lg-list > li, .lg-swatches, footer";
 
   var waveGen = 0;
   var waveMarked = [];
@@ -998,6 +1217,7 @@
   // Sequential, not parallel: the GitHub pass must land last, because it is
   // the more authoritative of the two and rebuilt cards would otherwise
   // discard the URLs it just set.
+  initDownloads();
   load("/releases.json", applyFeed, { cache: "no-cache" })
     .then(function () { return load("/api/latest", applyLatest); })
     // Last: the passes above replace the cards, and the buttons must be

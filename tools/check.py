@@ -62,7 +62,9 @@ check("local references resolve", not missing, ", ".join(missing))
 cards = re.findall(
     r'data-lg-format="([^"]*)"[^>]*data-lg-file="([^"]*)"(.*?)(?=<div data-lg-pkg|</section)',
     html, re.S)
-pkgs = feed["packages"]
+# A "soon" package is a placeholder with no asset: it renders as a muted row
+# without data-lg-pkg, so it is never matched, linked or counted here.
+pkgs = [p for p in feed["packages"] if not p.get("soon")]
 check("a card per package", len(cards) == len(pkgs),
       "%d cards vs %d packages" % (len(cards), len(pkgs)))
 
@@ -135,7 +137,10 @@ for (fmt, fil, body), pkg in zip(cards, pkgs):
         if not m:
             slot_missing.append("%s has no pkg.%s slot" % (fmt, field))
             continue
-        want = html_mod.escape(str(pkg.get(field, "")))
+        want = str(pkg.get(field, ""))
+        if field == "install":
+            want = want.replace("${file}", pkg.get("file", ""))
+        want = html_mod.escape(want)
         if m.group(1) != want:
             slot_wrong.append("%s pkg.%s is %r, feed says %r"
                               % (fmt, field, m.group(1), want))
@@ -173,26 +178,17 @@ check("the baked release date matches the feed",
 # because their boxes hold GUI actions rather than commands. Every button
 # ships hidden, so a reader without JavaScript is never shown one that cannot
 # work -- releases.js reveals them.
-# Located by the heading TEXT, not by an exact closing tag: the heading now
-# carries a trailing hint span ("AppImage and Flatpak carry their own Qt"),
-# and pinning `>Linux</h3>` made this file fail on a page that was correct.
-def _col(name):
-    m = re.search(r"<h3[^>]*>" + name + r"\b", html)
-    if not m:
-        raise SystemExit("check.py: no <h3> for " + name)
-    return m.start()
-
-
-lin_i, win_i = _col("Linux"), _col("Windows")
-linux_col, rest = html[lin_i:win_i], html[win_i:]
-# The responsive pass appends class="lg-cmd" after the attribute, so match the
-# attribute name rather than assuming it closes the tag.
-n_cmds = len(re.findall(r"data-lg-copy(?![a-z-])", linux_col))
-n_linux = linux_col.count("data-lg-copybtn")
-check("a copy button per Linux command", n_linux and n_linux == n_cmds,
-      "%d buttons, %d commands" % (n_linux, n_cmds))
-check("no copy buttons outside the Linux column", "data-lg-copybtn" not in rest,
-      "%d found" % rest.count("data-lg-copybtn"))
+# Counted per card: each Linux card carries exactly one command and one button,
+# every other card none.
+copy_bad = []
+for (fmt, fil, body), pkg in zip(cards, pkgs):
+    n_btn = body.count("data-lg-copybtn")
+    n_cmd = len(re.findall(r"data-lg-copy(?![a-z-])", body))
+    want = 1 if pkg["os"] == "linux" else 0
+    if n_btn != want or n_cmd != want:
+        copy_bad.append("%s (%s): %d buttons, %d commands" % (fmt, pkg["os"], n_btn, n_cmd))
+check("a copy button per Linux command, none elsewhere", not copy_bad,
+      "; ".join(copy_bad))
 check("every copy button ships hidden",
       html.count("data-lg-copybtn hidden") == html.count("data-lg-copybtn"),
       "%d of %d" % (html.count("data-lg-copybtn hidden"),

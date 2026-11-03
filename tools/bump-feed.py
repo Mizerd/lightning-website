@@ -112,7 +112,9 @@ def main():
     kept, dropped, unpinned = [], [], []
     for pkg in feed["packages"]:
         # A store card (Flathub, COPR) is not a release asset: keep it as is.
-        if pkg.get("store"):
+        # A "soon" placeholder names no asset yet; it goes live when its
+        # "soon" line is deleted, and the next run fills in its file.
+        if pkg.get("store") or pkg.get("soon"):
             kept.append(dict(pkg))
             continue
         name = asset_for(pkg, names)

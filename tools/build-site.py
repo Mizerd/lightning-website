@@ -141,34 +141,46 @@ def asset_href(fil, pkg=None):
     return ASSET.replace("${version}", VERSION).replace("${file}", fil)
 
 
-def pkg_card(p):
-    """One package card, GENERATED FROM THE FEED so the two cannot disagree.
+ARCH_NAMES = {"x86_64": "x86_64", "aarch64": "ARM64"}
+OS_LOGOS = json.loads((HERE / "os-logos.json").read_text(encoding="utf-8"))
+FAMILIES = feed["families"]
 
-    Hand-writing these is how the page ends up naming a file the feed does
-    not — check.py compares them for exactly that reason, and generating them
-    makes the comparison trivially true instead of a thing somebody has to
-    remember. releases.js then clones card zero per OS at runtime, so every
-    per-card attribute it overwrites has to exist here or the clone keeps card
-    zero's value; that was the bug that once served the .deb from every Linux
-    button.
+
+def pkg_arches(p):
+    a = p.get("arch") or "x86_64"
+    return a if isinstance(a, list) else [a]
+
+
+def arch_chips(p):
+    return "".join(f'<span class="lg-arch">{ARCH_NAMES.get(a, a)}</span>' for a in pkg_arches(p))
+
+
+def _install(p):
+    """The install text, with `${file}` filled in for a template command."""
+    return p.get("install", "").replace("${file}", p.get("file", ""))
+
+
+def pkg_card(p):
+    """One variant row, GENERATED FROM THE FEED so the two cannot disagree.
+
+    releases.js rebuilds these rows from the feed with the same markup
+    (variantRow), and pass 2 rewrites [data-lg-dl], [data-lg-file] and the
+    pkg.install slot by asset suffix, so every attribute here is load-bearing.
     """
+    if p.get("soon"):
+        return (f'<div class="lg-pkg lg-soon" data-lg-soon>\n'
+                f'  <div class="lg-pkg-head">\n'
+                f'    <span class="lg-pkg-fmt">{html.escape(p["format"])}</span><span class="lg-pkg-arches">{arch_chips(p)}</span>\n'
+                f'    <span class="lg-pkg-label">{html.escape(p["label"])}</span>\n'
+                f'    <span class="lg-soon-tag">Coming soon</span>\n'
+                f'  </div>\n</div>')
     fil = p.get("file", "")
+    if not fil and not p.get("store"):
+        raise SystemExit(f"build-site: {p['format']} ({p['family']}) has no file; "
+                         "run tools/bump-feed.py after removing \"soon\"")
     match = f' data-lg-match="{p["match"]}"' if p.get("match") else ""
-    # The AppImage command carries `&&`, so the text is escaped rather than
-    # interpolated raw -- a bare `&` in HTML is a malformed entity reference
-    # that a copy button would hand the reader back verbatim only by luck.
-    install = html.escape(p.get("install", ""))
-    inner = ""
+    install = html.escape(_install(p))
     if p["os"] == "linux":
-        # data-lg-bind="pkg.install" is LOAD-BEARING and lives on the same
-        # element as data-lg-copy: releases.js rebuilds these cards by cloning
-        # card zero, and a command without the bind keeps card zero's text --
-        # every Linux card then showed the AppImage command. It is also how
-        # pass 2 rewrites the filename inside the command when GitHub's
-        # published asset name differs from the feed's.
-        # The optional per-card note (data-lg-bind="pkg.note") is on every
-        # Linux card, hidden when empty, for the same clone-of-card-zero
-        # reason as the install command.
         note = p.get("note", "")
         hid = "" if note else " hidden"
         inner = f"""  <div class="lg-cmdrow">
@@ -178,23 +190,16 @@ def pkg_card(p):
   <p class="lg-pkg-note" data-lg-bind="pkg.note"{hid}>{html.escape(note)}</p>"""
     else:
         inner = f'  <p class="lg-pkg-note" data-lg-bind="pkg.install">{install}</p>'
-    # A pinned card is excluded from the /api/latest pass: that pass resolves a
-    # card against the NEWEST release's assets, and this one deliberately names
-    # an older release's file. Without the marker it would find no macOS asset
-    # and hide the button -- removing the only macOS download there is.
     pinned = f' data-lg-pinned="{html.escape(p["pinned"])}"' if p.get("pinned") else ""
     ver = (f'<span class="lg-pkg-ver">{html.escape(p["pinned"])}</span>'
            if p.get("pinned") else "")
-    # A STORE card links to a store or project page (Flathub, COPR), not to a
-    # release asset. It carries its own absolute url, names no file, and is
-    # excluded from the /api/latest pass exactly like a pinned card.
     store = " data-lg-store" if p.get("store") else ""
     action = html.escape(p.get("action") or "Download")
     label_attr = (f' aria-label="Open {html.escape(p["format"])} page"'
                   if p.get("store") else "")
     return f'''<div data-lg-pkg="{p["os"]}" data-lg-format="{p["format"]}" data-lg-file="{fil}"{match}{pinned}{store} class="lg-pkg">
   <div class="lg-pkg-head">
-    <span class="lg-pkg-fmt" data-lg-bind="pkg.format">{html.escape(p["format"])}</span>
+    <span class="lg-pkg-fmt" data-lg-bind="pkg.format">{html.escape(p["format"])}</span><span class="lg-pkg-arches" data-lg-arches>{arch_chips(p)}</span>
     <span class="lg-pkg-label" data-lg-bind="pkg.label">{html.escape(p["label"])}</span>{ver}
     <a class="lg-pkg-dl" data-lg-dl data-lg-bind="pkg.action"{label_attr} href="{asset_href(fil, p)}">{action}</a>
   </div>
@@ -202,53 +207,94 @@ def pkg_card(p):
 </div>'''
 
 
-def cards_for(os_name):
-    return "\n".join(pkg_card(p) for p in feed["packages"] if p["os"] == os_name)
+def family_pkgs(fid):
+    return [p for p in feed["packages"] if p.get("family", p["os"]) == fid]
 
 
-def platform_block(os_name, heading, hint, note=""):
-    """One <div class="lg-plat">, or NOTHING if the feed has no such package.
-
-    macOS is `allow_failure` in the release pipeline -- deliberately, so one
-    sleeping Mac cannot block a release -- and it has already been absent from
-    a release for an unrelated reason (the 413 on the artifact upload). A
-    hard-coded block would then print an empty "macOS" heading over nothing,
-    and its card would link at an asset GitHub never received. The page is
-    generated from the feed; a platform the feed does not list is a platform
-    the page does not claim.
-    """
-    cards = cards_for(os_name)
-    if not cards:
-        return ""
-    tail = "\n      " + note if note else ""
-    return (f'    <div class="lg-plat">\n'
-            f'      <h3>{heading} <span class="hint">{hint}</span></h3>\n'
-            f'{cards}{tail}\n'
-            f'    </div>')
+def _arches(pkgs):
+    seen = []
+    for p in pkgs:
+        for a in pkg_arches(p):
+            if a not in seen:
+                seen.append(a)
+    return seen
 
 
-# The hero claimed "six Linux formats" over FIVE cards: the pipeline builds two
-# .debs (Debian and Ubuntu) and the page offers one, so the lane count and the
-# download count are different numbers. Counted off the feed, which is what the
-# reader can actually see.
+def logo_svg(name, cls):
+    return (f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+            f'<use href="#lg-logo-{name}"/></svg>')
+
+
+def logo_sprite():
+    """Each mark once, referenced by every tile and panel that shows it."""
+    used = []
+    for fam in FAMILIES:
+        if fam["logo"] not in used:
+            used.append(fam["logo"])
+    syms = "".join(f'<symbol id="lg-logo-{n}" viewBox="0 0 24 24"><path d="{OS_LOGOS[n]}"/></symbol>'
+                   for n in used)
+    return f'<svg class="lg-sprite" aria-hidden="true" focusable="false">{syms}</svg>'
+
+
+def tile_meta(pkgs):
+    """The formats line and the architecture chips a tile shows, from its rows."""
+    live = [p for p in pkgs if not p.get("soon")]
+    fmts = []
+    for p in live:
+        if p["format"] not in fmts:
+            fmts.append(p["format"])
+    live_arches = _arches(live)
+    chips = []
+    for a in _arches(pkgs):
+        name = ARCH_NAMES.get(a, a)
+        if a in live_arches:
+            chips.append(f'<span class="lg-arch">{name}</span>')
+        else:
+            chips.append(f'<span class="lg-arch soon">{name} soon</span>')
+    return " · ".join(html.escape(f) for f in fmts), "".join(chips)
+
+
+def download_grid():
+    """The OS tiles and their panels. A family the feed gives no rows is not
+    drawn at all, so a release without a macOS build claims none."""
+    tiles, panels = [], []
+    for fam in FAMILIES:
+        pkgs = family_pkgs(fam["id"])
+        if not any(not p.get("soon") for p in pkgs):
+            continue
+        fid = fam["id"]
+        fmts, chips = tile_meta(pkgs)
+        name = html.escape(fam["name"])
+        tiles.append(f'''  <a class="lg-os" href="#download-{fid}" data-lg-tile="{fid}" aria-controls="download-{fid}">
+    {logo_svg(fam["logo"], "lg-os-logo")}
+    <span class="lg-os-name">{name}</span>
+    <span class="lg-os-blurb" data-lg-tile-blurb>{html.escape(fam.get("blurb", ""))}</span>
+    <span class="lg-os-fmts" data-lg-tile-fmts>{fmts}</span>
+    <span class="lg-os-arch" data-lg-tile-arch>{chips}</span>
+    <span class="lg-os-mine" data-lg-mine hidden>Your system</span>
+  </a>''')
+        note = fam.get("note", "")
+        hid = "" if note else " hidden"
+        panels.append(f'''<div class="lg-os-panel" id="download-{fid}" data-lg-family="{fid}" role="region" aria-labelledby="download-{fid}-h" tabindex="-1">
+  <div class="lg-os-panel-head">
+    {logo_svg(fam["logo"], "lg-os-logo")}
+    <h3 id="download-{fid}-h">{name}</h3>
+  </div>
+  <p class="lg-os-note" data-lg-family-note{hid}>{html.escape(note)}</p>
+  <div class="lg-variants" data-lg-variants>
+{chr(10).join(pkg_card(p) for p in pkgs)}
+  </div>
+</div>''')
+    return (logo_sprite() + '\n<div class="lg-os-grid">\n' + "\n".join(tiles) + '\n</div>\n'
+            '<div class="lg-os-panels">\n' + "\n".join(panels) + '\n</div>')
+
+
 _WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
           7: "seven", 8: "eight", 9: "nine", 10: "ten"}
-_n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux")
+_n_linux = sum(1 for p in feed["packages"] if p["os"] == "linux" and not p.get("soon"))
 LINUX_COUNT_WORD = _WORDS.get(_n_linux, str(_n_linux))
-
-LINUX_BLOCK = platform_block(
-    "linux", "Linux",
-    "AppImage and Flatpak carry their own Qt and run anywhere",
-    '<p class="lg-pkg-note">Needs Qt 6.8+. Neither <code>.deb</code> installs on'
-    ' Ubuntu 24.04, Mint 22.x or Pop!_OS 24.04, nor the <code>.rpm</code> on'
-    ' Fedora 43 \u2014 older Qt. Use the AppImage or the Flatpak there; both'
-    ' carry their own.</p>')
-WINDOWS_BLOCK = platform_block(
-    "windows", "Windows", "unsigned \u2014 Windows will warn you")
-_macos_note = feed.get("macos_note", "")
-MACOS_BLOCK = platform_block(
-    "macos", "macOS", "Apple Silicon, macOS 26+, ad-hoc signed",
-    f'<p class="lg-pkg-note">{html.escape(_macos_note)}</p>' if _macos_note else "")
+DOWNLOAD_GRID = download_grid()
+SHA_HREF = asset_href("SHA256SUMS")
 
 LD = {
     "@context": "https://schema.org", "@type": "SoftwareApplication",
@@ -608,18 +654,60 @@ h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .lg-relhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px; margin-top: 22px;
   font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-3); }
 .lg-relhead .v { color: var(--text); font-size: 16px; font-weight: 500; }
-.lg-plat { margin-top: 38px; }
-.lg-plat > h3 { display: flex; align-items: baseline; gap: 10px; }
-.lg-plat > h3 .hint { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-3); font-weight: 400; }
-.lg-pkg { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--raised); padding: 16px 18px; margin-top: 12px; }
-.lg-pkg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.lg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.lg-os-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 30px; }
+.lg-os {
+  position: relative; display: grid; grid-template-columns: auto 1fr; align-content: start;
+  column-gap: 14px; row-gap: 3px; padding: 16px 18px; min-width: 0;
+  border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--raised);
+  color: var(--text); text-decoration: none;
+  transition: transform 160ms cubic-bezier(0.2,0.7,0.3,1), border-color 120ms ease, box-shadow 120ms ease;
+}
+.lg-os > * { grid-column: 2; min-width: 0; }
+.lg-os > .lg-os-logo { grid-column: 1; grid-row: 1 / span 4; }
+.lg-os-logo { width: 32px; height: 32px; fill: currentColor; display: block; }
+.lg-os:hover { border-color: var(--text-3); transform: translateY(-2px); }
+.lg-os:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.lg-os[aria-expanded="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: var(--elevated); transform: none; }
+.lg-os-name { font-size: 17px; font-weight: 600; line-height: 1.25; padding-right: 64px; }
+.lg-os-blurb { font-size: 13px; color: var(--text-2); }
+.lg-os-fmts { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-3); margin-top: 6px; }
+.lg-os-arch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lg-arch { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 1px 6px; }
+.lg-arch.soon { color: var(--text-3); border-style: dashed; }
+.lg-os-mine { position: absolute; top: 14px; right: 14px; font-size: 11px; font-weight: 500;
+  color: var(--text-2); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 1px 8px; }
+.lg-os-mine[hidden] { display: none; }
+.lg-os-panel { margin-top: 16px; padding: 20px 22px 22px; border: 1px solid var(--border);
+  border-radius: var(--r-lg); background: var(--raised); scroll-margin-top: 76px; }
+.lg-os-panel:focus { outline: none; }
+.lg-os-panel-head { display: flex; align-items: center; gap: 12px; }
+.lg-os-panel-head .lg-os-logo { width: 26px; height: 26px; }
+.lg-os-note { margin: 10px 0 0; color: var(--text-2); font-size: 13.5px; max-width: 72ch; }
+.lg-os-note[hidden] { display: none; }
+.lg-osjs .lg-os-panel.lg-opening { animation: lgPanelIn 180ms ease-out; }
+@keyframes lgPanelIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .lg-os { transition: none; }
+  .lg-os:hover { transform: none; }
+  .lg-osjs .lg-os-panel.lg-opening { animation: none; }
+}
+.lg-pkg { border-top: 1px solid var(--hairline); padding-top: 16px; margin-top: 16px; }
+.lg-pkg-arches { display: inline-flex; gap: 6px; }
+.lg-pkg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .lg-pkg-fmt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px 7px; }
 .lg-pkg-label { color: var(--text-2); font-size: 14px; }
 .lg-pkg-ver { font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
   color: var(--text-3); border: 1px solid var(--hairline);
   border-radius: var(--r-sm); padding: 1px 6px; }
-.lg-pkg-dl { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--link); white-space: nowrap; }
-.lg-pkg-dl:hover { color: var(--text); }
+.lg-pkg-dl { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--link); white-space: nowrap;
+  border: 1px solid var(--border); border-radius: var(--r-pill); padding: 5px 14px; }
+.lg-pkg-dl:hover { color: var(--text); border-color: var(--text-3); }
+.lg-soon .lg-pkg-fmt { color: var(--text-3); border-style: dashed; }
+.lg-soon .lg-pkg-label { color: var(--text-3); }
+.lg-soon-tag { margin-left: auto; font-size: 12px; color: var(--text-3); }
+.lg-sums { margin-top: 22px; }
 .lg-pkg-note { margin: 10px 0 0; color: var(--text-3); font-size: 13px; }
 .lg-pkg-note[hidden] { display: none; }
 .lg-cmdrow { display: flex; align-items: stretch; gap: 8px; margin-top: 12px; }
@@ -716,8 +804,17 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; color: var
   .lg-hero-grid .lg-shot { order: -1; }
   .lg-row:nth-child(even) .lg-row-copy { order: 0; }
   .lg-nav { display: none; }
+  .lg-os-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lg-hero { padding: 44px 0 40px; }
   section { padding: 48px 0; }
+}
+@media (max-width: 520px) {
+  .lg-os { grid-template-columns: 1fr; padding: 14px; }
+  .lg-os > * { grid-column: 1; }
+  .lg-os > .lg-os-logo { grid-row: auto; width: 28px; height: 28px; margin-bottom: 6px; }
+  .lg-os-name { padding-right: 0; font-size: 16px; }
+  .lg-os-mine { position: static; justify-self: start; margin-top: 8px; }
+  .lg-os-panel { padding: 16px 14px 18px; }
 }
 """
 
@@ -1143,13 +1240,9 @@ def build():
       <a href="{RELEASES_URL}" data-lg-href="releasesUrl">Release notes →</a>
     </p>
 
-{LINUX_BLOCK}
+{DOWNLOAD_GRID}
 
-{WINDOWS_BLOCK}
-
-{MACOS_BLOCK}
-
-    <p class="lg-pkg-note">Every release ships <code>SHA256SUMS</code>, and the updater's manifest is signed.</p>
+    <p class="lg-pkg-note lg-sums">Every release ships <a data-lg-dl-sha href="{SHA_HREF}"><code>SHA256SUMS</code></a>, and the updater's manifest is signed.</p>
 {ROOM_CARD}
   </div>
 </section>

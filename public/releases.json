@@ -1,6 +1,6 @@
 {
-  "version": "0.10.4",
-  "released": "2026-11-02",
+  "version": "0.10.5",
+  "released": "2026-11-08",
   "releases_url": "https://github.com/Mizerd/lightning/releases",
   "donate_url": "",
   "asset_url": "https://github.com/Mizerd/lightning/releases/download/v${version}/${file}",
@@ -86,8 +86,8 @@
       "arch": "x86_64",
       "label": "Any distribution, nothing installed",
       "format": "AppImage",
-      "file": "Lightning-0.10.4-x86_64.AppImage",
-      "install": "chmod +x Lightning-0.10.4-x86_64.*pp[Ii]mage && ./Lightning-0.10.4-x86_64.*pp[Ii]mage",
+      "file": "Lightning-0.10.5-x86_64.AppImage",
+      "install": "chmod +x Lightning-0.10.5-x86_64.*pp[Ii]mage && ./Lightning-0.10.5-x86_64.*pp[Ii]mage",
       "remove": "delete the file",
       "match": "-x86_64.AppImage"
     },
@@ -97,8 +97,8 @@
       "arch": "x86_64",
       "label": "Flatpak (KDE Platform 6.11 runtime)",
       "format": ".flatpak",
-      "file": "lightning_0.10.4_amd64.flatpak",
-      "install": "flatpak install --user ./lightning_0.10.4_amd64.flatpak",
+      "file": "lightning_0.10.5_amd64.flatpak",
+      "install": "flatpak install --user ./lightning_0.10.5_amd64.flatpak",
       "remove": "flatpak uninstall --user org.lightning_matrix.Lightning",
       "note": "Manual file: no automatic updates. Flathub is better for most people.",
       "match": "_amd64.flatpak"
@@ -109,8 +109,8 @@
       "arch": "x86_64",
       "label": "Snap, strict confinement, local file",
       "format": ".snap",
-      "file": "lightning_0.10.4_amd64.snap",
-      "install": "sudo snap install --dangerous ./lightning_0.10.4_amd64.snap",
+      "file": "lightning_0.10.5_amd64.snap",
+      "install": "sudo snap install --dangerous ./lightning_0.10.5_amd64.snap",
       "remove": "sudo snap remove lightning",
       "match": "_amd64.snap"
     },
@@ -118,23 +118,23 @@
       "os": "linux",
       "family": "linux",
       "arch": "aarch64",
-      "soon": true,
       "format": "AppImage",
       "label": "Any distribution, nothing installed",
       "match": "-aarch64.AppImage",
       "install": "chmod +x ./${file} && ./${file}",
-      "remove": "delete the file"
+      "remove": "delete the file",
+      "file": "Lightning-0.10.5-aarch64.AppImage"
     },
     {
       "os": "linux",
       "family": "linux",
       "arch": "aarch64",
-      "soon": true,
       "format": ".snap",
       "label": "Snap, strict confinement, local file",
       "match": "_arm64.snap",
       "install": "sudo snap install --dangerous ./${file}",
-      "remove": "sudo snap remove lightning"
+      "remove": "sudo snap remove lightning",
+      "file": "lightning_0.10.5_arm64.snap"
     },
     {
       "os": "linux",
@@ -142,8 +142,8 @@
       "arch": "x86_64",
       "label": "Debian 13+",
       "format": ".deb",
-      "file": "lightning_0.10.4_amd64.deb",
-      "install": "sudo apt install ./lightning_0.10.4_amd64.deb",
+      "file": "lightning_0.10.5_amd64.deb",
+      "install": "sudo apt install ./lightning_0.10.5_amd64.deb",
       "remove": "sudo apt remove lightning",
       "match": "_amd64.deb"
     },
@@ -151,12 +151,12 @@
       "os": "linux",
       "family": "debian",
       "arch": "aarch64",
-      "soon": true,
       "format": ".deb",
       "label": "Debian 13+",
       "match": "_arm64.deb",
       "install": "sudo apt install ./${file}",
-      "remove": "sudo apt remove lightning"
+      "remove": "sudo apt remove lightning",
+      "file": "lightning_0.10.5_arm64.deb"
     },
     {
       "os": "linux",
@@ -164,21 +164,21 @@
       "arch": "x86_64",
       "label": "Ubuntu 26.04+ / Mint / Pop!_OS",
       "format": ".deb",
-      "file": "lightning_0.10.4_ubuntu2604_amd64.deb",
+      "file": "lightning_0.10.5_ubuntu2604_amd64.deb",
       "match": "_ubuntu2604_amd64.deb",
-      "install": "sudo apt install ./lightning_0.10.4_ubuntu2604_amd64.deb",
+      "install": "sudo apt install ./lightning_0.10.5_ubuntu2604_amd64.deb",
       "remove": "sudo apt remove lightning"
     },
     {
       "os": "linux",
       "family": "ubuntu",
       "arch": "aarch64",
-      "soon": true,
       "format": ".deb",
       "label": "Ubuntu 26.04+ / Mint / Pop!_OS",
       "match": "_ubuntu2604_arm64.deb",
       "install": "sudo apt install ./${file}",
-      "remove": "sudo apt remove lightning"
+      "remove": "sudo apt remove lightning",
+      "file": "lightning_0.10.5_ubuntu2604_arm64.deb"
     },
     {
       "os": "linux",
@@ -200,8 +200,8 @@
       "arch": "x86_64",
       "label": "Fedora 44 and newer",
       "format": ".rpm",
-      "file": "lightning-0.10.4-1.x86_64.rpm",
-      "install": "sudo dnf install ./lightning-0.10.4-1.x86_64.rpm",
+      "file": "lightning-0.10.5-1.x86_64.rpm",
+      "install": "sudo dnf install ./lightning-0.10.5-1.x86_64.rpm",
       "remove": "sudo dnf remove lightning-matrix",
       "note": "Manual file: no automatic updates. On Fedora 44 or 45, use COPR above.",
       "match": ".x86_64.rpm",
@@ -212,12 +212,12 @@
       "family": "fedora",
       "group": "fedora",
       "arch": "aarch64",
-      "soon": true,
       "format": ".rpm",
       "label": "Fedora 44 and newer",
       "match": ".aarch64.rpm",
       "install": "sudo dnf install ./${file}",
-      "remove": "sudo dnf remove lightning-matrix"
+      "remove": "sudo dnf remove lightning-matrix",
+      "file": "lightning-0.10.5-1.aarch64.rpm"
     },
     {
       "os": "linux",
@@ -226,8 +226,8 @@
       "arch": "x86_64",
       "label": "openSUSE Tumbleweed",
       "format": ".rpm",
-      "file": "lightning-0.10.4-1.x86_64.rpm",
-      "install": "sudo zypper install --allow-unsigned-rpm ./lightning-0.10.4-1.x86_64.rpm",
+      "file": "lightning-0.10.5-1.x86_64.rpm",
+      "install": "sudo zypper install --allow-unsigned-rpm ./lightning-0.10.5-1.x86_64.rpm",
       "remove": "sudo zypper remove lightning-matrix",
       "note": "Manual file: no automatic updates.",
       "match": ".x86_64.rpm"
@@ -237,12 +237,12 @@
       "family": "fedora",
       "group": "opensuse",
       "arch": "aarch64",
-      "soon": true,
       "format": ".rpm",
       "label": "openSUSE Tumbleweed",
       "match": ".aarch64.rpm",
       "install": "sudo zypper install --allow-unsigned-rpm ./${file}",
-      "remove": "sudo zypper remove lightning-matrix"
+      "remove": "sudo zypper remove lightning-matrix",
+      "file": "lightning-0.10.5-1.aarch64.rpm"
     },
     {
       "os": "windows",
@@ -250,8 +250,8 @@
       "arch": "x86_64",
       "label": "MSI installer, per-user",
       "format": ".msi",
-      "file": "Lightning-0.10.4-fd5aedf-windows-x86_64.msi",
-      "install": "double-click Lightning-0.10.4-fd5aedf-windows-x86_64.msi",
+      "file": "Lightning-0.10.5-2b63840-windows-x86_64.msi",
+      "install": "double-click Lightning-0.10.5-2b63840-windows-x86_64.msi",
       "remove": "Settings → Apps → Installed apps",
       "match": "-x86_64.msi"
     },
@@ -261,7 +261,7 @@
       "arch": "x86_64",
       "label": "Setup EXE, per-user",
       "format": ".exe",
-      "file": "Lightning-0.10.4-fd5aedf-windows-x86_64-setup.exe",
+      "file": "Lightning-0.10.5-2b63840-windows-x86_64-setup.exe",
       "install": "run the installer",
       "remove": "Uninstall Lightning shortcut",
       "match": "-x86_64-setup.exe"
@@ -273,7 +273,7 @@
       "label": "Portable ZIP, installs nothing",
       "format": ".zip",
       "match": "-portable.zip",
-      "file": "Lightning-0.10.4-fd5aedf-windows-x86_64-portable.zip",
+      "file": "Lightning-0.10.5-2b63840-windows-x86_64-portable.zip",
       "install": "extract anywhere, run Lightning.exe",
       "remove": "delete the folder"
     },
@@ -284,7 +284,7 @@
       "label": "Apple Silicon, macOS 26 or newer",
       "format": ".zip",
       "match": "-macos-arm64.zip",
-      "file": "Lightning-0.10.4-fd5aedf-macos-arm64.zip",
+      "file": "Lightning-0.10.5-2b63840-macos-arm64.zip",
       "install": "unzip, drag Lightning.app to Applications",
       "remove": "move Lightning.app to the Bin"
     }
